@@ -1,0 +1,74 @@
+================================================================================
+ASTROLOGICAL CHARTS SUMMARY
+================================================================================
+
+Name: Prachi Gaur
+Date of Birth: 1996-09-20
+Time of Birth: 01:50:00
+Place: saharanpur
+Generated: 2026-03-28T04:14:25.434666
+
+================================================================================
+CHARTS GENERATED
+================================================================================
+
+D1: Rasi Chart
+  Signification: Birth Chart, Overall Life
+
+D2: Hora Chart
+  Signification: Wealth, Money
+
+D3: Drekkana Chart
+  Signification: Siblings, Courage
+
+D4: Chaturthamsa Chart
+  Signification: Property, Assets
+
+D5: Panchamsa Chart
+  Signification: Fame, Power
+
+D6: Shashthamsa Chart
+  Signification: Health, Diseases
+
+D7: Saptamsa Chart
+  Signification: Children, Progeny
+
+D8: Ashtamsa Chart
+  Signification: Longevity, Obstacles
+
+D9: Navamsa Chart
+  Signification: Spouse, Marriage
+
+D10: Dasamsa Chart
+  Signification: Career, Profession
+
+D11: Rudramsa Chart
+  Signification: Destruction
+
+D12: Dwadasamsa Chart
+  Signification: Parents
+
+D16: Shodasamsa Chart
+  Signification: Vehicles, Comforts
+
+D20: Vimsamsa Chart
+  Signification: Spiritual Progress
+
+D24: Chaturvimsamsa Chart
+  Signification: Education
+
+D27: Nakshatramsa Chart
+  Signification: Strengths
+
+D30: Trimsamsa Chart
+  Signification: Evils, Misfortunes
+
+D40: Khavedamsa Chart
+  Signification: Effects
+
+D45: Akshavedamsa Chart
+  Signification: General
+
+D60: Shashtyamsa Chart
+  Signification: Well-being
+

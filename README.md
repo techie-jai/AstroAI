@@ -80,6 +80,18 @@ The library provides nearly all features described in these authoritative source
 - Pattern recognition in astrological data
 
 ### User Interface
+
+**New Simple UI (Recommended for Quick Chart Generation)**
+- Clean, modern PyQt6 interface focused on chart generation
+- Simple form-based input for birth details
+- Auto-complete for place names with automatic coordinate filling
+- Generates all 20 divisional charts (D1-D60) with one click
+- Saves charts in multiple formats: JSON, text, and PNG images
+- Organized user-specific folders with structured file organization
+- Real-time progress tracking and status updates
+- See `new-ui/README.md` for details
+
+**Advanced UI (Full Features)**
 - Multi-tab PyQt6 interface with comprehensive chart visualization
 - Support for multiple languages (English, Tamil, Telugu, Hindi, Kannada, Malayalam)
 - PDF export of detailed horoscope reports
@@ -179,7 +191,25 @@ d9_positions = charts.divisional_chart(jd, place, divisional_chart_factor=9)
 d10_positions = charts.divisional_chart(jd, place, divisional_chart_factor=10)
 ```
 
-### Method 3: Using the GUI
+### Method 3: Using the New Simple UI (Recommended)
+
+```bash
+# From project root
+python run_ui.py
+
+# Or from new-ui directory
+cd new-ui
+python main.py
+```
+
+**Features:**
+- Simple form interface for entering birth details
+- Auto-complete for place names
+- Generates all 20 charts with one click
+- Saves in JSON, text, and PNG formats
+- Organized user folders
+
+### Method 4: Using the Advanced GUI
 
 ```python
 from jhora.ui.horo_chart_tabs import ChartTabbed
@@ -202,11 +232,24 @@ AstroAI/
 │   ├── jhora/
 │   │   ├── horoscope/                # Chart calculations
 │   │   ├── panchanga/                # Panchanga calculations
-│   │   ├── ui/                       # User interface components
+│   │   ├── ui/                       # Advanced UI components
 │   │   └── data/                     # Ephemeris and reference data
 │   └── requirements.txt
+├── new-ui/                           # New Simple UI (Recommended) ⭐
+│   ├── main.py                       # Application entry point
+│   ├── ui_components.py              # PyQt6 UI widgets
+│   ├── chart_generator.py            # Chart generation logic
+│   ├── file_manager.py               # File operations
+│   ├── requirements.txt              # UI dependencies
+│   └── README.md                     # UI documentation
+├── users/                            # Generated chart data (auto-created)
+│   └── {timestamp}_{uniqueId}-{name}/
+│       ├── user_info.json            # Birth data
+│       ├── charts_summary.txt        # Summary
+│       └── charts/                   # JSON, text, PNG files
 ├── Docs/                             # Documentation and reference materials
 ├── astro_chart_api.py                # Production API class ⭐
+├── run_ui.py                         # Quick launcher for new UI ⭐
 ├── test_all_api_methods.py           # API test suite (58/58 passing) ⭐
 ├── PYJHORA_INTEGRATION_GUIDE.md      # Complete API documentation ⭐
 ├── ARCHITECTURE.md                   # System architecture
