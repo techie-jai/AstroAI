@@ -34,7 +34,12 @@ from PyQt6.QtWidgets import QStyledItemDelegate, QWidget, QVBoxLayout, QHBoxLayo
 from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtCore import Qt
 from _datetime import datetime, timedelta, timezone
-import img2pdf
+try:
+    import img2pdf
+    _IMG2PDF_AVAILABLE = True
+except Exception as e:
+    _IMG2PDF_AVAILABLE = False
+    print(f"Warning: img2pdf not available. PDF export will be disabled. Error: {e}")
 from PIL import Image
 import numpy as np
 from jhora import const, utils
@@ -587,6 +592,7 @@ class ChartTabbed(QWidget):
         self._amsa_method_index=1
         self._amsa_varga_dict = {k:v for k,v in utils.get_varga_option_dict().items() if k in self._amsa_vargas}
         self._amsa_varga_dict[150] = self._amsa_varga_dict[60]
+        self._amsa_chart_options_str = ''
     def _show_amsa_chart_options(self):
         self._current_amsa_chart_index = self._amsa_chart_combo.currentIndex()
         self._amsa_option_info_label.setText(self._amsa_chart_options_str)
@@ -678,6 +684,7 @@ class ChartTabbed(QWidget):
         self._sphuta_custom_varga = _custom_varga_index
         self._sphuta_mixed_chart_index_1 = _mixed_chart_index_1; self._sphuta_mixed_chart_index_2 = _mixed_chart_index_2
         self._sphuta_mixed_method_index_1 = _mixed_chart_method_1; self._sphuta_mixed_method_index_2 = _mixed_chart_method_2
+        self._sphuta_chart_options_str = ''
     def _show_varnada_options(self):
         if self._current_sphuta_chart_index < _custom_chart_index:
             varga_index = const.division_chart_factors[self._current_sphuta_chart_index]
@@ -1139,6 +1146,7 @@ class ChartTabbed(QWidget):
         self._bhava_custom_varga = _custom_varga_index
         self._bhava_mixed_chart_index_1 = _mixed_chart_index_1; self._bhava_mixed_chart_index_2 = _mixed_chart_index_2
         self._bhava_mixed_method_index_1 = _mixed_chart_method_1; self._bhava_mixed_method_index_2 = _mixed_chart_method_2
+        self._bhava_chart_options_str = ''
     def _show_bhava_chart_options(self):
         self._current_bhava_chart_index = self._bhava_chart_combo.currentIndex()
         _bhava_value_index = self._bhava_method_combo.currentIndex()
@@ -1294,6 +1302,7 @@ class ChartTabbed(QWidget):
         self._chakra_custom_varga = _custom_varga_index
         self._chakra_mixed_chart_index_1 = _mixed_chart_index_1; self._chakra_mixed_chart_index_2 = _mixed_chart_index_2
         self._chakra_mixed_method_index_1 = _mixed_chart_method_1; self._chakra_mixed_method_index_2 = _mixed_chart_method_2
+        self._chakra_chart_options_str = ''
     def _show_chakra_chart_options(self):
         self._current_chakra_chart_index = self._chakra_chart_combo.currentIndex()
         self._chakra_option_info_label.setText(self._chakra_chart_options_str)
@@ -1434,6 +1443,7 @@ class ChartTabbed(QWidget):
         self._kpinfo_custom_varga = _custom_varga_index
         self._kpinfo_mixed_chart_index_1 = _mixed_chart_index_1; self._kpinfo_mixed_chart_index_2 = _mixed_chart_index_2
         self._kpinfo_mixed_method_index_1 = _mixed_chart_method_1; self._kpinfo_mixed_method_index_2 = _mixed_chart_method_2
+        self._kpinfo_chart_options_str = ''
         self.horo_tabs[tab_index].setLayout(v_layout)
     def _show_kpinfo_chart_options(self):
         self._current_kpinfo_chart_index = self._kpinfo_chart_combo.currentIndex()
@@ -1585,6 +1595,7 @@ class ChartTabbed(QWidget):
         self._kundali_custom_varga = _custom_varga_index
         self._kundali_mixed_chart_index_1 = _mixed_chart_index_1; self._kundali_mixed_chart_index_2 = _mixed_chart_index_2
         self._kundali_mixed_method_index_1 = _mixed_chart_method_1; self._kundali_mixed_method_index_2 = _mixed_chart_method_2
+        self._kundali_chart_options_str = ''
     def _show_kundali_chart_options(self):
         self._current_kundali_chart_index = self._kundali_chart_combo.currentIndex()
         self._kundali_option_info_label.setText(self._kundali_chart_options_str)
@@ -1746,6 +1757,7 @@ class ChartTabbed(QWidget):
         self._saham_custom_varga = _custom_varga_index
         self._saham_mixed_chart_index_1 = _mixed_chart_index_1; self._saham_mixed_chart_index_2 = _mixed_chart_index_2
         self._saham_mixed_method_index_1 = _mixed_chart_method_1; self._saham_mixed_method_index_2 = _mixed_chart_method_2
+        self._saham_chart_options_str = ''
     def _show_saham_chart_options(self):
         self._current_saham_chart_index = self._saham_chart_combo.currentIndex()
         self._saham_option_info_label.setText(self._saham_chart_options_str)
@@ -1902,6 +1914,7 @@ class ChartTabbed(QWidget):
         self._drishti_custom_varga = _custom_varga_index
         self._drishti_mixed_chart_index_1 = _mixed_chart_index_1; self._drishti_mixed_chart_index_2 = _mixed_chart_index_2
         self._drishti_mixed_method_index_1 = _mixed_chart_method_1; self._drishti_mixed_method_index_2 = _mixed_chart_method_2
+        self._drishti_chart_options_str = ''
     def _show_drishti_chart_options(self):
         self._current_drishti_chart_index = self._drishti_chart_combo.currentIndex()
         self._drishti_option_info_label.setText(self._drishti_chart_options_str)
@@ -2105,6 +2118,7 @@ class ChartTabbed(QWidget):
         self._argala_custom_varga = _custom_varga_index
         self._argala_mixed_chart_index_1 = _mixed_chart_index_1; self._argala_mixed_chart_index_2 = _mixed_chart_index_2
         self._argala_mixed_method_index_1 = _mixed_chart_method_1; self._argala_mixed_method_index_2 = _mixed_chart_method_2
+        self._argala_chart_options_str = ''
     def _show_argala_chart_options(self):
         self._current_argala_chart_index = self._argala_chart_combo.currentIndex()
         self._argala_option_info_label.setText(self._argala_chart_options_str)
@@ -5699,9 +5713,12 @@ class ChartTabbed(QWidget):
                 _combine_multiple_images(image_files[i:i+2],combined_image_file)
                 combined_image_files.append(combined_image_file)
                 ci += 1
-            with open(pdf_file_name,"wb") as f:
-                f.write(img2pdf.convert(combined_image_files))
-            f.close()
+            if _IMG2PDF_AVAILABLE:
+                with open(pdf_file_name,"wb") as f:
+                    f.write(img2pdf.convert(combined_image_files))
+                f.close()
+            else:
+                print("Warning: Cannot create PDF. img2pdf library is not available.")
         for image_file in image_files+combined_image_files:
             if os.path.exists(image_file):
                 os.remove(image_file)
