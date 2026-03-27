@@ -15,6 +15,12 @@ from typing import Dict, List, Tuple, Optional
 # Add PyJHora to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'PyJHora'))
 
+# Set ephemeris path BEFORE importing any jhora modules
+import swisseph as swe
+ephe_path = os.path.join(os.path.dirname(__file__), 'PyJHora', 'jhora', 'data', 'ephe')
+ephe_path = os.path.abspath(ephe_path)
+swe.set_ephe_path(ephe_path)
+
 from jhora import const, utils
 from jhora.panchanga import drik
 from jhora.horoscope import main

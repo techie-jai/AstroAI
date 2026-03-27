@@ -1,0 +1,275 @@
+{
+  "chart_type": "D7",
+  "divisional_factor": 7,
+  "chart_name": "Saptamsa Chart",
+  "signification": "Children, Progeny",
+  "planets": [
+    {
+      "id": "L",
+      "name": "Ascendant",
+      "short_name": "Asc",
+      "house": 5,
+      "house_name": "♍︎Virgo",
+      "longitude": 4.507241596366583,
+      "longitude_dms": "4° 30’ 26\""
+    },
+    {
+      "id": 0,
+      "name": "Sun☉",
+      "short_name": "Su☉",
+      "house": 8,
+      "house_name": "♐︎Sagittarius",
+      "longitude": 11.113802711025244,
+      "longitude_dms": "11° 6’ 50\""
+    },
+    {
+      "id": 1,
+      "name": "Moon☾",
+      "short_name": "Mo☾",
+      "house": 0,
+      "house_name": "♈Aries",
+      "longitude": 17.43443818013253,
+      "longitude_dms": "17° 26’ 4\""
+    },
+    {
+      "id": 2,
+      "name": "Mars♂",
+      "short_name": "Ma♂",
+      "house": 4,
+      "house_name": "♌︎Leo",
+      "longitude": 9.482588153732365,
+      "longitude_dms": "9° 28’ 57\""
+    },
+    {
+      "id": 3,
+      "name": "Mercury☿",
+      "short_name": "Me☿",
+      "house": 2,
+      "house_name": "♊︎Gemini",
+      "longitude": 4.772310627207105,
+      "longitude_dms": "4° 46’ 20\""
+    },
+    {
+      "id": 4,
+      "name": "Jupiter♃",
+      "short_name": "Ju♃",
+      "house": 7,
+      "house_name": "♏︎Scorpio",
+      "longitude": 7.259758168048563,
+      "longitude_dms": "7° 15’ 35\""
+    },
+    {
+      "id": 5,
+      "name": "Venus♀",
+      "short_name": "Ve♀",
+      "house": 0,
+      "house_name": "♈Aries",
+      "longitude": 27.225281320442708,
+      "longitude_dms": "27° 13’ 31\""
+    },
+    {
+      "id": 6,
+      "name": "Saturn♄",
+      "short_name": "Sa♄",
+      "house": 7,
+      "house_name": "♏︎Scorpio",
+      "longitude": 23.945335561872866,
+      "longitude_dms": "23° 56’ 43\""
+    },
+    {
+      "id": 7,
+      "name": "Raagu☊",
+      "short_name": "Ra☊",
+      "house": 1,
+      "house_name": "♉︎Taurus",
+      "longitude": 19.64945623394425,
+      "longitude_dms": "19° 38’ 58\""
+    },
+    {
+      "id": 8,
+      "name": "Kethu☋",
+      "short_name": "Ke☋",
+      "house": 7,
+      "house_name": "♏︎Scorpio",
+      "longitude": 19.64945623394425,
+      "longitude_dms": "19° 38’ 58\""
+    },
+    {
+      "id": 9,
+      "name": "Uranus⛢",
+      "short_name": "Ur⛢",
+      "house": 8,
+      "house_name": "♐︎Sagittarius",
+      "longitude": 8.600866944320465,
+      "longitude_dms": "8° 36’ 3\""
+    },
+    {
+      "id": 10,
+      "name": "Neptune♆",
+      "short_name": "Ne♆",
+      "house": 7,
+      "house_name": "♏︎Scorpio",
+      "longitude": 2.8423828459416427,
+      "longitude_dms": "2° 50’ 33\""
+    },
+    {
+      "id": 11,
+      "name": "Pluto♇",
+      "short_name": "Pl♇",
+      "house": 5,
+      "house_name": "♍︎Virgo",
+      "longitude": 24.45482156798073,
+      "longitude_dms": "24° 27’ 17\""
+    }
+  ],
+  "houses": {
+    "0": [
+      {
+        "id": 1,
+        "name": "Moon☾",
+        "short_name": "Mo☾",
+        "house": 0,
+        "house_name": "♈Aries",
+        "longitude": 17.43443818013253,
+        "longitude_dms": "17° 26’ 4\""
+      },
+      {
+        "id": 5,
+        "name": "Venus♀",
+        "short_name": "Ve♀",
+        "house": 0,
+        "house_name": "♈Aries",
+        "longitude": 27.225281320442708,
+        "longitude_dms": "27° 13’ 31\""
+      }
+    ],
+    "1": [
+      {
+        "id": 7,
+        "name": "Raagu☊",
+        "short_name": "Ra☊",
+        "house": 1,
+        "house_name": "♉︎Taurus",
+        "longitude": 19.64945623394425,
+        "longitude_dms": "19° 38’ 58\""
+      }
+    ],
+    "2": [
+      {
+        "id": 3,
+        "name": "Mercury☿",
+        "short_name": "Me☿",
+        "house": 2,
+        "house_name": "♊︎Gemini",
+        "longitude": 4.772310627207105,
+        "longitude_dms": "4° 46’ 20\""
+      }
+    ],
+    "3": [],
+    "4": [
+      {
+        "id": 2,
+        "name": "Mars♂",
+        "short_name": "Ma♂",
+        "house": 4,
+        "house_name": "♌︎Leo",
+        "longitude": 9.482588153732365,
+        "longitude_dms": "9° 28’ 57\""
+      }
+    ],
+    "5": [
+      {
+        "id": "L",
+        "name": "Ascendant",
+        "short_name": "Asc",
+        "house": 5,
+        "house_name": "♍︎Virgo",
+        "longitude": 4.507241596366583,
+        "longitude_dms": "4° 30’ 26\""
+      },
+      {
+        "id": 11,
+        "name": "Pluto♇",
+        "short_name": "Pl♇",
+        "house": 5,
+        "house_name": "♍︎Virgo",
+        "longitude": 24.45482156798073,
+        "longitude_dms": "24° 27’ 17\""
+      }
+    ],
+    "6": [],
+    "7": [
+      {
+        "id": 4,
+        "name": "Jupiter♃",
+        "short_name": "Ju♃",
+        "house": 7,
+        "house_name": "♏︎Scorpio",
+        "longitude": 7.259758168048563,
+        "longitude_dms": "7° 15’ 35\""
+      },
+      {
+        "id": 6,
+        "name": "Saturn♄",
+        "short_name": "Sa♄",
+        "house": 7,
+        "house_name": "♏︎Scorpio",
+        "longitude": 23.945335561872866,
+        "longitude_dms": "23° 56’ 43\""
+      },
+      {
+        "id": 8,
+        "name": "Kethu☋",
+        "short_name": "Ke☋",
+        "house": 7,
+        "house_name": "♏︎Scorpio",
+        "longitude": 19.64945623394425,
+        "longitude_dms": "19° 38’ 58\""
+      },
+      {
+        "id": 10,
+        "name": "Neptune♆",
+        "short_name": "Ne♆",
+        "house": 7,
+        "house_name": "♏︎Scorpio",
+        "longitude": 2.8423828459416427,
+        "longitude_dms": "2° 50’ 33\""
+      }
+    ],
+    "8": [
+      {
+        "id": 0,
+        "name": "Sun☉",
+        "short_name": "Su☉",
+        "house": 8,
+        "house_name": "♐︎Sagittarius",
+        "longitude": 11.113802711025244,
+        "longitude_dms": "11° 6’ 50\""
+      },
+      {
+        "id": 9,
+        "name": "Uranus⛢",
+        "short_name": "Ur⛢",
+        "house": 8,
+        "house_name": "♐︎Sagittarius",
+        "longitude": 8.600866944320465,
+        "longitude_dms": "8° 36’ 3\""
+      }
+    ],
+    "9": [],
+    "10": [],
+    "11": []
+  },
+  "ascendant": {
+    "house": 5,
+    "house_name": "♍︎Virgo",
+    "longitude": 4.507241596366583,
+    "longitude_dms": "4° 30’ 26\""
+  },
+  "birth_data": {
+    "name": "acv",
+    "place": "Bangkok,TH",
+    "date": "2026-03-28",
+    "time": "12:00:00"
+  }
+}

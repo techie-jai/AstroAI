@@ -1,0 +1,17 @@
+{
+  "name": "jai mishra",
+  "gender": "Male",
+  "year": 1994,
+  "month": 12,
+  "day": 28,
+  "hour": 18,
+  "minute": 50,
+  "second": 0,
+  "place_name": "allahabad",
+  "latitude": 25.4683,
+  "longitude": 81.8546,
+  "timezone_offset": 5.5,
+  "unique_id": "20260328_033441_6ad59217",
+  "generated_at": "2026-03-28T03:34:41.930925",
+  "version": "1.0.0"
+}
