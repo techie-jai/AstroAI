@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 """
-Comprehensive API Testing - Test ALL available methods and chart types
+Comprehensive Testing - Test PyJHora Low-Level Functions and API Wrapper
+Tests both the wrapper API and PyJHora's core functions directly
 """
 
 import sys
@@ -9,7 +10,10 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'PyJHora'))
 
 from astro_chart_api import AstroChartAPI
-from jhora import utils
+from jhora import utils, const
+from jhora.panchanga import drik
+from jhora.horoscope.chart import charts
+from jhora.horoscope import main
 
 # Initialize language
 utils.set_language('en')
@@ -410,22 +414,290 @@ def test_different_chart_methods():
     return results
 
 
+def test_pyjhora_low_level_drik():
+    """Test PyJHora's low-level drik (astronomical calculation) functions"""
+    print("\n" + "=" * 80)
+    print("TEST 7: Testing PyJHora Low-Level Drik Functions")
+    print("=" * 80)
+    
+    results = []
+    
+    # Test 1: Date creation
+    try:
+        birth_date = drik.Date(1990, 6, 15)
+        assert birth_date.year == 1990
+        assert birth_date.month == 6
+        assert birth_date.day == 15
+        results.append(("drik.Date creation", "PASS", None))
+        print("✓ drik.Date() - OK")
+    except Exception as e:
+        results.append(("drik.Date creation", "FAIL", str(e)))
+        print(f"✗ drik.Date() - FAILED: {e}")
+    
+    # Test 2: Place creation
+    try:
+        place = drik.Place("Chennai,IN", 13.0827, 80.2707, 5.5)
+        assert place.Place == "Chennai,IN"
+        assert place.latitude == 13.0827
+        assert place.longitude == 80.2707
+        assert place.timezone == 5.5
+        results.append(("drik.Place creation", "PASS", None))
+        print("✓ drik.Place() - OK")
+    except Exception as e:
+        results.append(("drik.Place creation", "FAIL", str(e)))
+        print(f"✗ drik.Place() - FAILED: {e}")
+    
+    # Test 3: Julian Day calculation (utils function)
+    try:
+        jd = utils.julian_day_number(drik.Date(1990, 6, 15), (10, 30, 0))
+        assert jd > 0
+        assert isinstance(jd, (int, float))
+        results.append(("utils.julian_day_number", "PASS", None))
+        print("✓ utils.julian_day_number() - OK")
+    except Exception as e:
+        results.append(("utils.julian_day_number", "FAIL", str(e)))
+        print(f"✗ utils.julian_day_number() - FAILED: {e}")
+    
+    # Test 4: Dhasavarga (divisional chart positions)
+    try:
+        jd = utils.julian_day_number(drik.Date(1990, 6, 15), (10, 30, 0))
+        place = drik.Place("Chennai,IN", 13.0827, 80.2707, 5.5)
+        positions = drik.dhasavarga(jd, place, divisional_chart_factor=1)
+        assert len(positions) > 0
+        assert isinstance(positions, list)
+        results.append(("drik.dhasavarga", "PASS", None))
+        print("✓ drik.dhasavarga() - OK")
+    except Exception as e:
+        results.append(("drik.dhasavarga", "FAIL", str(e)))
+        print(f"✗ drik.dhasavarga() - FAILED: {e}")
+    
+    # Test 5: Ascendant calculation
+    try:
+        jd = utils.julian_day_number(drik.Date(1990, 6, 15), (10, 30, 0))
+        place = drik.Place("Chennai,IN", 13.0827, 80.2707, 5.5)
+        asc = drik.ascendant(jd, place)
+        assert isinstance(asc, tuple)
+        assert len(asc) == 2  # (rasi, longitude)
+        results.append(("drik.ascendant", "PASS", None))
+        print("✓ drik.ascendant() - OK")
+    except Exception as e:
+        results.append(("drik.ascendant", "FAIL", str(e)))
+        print(f"✗ drik.ascendant() - FAILED: {e}")
+    
+    passed = sum(1 for _, status, _ in results if status == "PASS")
+    print(f"\nResults: {passed}/{len(results)} drik functions passed")
+    
+    return results
+
+
+def test_pyjhora_low_level_charts():
+    """Test PyJHora's low-level chart calculation functions"""
+    print("\n" + "=" * 80)
+    print("TEST 8: Testing PyJHora Low-Level Chart Functions")
+    print("=" * 80)
+    
+    results = []
+    
+    # Setup test data
+    jd = utils.julian_day_number(drik.Date(1990, 6, 15), (10, 30, 0))
+    place = drik.Place("Chennai,IN", 13.0827, 80.2707, 5.5)
+    
+    # Test 1: Rasi chart (D1)
+    try:
+        d1 = charts.rasi_chart(jd, place)
+        assert len(d1) > 0
+        assert d1[0][0] == 'L'  # First element should be Lagna
+        results.append(("charts.rasi_chart (D1)", "PASS", None))
+        print("✓ charts.rasi_chart() - OK")
+    except Exception as e:
+        results.append(("charts.rasi_chart (D1)", "FAIL", str(e)))
+        print(f"✗ charts.rasi_chart() - FAILED: {e}")
+    
+    # Test 2: Navamsa chart (D9)
+    try:
+        d1_positions = charts.rasi_chart(jd, place)
+        d9 = charts.navamsa_chart(d1_positions)
+        assert len(d9) > 0
+        results.append(("charts.navamsa_chart (D9)", "PASS", None))
+        print("✓ charts.navamsa_chart() - OK")
+    except Exception as e:
+        results.append(("charts.navamsa_chart (D9)", "FAIL", str(e)))
+        print(f"✗ charts.navamsa_chart() - FAILED: {e}")
+    
+    # Test 3: Dasamsa chart (D10)
+    try:
+        d1_positions = charts.rasi_chart(jd, place)
+        d10 = charts.dasamsa_chart(d1_positions)
+        assert len(d10) > 0
+        results.append(("charts.dasamsa_chart (D10)", "PASS", None))
+        print("✓ charts.dasamsa_chart() - OK")
+    except Exception as e:
+        results.append(("charts.dasamsa_chart (D10)", "FAIL", str(e)))
+        print(f"✗ charts.dasamsa_chart() - FAILED: {e}")
+    
+    # Test 4: Generic divisional_chart function
+    try:
+        for factor in [1, 2, 3, 4, 7, 9, 10, 12]:
+            chart = charts.divisional_chart(jd, place, divisional_chart_factor=factor)
+            assert len(chart) > 0
+        results.append(("charts.divisional_chart (multiple)", "PASS", None))
+        print("✓ charts.divisional_chart() - OK (tested D1,D2,D3,D4,D7,D9,D10,D12)")
+    except Exception as e:
+        results.append(("charts.divisional_chart (multiple)", "FAIL", str(e)))
+        print(f"✗ charts.divisional_chart() - FAILED: {e}")
+    
+    passed = sum(1 for _, status, _ in results if status == "PASS")
+    print(f"\nResults: {passed}/{len(results)} chart functions passed")
+    
+    return results
+
+
+def test_pyjhora_low_level_utils():
+    """Test PyJHora's low-level utility functions"""
+    print("\n" + "=" * 80)
+    print("TEST 9: Testing PyJHora Low-Level Utils Functions")
+    print("=" * 80)
+    
+    results = []
+    
+    # Test 1: Julian day number calculation
+    try:
+        jd = utils.julian_day_number(drik.Date(1990, 6, 15), (10, 30, 0))
+        assert jd > 0
+        results.append(("utils.julian_day_number", "PASS", None))
+        print("✓ utils.julian_day_number() - OK")
+    except Exception as e:
+        results.append(("utils.julian_day_number", "FAIL", str(e)))
+        print(f"✗ utils.julian_day_number() - FAILED: {e}")
+    
+    # Test 2: DMS conversion
+    try:
+        dms = utils.to_dms(23.5, as_string=True, is_lat_long='plong')
+        assert isinstance(dms, str)
+        assert '23' in dms
+        results.append(("utils.to_dms", "PASS", None))
+        print("✓ utils.to_dms() - OK")
+    except Exception as e:
+        results.append(("utils.to_dms", "FAIL", str(e)))
+        print(f"✗ utils.to_dms() - FAILED: {e}")
+    
+    # Test 3: From DMS conversion
+    try:
+        degrees = utils.from_dms(23, 30, 0)
+        assert abs(degrees - 23.5) < 0.01
+        results.append(("utils.from_dms", "PASS", None))
+        print("✓ utils.from_dms() - OK")
+    except Exception as e:
+        results.append(("utils.from_dms", "FAIL", str(e)))
+        print(f"✗ utils.from_dms() - FAILED: {e}")
+    
+    # Test 4: Language resources loaded
+    try:
+        assert hasattr(utils, 'RAASI_LIST')
+        assert hasattr(utils, 'PLANET_NAMES')
+        assert len(utils.RAASI_LIST) == 12
+        assert len(utils.PLANET_NAMES) > 0
+        results.append(("utils language resources", "PASS", None))
+        print("✓ utils language resources - OK")
+    except Exception as e:
+        results.append(("utils language resources", "FAIL", str(e)))
+        print(f"✗ utils language resources - FAILED: {e}")
+    
+    passed = sum(1 for _, status, _ in results if status == "PASS")
+    print(f"\nResults: {passed}/{len(results)} utils functions passed")
+    
+    return results
+
+
+def test_pyjhora_horoscope_class():
+    """Test PyJHora's Horoscope class"""
+    print("\n" + "=" * 80)
+    print("TEST 10: Testing PyJHora Horoscope Class")
+    print("=" * 80)
+    
+    results = []
+    
+    # Test 1: Horoscope instantiation
+    try:
+        horo = main.Horoscope(
+            place_with_country_code="Chennai,IN",
+            latitude=13.0827,
+            longitude=80.2707,
+            timezone_offset=5.5,
+            date_in=drik.Date(1990, 6, 15),
+            birth_time="10:30:00",
+            calculation_type='drik',
+            language='en'
+        )
+        assert horo is not None
+        results.append(("Horoscope instantiation", "PASS", None))
+        print("✓ Horoscope() instantiation - OK")
+    except Exception as e:
+        results.append(("Horoscope instantiation", "FAIL", str(e)))
+        print(f"✗ Horoscope() instantiation - FAILED: {e}")
+        return results  # Can't continue if instantiation fails
+    
+    # Test 2: Get chart information for D1
+    try:
+        info, chart_data, asc_house = horo.get_horoscope_information_for_chart(
+            chart_index=0,  # D1
+            chart_method=1
+        )
+        assert info is not None
+        assert isinstance(asc_house, int)
+        results.append(("Horoscope.get_horoscope_information_for_chart D1", "PASS", None))
+        print("✓ Horoscope.get_horoscope_information_for_chart(D1) - OK")
+    except Exception as e:
+        results.append(("Horoscope.get_horoscope_information_for_chart D1", "FAIL", str(e)))
+        print(f"✗ Horoscope.get_horoscope_information_for_chart(D1) - FAILED: {e}")
+    
+    # Test 3: Get chart information for D9
+    try:
+        info, chart_data, asc_house = horo.get_horoscope_information_for_chart(
+            chart_index=8,  # D9 (index 8 in const.division_chart_factors)
+            chart_method=1
+        )
+        assert info is not None
+        results.append(("Horoscope.get_horoscope_information_for_chart D9", "PASS", None))
+        print("✓ Horoscope.get_horoscope_information_for_chart(D9) - OK")
+    except Exception as e:
+        results.append(("Horoscope.get_horoscope_information_for_chart D9", "FAIL", str(e)))
+        print(f"✗ Horoscope.get_horoscope_information_for_chart(D9) - FAILED: {e}")
+    
+    passed = sum(1 for _, status, _ in results if status == "PASS")
+    print(f"\nResults: {passed}/{len(results)} Horoscope class tests passed")
+    
+    return results
+
+
 def run_all_tests():
     """Run all comprehensive tests"""
     print("\n" + "=" * 80)
-    print("COMPREHENSIVE API TESTING")
-    print("Testing ALL methods, ALL chart types, and edge cases")
+    print("COMPREHENSIVE TESTING - API WRAPPER + PYJHORA LOW-LEVEL FUNCTIONS")
+    print("Testing wrapper API methods AND PyJHora core functions")
     print("=" * 80 + "\n")
     
     all_results = {}
     
-    # Run all test suites
+    # Run wrapper API test suites
+    print("\n" + "=" * 80)
+    print("PART A: WRAPPER API TESTS")
+    print("=" * 80)
     all_results['chart_types'] = test_all_chart_types()
     all_results['api_methods'] = test_all_api_methods()
     all_results['planets'] = test_all_planets()
     all_results['data_structure'] = test_chart_data_structure()
     all_results['edge_cases'] = test_edge_cases()
     all_results['chart_methods'] = test_different_chart_methods()
+    
+    # Run PyJHora low-level function tests
+    print("\n" + "=" * 80)
+    print("PART B: PYJHORA LOW-LEVEL FUNCTION TESTS")
+    print("=" * 80)
+    all_results['pyjhora_drik'] = test_pyjhora_low_level_drik()
+    all_results['pyjhora_charts'] = test_pyjhora_low_level_charts()
+    all_results['pyjhora_utils'] = test_pyjhora_low_level_utils()
+    all_results['pyjhora_horoscope'] = test_pyjhora_horoscope_class()
     
     # Final summary
     print("\n" + "=" * 80)
@@ -434,6 +706,9 @@ def run_all_tests():
     
     total_tests = 0
     total_passed = 0
+    
+    print("\nPART A: WRAPPER API TESTS")
+    print("-" * 80)
     
     # Chart types
     chart_passed = len(all_results['chart_types']['passed'])
@@ -477,12 +752,43 @@ def run_all_tests():
     total_passed += cmethod_passed
     print(f"Chart Methods:    {cmethod_passed:2d}/{cmethod_total:2d} passed")
     
+    print("\nPART B: PYJHORA LOW-LEVEL FUNCTION TESTS")
     print("-" * 80)
+    
+    # PyJHora drik functions
+    drik_passed = sum(1 for _, status, _ in all_results['pyjhora_drik'] if status == "PASS")
+    drik_total = len(all_results['pyjhora_drik'])
+    total_tests += drik_total
+    total_passed += drik_passed
+    print(f"Drik Functions:   {drik_passed:2d}/{drik_total:2d} passed")
+    
+    # PyJHora chart functions
+    pcharts_passed = sum(1 for _, status, _ in all_results['pyjhora_charts'] if status == "PASS")
+    pcharts_total = len(all_results['pyjhora_charts'])
+    total_tests += pcharts_total
+    total_passed += pcharts_passed
+    print(f"Chart Functions:  {pcharts_passed:2d}/{pcharts_total:2d} passed")
+    
+    # PyJHora utils functions
+    putils_passed = sum(1 for _, status, _ in all_results['pyjhora_utils'] if status == "PASS")
+    putils_total = len(all_results['pyjhora_utils'])
+    total_tests += putils_total
+    total_passed += putils_passed
+    print(f"Utils Functions:  {putils_passed:2d}/{putils_total:2d} passed")
+    
+    # PyJHora Horoscope class
+    phoro_passed = sum(1 for _, status, _ in all_results['pyjhora_horoscope'] if status == "PASS")
+    phoro_total = len(all_results['pyjhora_horoscope'])
+    total_tests += phoro_total
+    total_passed += phoro_passed
+    print(f"Horoscope Class:  {phoro_passed:2d}/{phoro_total:2d} passed")
+    
+    print("=" * 80)
     print(f"TOTAL:            {total_passed:2d}/{total_tests:2d} passed ({100*total_passed//total_tests}%)")
     print("=" * 80)
     
     if total_passed == total_tests:
-        print("\n🎉 ALL TESTS PASSED! API is fully functional.")
+        print("\n🎉 ALL TESTS PASSED! Wrapper API and PyJHora core functions are fully functional.")
     else:
         print(f"\n⚠️  {total_tests - total_passed} test(s) failed. Review output above.")
     
