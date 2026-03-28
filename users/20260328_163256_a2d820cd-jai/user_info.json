@@ -1,0 +1,17 @@
+{
+  "name": "jai",
+  "gender": "Male",
+  "year": 1994,
+  "month": 12,
+  "day": 28,
+  "hour": 18,
+  "minute": 50,
+  "second": 0,
+  "place_name": "India,Allahganj, India",
+  "latitude": 27.5454,
+  "longitude": 79.68715,
+  "timezone_offset": 5.5,
+  "unique_id": "20260328_163256_a2d820cd",
+  "generated_at": "2026-03-28T16:32:56.178152",
+  "version": "1.0.0"
+}

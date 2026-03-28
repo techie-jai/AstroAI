@@ -39,12 +39,37 @@ class AstroAIMainWindow(QWidget):
         # Initialize language
         utils.set_language('en')
         
-        # Load world cities for autocomplete
-        self.world_cities = utils.world_cities_dict
+        # Load world cities database for autocomplete
+        utils.use_database_for_world_cities(True)
+        self.world_cities = self._load_world_cities()
         
         self._init_ui()
         self._connect_signals()
         self._set_default_values()
+    
+    def _load_world_cities(self) -> dict:
+        """Load world cities from CSV file into a usable dictionary"""
+        import csv
+        cities_dict = {}
+        try:
+            with open(const._world_city_csv_file, 'r', encoding='ISO-8859-1') as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    if len(row) >= 4:
+                        # Format: Country, City, Lat, Long, TZ_String, TZ_Offset
+                        country = row[0]
+                        city = row[1]
+                        lat = float(row[2])
+                        lon = float(row[3])
+                        tz = float(row[5]) if len(row) > 5 else 0.0
+                        
+                        # Create key as "Country,City" for display
+                        key = f"{country},{city}"
+                        cities_dict[key] = (lat, lon, tz)
+        except Exception as e:
+            print(f"Warning: Could not load world cities database: {e}")
+        
+        return cities_dict
     
     def _init_ui(self):
         """Initialize the user interface"""
@@ -156,10 +181,11 @@ class AstroAIMainWindow(QWidget):
         self.place_input.setPlaceholderText("Start typing city name...")
         
         # Add autocomplete
-        completer = QCompleter(list(self.world_cities.keys()))
-        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-        completer.setFilterMode(Qt.MatchFlag.MatchContains)
-        self.place_input.setCompleter(completer)
+        self.place_completer = QCompleter(list(self.world_cities.keys()))
+        self.place_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.place_completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self.place_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        self.place_input.setCompleter(self.place_completer)
         
         layout.addRow("Place*:", self.place_input)
         
@@ -217,6 +243,7 @@ class AstroAIMainWindow(QWidget):
         """Connect UI signals"""
         self.generate_btn.clicked.connect(self._on_generate_clicked)
         self.place_input.textChanged.connect(self._on_place_changed)
+        self.place_completer.activated.connect(self._on_place_selected)
         
         # Connect validation to all required fields
         self.name_input.textChanged.connect(self._validate_inputs)
@@ -245,9 +272,18 @@ class AstroAIMainWindow(QWidget):
         self._validate_inputs()
     
     def _on_place_changed(self, text: str):
-        """Handle place selection from autocomplete"""
+        """Handle place text change - check if exact match exists"""
         if text in self.world_cities:
-            city_data = self.world_cities[text]
+            self._fill_coordinates(text)
+    
+    def _on_place_selected(self, text: str):
+        """Handle place selection from autocomplete dropdown"""
+        self._fill_coordinates(text)
+    
+    def _fill_coordinates(self, city_name: str):
+        """Fill coordinate fields from city database"""
+        if city_name in self.world_cities:
+            city_data = self.world_cities[city_name]
             self.lat_input.setText(str(city_data[0]))
             self.long_input.setText(str(city_data[1]))
             self.tz_input.setText(str(city_data[2]))
