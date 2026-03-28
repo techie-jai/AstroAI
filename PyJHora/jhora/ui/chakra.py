@@ -121,25 +121,21 @@ class PanchaShalaka(QWidget):
         self._planet_positions = planet_positions
         self._planets_in_retrograde = planets_in_retrograde
         self._update_with_planet_labels()
-        self.createUI()
-    def createUI(self):
+        self.update()
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine))
         x_gap = self.x_gap; y_gap = self.y_gap
-        # Draw lines
         for line in self.lines:
             start, end = line
             painter.drawLine(int(start[0] * x_gap), int((start[1]) * y_gap), int(end[0] * x_gap), int((end[1]) * y_gap))
-
-        # Draw text
         font = QFont(); font.setPointSize(self._label_font_size); font.setWeight(QFont.Weight.Bold); painter.setFont(font)
         for _, (x, y,star_planets) in self.rasi_labels.items():
             color = self._planet_color if '\n' in star_planets else self._star_color
             painter.setPen(QColor(color))
             painter.drawText(QRectF(int(x * x_gap), int((y) * y_gap),300,300), str(star_planets))
             painter.setPen(QPen())
-    def paintEvent(self, event):
-        self.createUI()
+        painter.end()
 class SapthaShalaka(QWidget):
     def __init__(self,planet_positions=[],planets_in_retrograde=[],label_font_size=6):
         super().__init__()
@@ -190,25 +186,21 @@ class SapthaShalaka(QWidget):
         self._planet_positions = planet_positions
         self._planets_in_retrograde = planets_in_retrograde
         self._update_with_planet_labels()
-        self.createUI()
-    def createUI(self):
+        self.update()
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine))
         x_gap = self.x_gap; y_gap = self.y_gap
-        # Draw lines
         for line in self.lines:
             start, end = line
             painter.drawLine(start[0] * x_gap, (start[1]) * y_gap, end[0] * x_gap, (end[1]) * y_gap)
-
-        # Draw text
         font = QFont(); font.setPointSize(self._label_font_size); font.setWeight(QFont.Weight.Bold); painter.setFont(font)
         for _, (x, y,star_planets) in self.rasi_labels.items():
             color = self._planet_color if '\n' in star_planets else self._star_color
             painter.setPen(QColor(color))
             painter.drawText(QRectF(int(x * x_gap), int((y) * y_gap),300,300), str(star_planets))
             painter.setPen(QPen())
-    def paintEvent(self, event):
-        self.createUI()
+        painter.end()
 RahuKalanala = SapthaShalaka
 class ChandraKalanala(QWidget):
     def __init__(self,base_star=18,planet_positions=[],planets_in_retrograde=[],label_font_size=6):
@@ -258,30 +250,25 @@ class ChandraKalanala(QWidget):
         self._planet_positions = planet_positions
         self._planets_in_retrograde = planets_in_retrograde
         self._update_with_planet_labels()
-        self.createUI()
-    def createUI(self):
+        self.update()
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine))
         x_gap = self.x_gap; y_gap = self.y_gap
-        # draw cicrle
         p1 = (1,1); p2 = (2,1)
         rad = 1.5*x_gap
         center = QPointF(5*x_gap,5*y_gap)
         painter.drawEllipse(center, rad, rad)
-        # Draw lines
         for line in self.lines:
             start, end = line
             painter.drawLine(start[0] * x_gap, (start[1]) * y_gap, end[0] * x_gap, (end[1]) * y_gap)
-
-        # Draw text
         font = QFont(); font.setPointSize(self._label_font_size); font.setWeight(QFont.Weight.Bold); painter.setFont(font)
         for _, (x, y,star_planets) in self.rasi_labels.items():
             color = self._planet_color if '\n' in star_planets else self._star_color
             painter.setPen(QColor(color))
             painter.drawText(QRectF(int(x * x_gap), int((y) * y_gap),300,300), str(star_planets))
             painter.setPen(QPen())
-    def paintEvent(self, event):
-        self.createUI()
+        painter.end()
 class Tripataki(QWidget):
     def __init__(self,planet_positions=[],planets_in_retrograde=[],label_font_size=6):
         super().__init__()
@@ -311,25 +298,21 @@ class Tripataki(QWidget):
         self._planet_positions = planet_positions
         self._planets_in_retrograde = planets_in_retrograde
         self._update_with_planet_labels()
-        self.createUI()
-    def createUI(self):
+        self.update()
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine))
         x_gap = self.x_gap; y_gap = self.y_gap
-        # Draw lines
         for start,ends in self.lines.items():
             for end in ends:
                 painter.drawLine(start[0] * x_gap, (start[1]) * y_gap, end[0] * x_gap, (end[1]) * y_gap)
-
-        # Draw text
         font = QFont(); font.setPointSize(self._label_font_size); font.setWeight(QFont.Weight.Bold); painter.setFont(font)
         for x, y,rasi_planets in self.rasi_labels:
             color = self._planet_color if '\n' in rasi_planets else self._rasi_color
             painter.setPen(QColor(color))
             painter.drawText(QRectF(int(x * x_gap), int((y) * y_gap),300,300), str(rasi_planets))
             painter.setPen(QPen())
-    def paintEvent(self, event):
-        self.createUI()
+        painter.end()
 class SuryaKalanala(QWidget):
     def __init__(self,base_star=18,planet_positions=[],planets_in_retrograde=[],label_font_size=6):
         super().__init__()
@@ -383,25 +366,21 @@ class SuryaKalanala(QWidget):
         self._planet_positions = planet_positions
         self._planets_in_retrograde = planets_in_retrograde
         self._update_with_planet_labels()
-        self.createUI()
-    def createUI(self):
+        self.update()
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine))
         x_gap = self.x_gap; y_gap = self.y_gap
-        # Draw lines
         for line in self.lines:
             start, end = line
             painter.drawLine(start[0] * x_gap, (start[1]) * y_gap, end[0] * x_gap, (end[1]) * y_gap)
-
-        # Draw text
         font = QFont(); font.setPointSize(self._label_font_size); font.setWeight(QFont.Weight.Bold); painter.setFont(font)
         for _, (x, y,star_planets) in self.rasi_labels.items():
             color = self._planet_color if '\n' in star_planets else self._star_color
             painter.setPen(QColor(color))
             painter.drawText(QRectF(int(x * x_gap), int((y) * y_gap),300,300), str(star_planets))
             painter.setPen(QPen())
-    def paintEvent(self, event):
-        self.createUI()
+        painter.end()
 class Shoola(QWidget):
     def __init__(self,base_star=18,planet_positions=[],planets_in_retrograde=[],label_font_size=6):
         super().__init__()
@@ -454,25 +433,21 @@ class Shoola(QWidget):
         self._planet_positions = planet_positions
         self._planets_in_retrograde = planets_in_retrograde
         self._update_with_planet_labels()
-        self.createUI()
-    def createUI(self):
+        self.update()
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setPen(QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine))
         x_gap = self.x_gap; y_gap = self.y_gap
-        # Draw lines
         for line in self.lines:
             start, end = line
             painter.drawLine(start[0] * x_gap, (self.y_dim+1 - start[1]) * y_gap, end[0] * x_gap, (self.y_dim+1 - end[1]) * y_gap)
-
-        # Draw text
         font = QFont(); font.setPointSize(self._label_font_size); font.setWeight(QFont.Weight.Bold); painter.setFont(font)
         for _, (x, y,star_planets) in self.rasi_labels.items():
             color = self._planet_color if '\n' in star_planets else self._star_color
             painter.setPen(QColor(color))
             painter.drawText(QRectF(int(x * x_gap), int((self.y_dim+1 - y) * y_gap),300,300), str(star_planets))
             painter.setPen(QPen())
-    def paintEvent(self, event):
-        self.createUI()
+        painter.end()
 class Sarvatobadra(QWidget):
     def __init__(self, planet_positions=[],planets_in_retrograde=[]):
         QWidget.__init__(self)
@@ -587,7 +562,7 @@ class KaalaChakra(QWidget):
         self.add_planet_labels()
         self.inner_angles = [45, 135, 225, 315]
         self.outer_angles = [45, 90, 135, 180, 225, 270, 315, 360]
-        self.createUI()
+        self.update()
     def add_planet_labels(self):
         for p,(h,long) in self._planet_positions:
             p_long = h*30+long
@@ -604,7 +579,13 @@ class KaalaChakra(QWidget):
                 self.labels_outer_divisions[r][c] += '\n'+pstr+rstr
     def paintEvent(self, event):
         if len(self._planet_positions) > 0:
-            self.createUI()
+            qp = QPainter(self)
+            qp.begin(self)
+            try:
+                self.drawCircle(qp)
+            except Exception as e:
+                print(f"Error in drawCircle: {e}")
+            qp.end()
     def drawCircle(self, qp):
         try:
             # Set up pen and font
@@ -692,19 +673,6 @@ class KotaChakra(QWidget):
             self._kota_lord = utils.PLANET_NAMES[house.house_owner_from_planet_positions(planet_positions, moon_house)]
             self._kota_paala = utils.PLANET_NAMES[const.kota_paala_lord_for_star_paadha[birth_star-1][birth_star_padha-1]]
             #print('kota lord',self._kota_lord,'kota paala',self._kota_paala)
-    def createUI(self):
-        self._star_list = utils.NAKSHATRA_SHORT_LIST
-        painter = QPainter(self)
-        rect = self.rect().adjusted(0, 0, -1, -1)
-        colors = [QColor(x[0],x[1],x[2]) for x in self._square_color_rgbs ]
-        # Draw 4 concentric squares
-        num_squares = 4
-        for i in range(num_squares):
-            inset = i * self._space_between_squares  # Space between squares
-            square_rect = rect.adjusted(inset, inset, -inset, -inset)
-            painter.fillRect(square_rect, colors[i])
-            self.drawLabels(painter, square_rect, i, num_squares)
-            self.drawCaptions(painter, square_rect, i, num_squares)
     def setData(self,planet_positions=[], birth_star=15,birth_star_padha=1,planets_in_retrograde=[],
                  title_font_size=12,label_font_size=8,
                  square_color_rgbs=[(255, 128, 128),(128, 255, 128), (128, 128, 255), (255, 255, 128)],
@@ -725,9 +693,19 @@ class KotaChakra(QWidget):
         self._kota_lord = utils.PLANET_NAMES[house.house_owner_from_planet_positions(planet_positions, moon_house)]
         self._kota_paala = utils.PLANET_NAMES[const.kota_paala_lord_for_star_paadha[birth_star-1][birth_star_padha-1]]
         #print('kota lord',self._kota_lord,'kota paala',self._kota_paala)
-        self.createUI()
+        self.update()
     def paintEvent(self, event):
-        self.createUI()
+        painter = QPainter(self)
+        rect = self.rect().adjusted(0, 0, -1, -1)
+        colors = [QColor(x[0],x[1],x[2]) for x in self._square_color_rgbs ]
+        num_squares = 4
+        for i in range(num_squares):
+            inset = i * self._space_between_squares
+            square_rect = rect.adjusted(inset, inset, -inset, -inset)
+            painter.fillRect(square_rect, colors[i])
+            self.drawLabels(painter, square_rect, i, num_squares)
+            self.drawCaptions(painter, square_rect, i, num_squares)
+        painter.end()
     def drawLabels(self, painter, rect, index, num_squares):
         painter.setPen(Qt.GlobalColor.black)
         # Retrieve labels from the list
