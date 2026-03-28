@@ -57,14 +57,22 @@ class AstroAIMainWindow(QWidget):
                 for row in reader:
                     if len(row) >= 4:
                         # Format: Country, City, Lat, Long, TZ_String, TZ_Offset
-                        country = row[0]
-                        city = row[1]
+                        country = row[0].strip()
+                        city = row[1].strip()
+                        
+                        # Clean up malformed city names (remove extra country references)
+                        # e.g., " Allahabad India\" -> "Allahabad"
+                        city = city.replace('\\', '').replace('"', '')
+                        if country in city:
+                            city = city.replace(country, '').strip()
+                        city = city.replace(',', '').strip()
+                        
                         lat = float(row[2])
                         lon = float(row[3])
                         tz = float(row[5]) if len(row) > 5 else 0.0
                         
-                        # Create key as "Country,City" for display
-                        key = f"{country},{city}"
+                        # Create key as "Country, City" for display (with space after comma)
+                        key = f"{country}, {city}"
                         cities_dict[key] = (lat, lon, tz)
         except Exception as e:
             print(f"Warning: Could not load world cities database: {e}")
@@ -253,21 +261,11 @@ class AstroAIMainWindow(QWidget):
         self.tz_input.textChanged.connect(self._validate_inputs)
     
     def _set_default_values(self):
-        """Set default values and try to get location from IP"""
-        try:
-            # Try to get location from IP
-            loc = utils.get_place_from_user_ip_address()
-            if len(loc) == 4:
-                self.place_input.setText(loc[0])
-                self.lat_input.setText(str(loc[1]))
-                self.long_input.setText(str(loc[2]))
-                self.tz_input.setText(str(loc[3]))
-        except:
-            # Set default to Chennai if IP lookup fails
-            self.place_input.setText("Chennai,IN")
-            self.lat_input.setText("13.0827")
-            self.long_input.setText("80.2707")
-            self.tz_input.setText("5.5")
+        """Set default values to Allahabad"""
+        self.place_input.setText("India, Allahabad")
+        self.lat_input.setText("25.45")
+        self.long_input.setText("81.85")
+        self.tz_input.setText("5.5")
         
         self._validate_inputs()
     

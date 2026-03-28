@@ -56,7 +56,7 @@ _tropical_planet_list = {const._SUN:const.SUN_ID,const._MOON:const.MOON_ID,const
 # Hindu sunrise/sunset is calculated w.r.t middle of the sun's disk
 # They are geometric, i.e. "true sunrise/set", so refraction is not considered
 _rise_flags = swe.BIT_HINDU_RISING | swe.FLG_TRUEPOS | swe.FLG_SPEED # V3.2.3 # Speed flag added for retrogression
-PLANET_FLAGS = utils.set_flags_for_planet_positions()
+PLANET_FLAGS = utils.set_flags_for_planet_positions(use_nutation=True)
 RISE_FLAGS = utils.set_flags_for_rise_set(flags_for_rise=True)
 SET_FLAGS = utils.set_flags_for_rise_set(flags_for_rise=False)
 def set_tropical_planets():

@@ -1,0 +1,17 @@
+{
+  "name": "jkm",
+  "gender": "Male",
+  "year": 1994,
+  "month": 12,
+  "day": 28,
+  "hour": 18,
+  "minute": 50,
+  "second": 0,
+  "place_name": "India, Allahabad",
+  "latitude": 25.45,
+  "longitude": 81.85,
+  "timezone_offset": 5.5,
+  "unique_id": "20260328_165750_974c3957",
+  "generated_at": "2026-03-28T16:57:50.180730",
+  "version": "1.0.0"
+}
