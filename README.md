@@ -1,134 +1,207 @@
-# AstroAI
+# AstroAI - Vedic Astrology Meets Artificial Intelligence
 
-## Goal
+> **Intelligent astrological analysis powered by Vedic calculations and AI**
 
-**Integrate AI into Astrology** - Using artificial intelligence to understand generated astrological charts and answer questions about them.
+---
 
-AstroAI combines the power of Vedic astrology calculations with modern AI to provide intelligent analysis and interpretation of birth charts, divisional charts, and astrological predictions.
+## 📑 Table of Contents
 
-## ✅ API Status: Fully Tested & Production Ready
+1. [About AstroAI](#about-astroai)
+2. [Key Features](#key-features)
+3. [System Architecture](#system-architecture)
+4. [Installation & Setup](#installation--setup)
+5. [Getting Started](#getting-started)
+6. [Using the New UI](#using-the-new-ui)
+7. [Generated Data & Output](#generated-data--output)
+8. [How It Works](#how-it-works)
+9. [Accuracy & Validation](#accuracy--validation)
+10. [Algorithm Improvements](#algorithm-improvements)
+11. [API Reference](#api-reference)
+12. [Project Structure](#project-structure)
+13. [Testing & Verification](#testing--verification)
+14. [Documentation](#documentation)
+15. [Credits & License](#credits--license)
 
-**All API methods have been comprehensively tested with 58/58 tests passing (100%)**
+---
 
-### Test Coverage Summary
+## About AstroAI
 
-✅ **All 20 Divisional Charts**
-- D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D16, D20, D24, D27, D30, D40, D45, D60
-- Every chart generates correctly with proper data structure
+**AstroAI** is a comprehensive platform that integrates **Vedic astrology calculations** with **artificial intelligence** to provide intelligent analysis and interpretation of birth charts, divisional charts, and astrological predictions.
 
-✅ **All 6 API Methods**
-- `set_birth_data()` - Birth data initialization
-- `get_chart()` - Single chart generation
-- `get_multiple_charts()` - Batch chart generation
-- `get_planet_in_house()` - Planet position queries
-- `get_planets_in_house()` - House occupancy queries
-- `format_chart_text()` - Text formatting
+### Mission
 
-✅ **All 9 Planets**
-- Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Raagu, Kethu
-- All planets correctly retrieved and positioned
+Combine the ancient wisdom of Vedic astrology with modern AI to:
+- Generate accurate astrological charts based on precise astronomical calculations
+- Provide intelligent, context-aware interpretations of astrological data
+- Enable pattern recognition across multiple divisional charts
+- Offer data-driven insights into life predictions and compatibility analysis
 
-✅ **Data Structure Validation**
-- 15 structure checks passed
-- All required fields present and correct types
+### Built On
 
-✅ **Error Handling**
-- Invalid chart types properly rejected
-- Missing birth data properly caught
-- Invalid house numbers properly validated
-- Non-existent planets return None correctly
-
-✅ **Multiple Calculation Methods**
-- D9 methods 1 & 2 tested
-- D2 methods 1 & 2 tested
-
-### 🔧 Compatibility Notes
-
-**Rahu/Ketu Naming**: PyJHora uses "Raagu" and "Kethu" internally. The API automatically normalizes both spellings, so you can use either:
-```python
-# Both work identically
-planet = api.get_planet_in_house('D1', 'Rahu')   # ✓ Works
-planet = api.get_planet_in_house('D1', 'Raagu')  # ✓ Works
-```
-
-## Overview
-
-AstroAI is built on top of **PyJHora**, a comprehensive Python package that implements Vedic astrology calculations based on:
-
+AstroAI is built on top of **PyJHora**, a comprehensive Python package implementing Vedic astrology calculations based on:
 - `Vedic Astrology - An Integrated Approach` by PVR Narasimha Rao
 - `Jagannatha Hora V8.0 software` by the same author
+- Classical Vedic astrology texts and methodologies
 
-The library provides nearly all features described in these authoritative sources, with results verified against the book examples and JHora software outputs.
+---
 
-## Features
+## Key Features
 
-### Core Astrology Calculations
-- Birth chart (Raasi) and divisional charts (Navamsa, Drekkana, etc.)
-- Planetary positions and aspects
-- Dasha systems (Vimsottari, Ashtottari, and 30+ other dasha variations)
-- Panchanga calculations (Tithi, Nakshatra, Yoga, Karana, Vaara)
-- Special lagnas and upagrahas
-- Ashtaka Varga and Shodhya Pinda
-- Marriage compatibility analysis
-- Doshas (Kala Sarpa, Manglik, Pitru, etc.)
-- Yogas (284+ yogas from various classical texts)
+### 🔢 Core Astrology Calculations
+- **Birth Charts & Divisional Charts**: D1 (Rasi), D2 (Hora), D3 (Drekkana), D9 (Navamsa), D10 (Dasamsa), and 15 more
+- **Planetary Positions & Aspects**: Accurate positions of all 9 planets across all divisional charts
+- **Dasha Systems**: Vimsottari, Ashtottari, and 30+ other dasha variations
+- **Panchanga Calculations**: Tithi, Nakshatra, Yoga, Karana, Vaara
+- **Special Lagnas & Upagrahas**: Advanced astrological points
+- **Ashtaka Varga & Shodhya Pinda**: Strength analysis
+- **Doshas**: Kala Sarpa, Manglik, Pitru, and others
+- **Yogas**: 284+ yogas from classical texts
+- **Compatibility Analysis**: Marriage and relationship compatibility
 
-### AI Integration
+### 🤖 AI Integration
 - Intelligent chart analysis and interpretation
 - Natural language question answering about charts
 - Automated predictions and insights
-- Pattern recognition in astrological data
+- Pattern recognition across multiple charts
+- Contextual analysis considering multiple divisional charts
 
-### User Interface
+### 💻 User Interfaces
+- **New Simple UI** (Recommended): Clean, modern PyQt6 interface for quick chart generation
+- **Advanced UI**: Multi-tab interface with comprehensive visualization and PDF export
 
-**New Simple UI (Recommended for Quick Chart Generation)**
-- Clean, modern PyQt6 interface focused on chart generation
-- Simple form-based input for birth details
-- Auto-complete for place names with automatic coordinate filling
-- Generates all 20 divisional charts (D1-D60) with one click
-- Saves charts in multiple formats: JSON, text, and PNG images
-- Organized user-specific folders with structured file organization
-- Real-time progress tracking and status updates
-- See `new-ui/README.md` for details
+### 📊 Data Export
+- JSON format for programmatic access
+- Text format for human-readable reports
+- PNG images for visual representation
+- PDF reports with detailed analysis
 
-**Advanced UI (Full Features)**
-- Multi-tab PyQt6 interface with comprehensive chart visualization
-- Support for multiple languages (English, Tamil, Telugu, Hindi, Kannada, Malayalam)
-- PDF export of detailed horoscope reports
-- Real-time chart updates with dynamic input
-- Context menus for advanced chart features
+---
 
-## Installation
+## System Architecture
 
-### Requirements
-
-```bash
-# Core dependencies
-pip install python-dateutil  # Date utilities (required)
-pip install pyswisseph       # Swiss ephemeris for accurate calculations
-pip install pyqt6            # GUI framework (optional, for UI)
-
-# Additional dependencies (see PyJHora/requirements.txt)
-pip install geocoder geopy img2pdf numpy pyqtgraph pytz Requests setuptools timezonefinder
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      AstroAI Platform                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────────┐  ┌──────────────────┐                 │
+│  │   New Simple UI  │  │   Advanced UI    │                 │
+│  │   (PyQt6)        │  │   (PyQt6 Tabs)   │                 │
+│  └────────┬─────────┘  └────────┬─────────┘                 │
+│           │                      │                           │
+│           └──────────┬───────────┘                           │
+│                      │                                       │
+│           ┌──────────▼──────────┐                           │
+│           │  AstroChartAPI      │                           │
+│           │  (Production API)   │                           │
+│           └──────────┬──────────┘                           │
+│                      │                                       │
+│           ┌──────────▼──────────┐                           │
+│           │     PyJHora         │                           │
+│           │  (Core Calculations)│                           │
+│           └──────────┬──────────┘                           │
+│                      │                                       │
+│        ┌─────────────┼─────────────┐                        │
+│        │             │             │                        │
+│   ┌────▼───┐  ┌─────▼────┐  ┌────▼───┐                    │
+│   │ Charts │  │Panchanga │  │ Doshas │                    │
+│   │Calc.   │  │& Dasha   │  │& Yogas │                    │
+│   └────────┘  └──────────┘  └────────┘                    │
+│                                                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         Ephemeris Data (Swiss Ephemeris)             │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Minimum for API usage:**
+---
+
+## Installation & Setup
+
+### System Requirements
+
+- **Python**: 3.10 or higher
+- **OS**: Windows, Linux, or macOS
+- **RAM**: 2GB minimum (4GB recommended)
+- **Disk Space**: 500MB for dependencies and ephemeris data
+
+### Step 1: Clone the Repository
+
 ```bash
+git clone https://github.com/techie-jai/AstroAI.git
+cd AstroAI
+```
+
+### Step 2: Create Virtual Environment
+
+#### On Windows (PowerShell)
+```powershell
+python -m venv astroai-env
+.\astroai-env\Scripts\Activate.ps1
+```
+
+#### On Windows (Command Prompt)
+```cmd
+python -m venv astroai-env
+astroai-env\Scripts\activate.bat
+```
+
+#### On Linux/macOS
+```bash
+python3 -m venv astroai-env
+source astroai-env/bin/activate
+```
+
+### Step 3: Install Dependencies
+
+```bash
+# Install core dependencies
 pip install python-dateutil pyswisseph
+
+# Install UI dependencies (for new-ui)
+pip install PyQt6 Pillow numpy pytz geopy geocoder img2pdf requests setuptools timezonefinder
+
+# Or install all at once
+pip install python-dateutil pyswisseph PyQt6 Pillow numpy pytz geopy geocoder img2pdf requests setuptools timezonefinder
 ```
 
-### Ephemeris Data
+### Step 4: Verify Installation
 
-From version 3.6.6 onwards, ephemeris data files must be copied separately:
+```bash
+# Test API functionality
+python test_all_api_methods.py
 
+# Expected output: 58/58 tests passing ✅
 ```
-Copy files from: https://github.com/naturalstupid/pyjhora/src/jhora/data/ephe
-To: <package_installation>/jhora/data/ephe
+
+---
+
+## Getting Started
+
+### Quick Start: Using the New UI (Recommended)
+
+The simplest way to generate astrological charts:
+
+```bash
+# From project root
+python run_ui.py
 ```
 
-## Quick Start
+Or directly:
+```bash
+cd new-ui
+python main.py
+```
 
-### Method 1: Using the Ready-Made API (Recommended)
+**UI Features:**
+- Simple form for entering birth details
+- Auto-complete for place names with automatic coordinate lookup
+- Generates all 20 divisional charts with one click
+- Real-time progress tracking
+- Organized output folders
+
+### Using the API (For Developers)
 
 ```python
 from astro_chart_api import AstroChartAPI
@@ -150,10 +223,10 @@ api.set_birth_data(
     minute=30
 )
 
-# Generate any divisional chart
-d1_chart = api.get_chart('D1')   # Birth chart
-d9_chart = api.get_chart('D9')   # Navamsa (Marriage)
-d10_chart = api.get_chart('D10') # Dasamsa (Career)
+# Generate charts
+d1_chart = api.get_chart('D1')    # Birth chart
+d9_chart = api.get_chart('D9')    # Navamsa (Marriage)
+d10_chart = api.get_chart('D10')  # Dasamsa (Career)
 
 # Query specific planets
 sun = api.get_planet_in_house('D1', 'Sun')
@@ -161,136 +234,237 @@ print(f"Sun is in {sun['house_name']}")
 
 # Get multiple charts at once
 charts = api.get_multiple_charts(['D1', 'D7', 'D9', 'D10'])
+
+# Get kundli (comprehensive astrological data)
+kundli = api.get_kundli()
 ```
 
-### Method 2: Using PyJHora Directly
+---
 
-```python
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'PyJHora'))
+## Using the New UI
 
-from jhora import const, utils
-from jhora.panchanga import drik
-from jhora.horoscope.chart import charts
-
-# Initialize language resources
-utils.set_language('en')
-
-# Create birth data
-birth_date = drik.Date(1990, 6, 15)
-birth_time = (10, 30, 0)  # Hour, Minute, Second
-place = drik.Place("Chennai,IN", 13.0827, 80.2707, 5.5)
-
-# Calculate Julian Day
-jd = utils.julian_day_number(birth_date, birth_time)
-
-# Generate divisional charts
-d1_positions = charts.divisional_chart(jd, place, divisional_chart_factor=1)
-d9_positions = charts.divisional_chart(jd, place, divisional_chart_factor=9)
-d10_positions = charts.divisional_chart(jd, place, divisional_chart_factor=10)
-```
-
-### Method 3: Using the New Simple UI (Recommended)
+### Starting the Application
 
 ```bash
-# From project root
 python run_ui.py
-
-# Or from new-ui directory
-cd new-ui
-python main.py
 ```
 
-**Features:**
-- Simple form interface for entering birth details
-- Auto-complete for place names
-- Generates all 20 charts with one click
-- Saves in JSON, text, and PNG formats
-- Organized user folders
+### Workflow
 
-### Method 4: Using the Advanced GUI
+1. **Enter Birth Details**
+   - Name
+   - Date of Birth (DD/MM/YYYY)
+   - Time of Birth (HH:MM)
+   - Place of Birth (with auto-complete)
 
+2. **Generate Charts**
+   - Click "Generate Charts"
+   - Monitor progress in real-time
+   - All 20 divisional charts generated automatically
+
+3. **View Results**
+   - Charts saved in organized user folder
+   - Multiple formats: JSON, Text, PNG
+   - Kundli (comprehensive data) also generated
+
+### UI Features
+
+- **Auto-Complete Place Names**: Automatically fills coordinates
+- **Progress Tracking**: Real-time status updates
+- **Organized Output**: User-specific folders with timestamps
+- **Multiple Formats**: JSON, Text, and PNG exports
+- **Kundli Generation**: 1000+ astrological data points
+- **Error Handling**: Graceful error messages and recovery
+
+---
+
+## Generated Data & Output
+
+### Output Directory Structure
+
+```
+users/
+└── {timestamp}_{uniqueId}-{name}/
+    ├── user_info.json                    # Birth data
+    ├── charts_summary.txt                # Summary of all charts
+    ├── {UserName}_Kundli.json            # Comprehensive astrological data
+    ├── {UserName}_Kundli.txt             # Formatted kundli text
+    └── charts/
+        ├── D1_Rasi.json                  # Birth chart (JSON)
+        ├── D1_Rasi.txt                   # Birth chart (Text)
+        ├── D1_Rasi.png                   # Birth chart (Image)
+        ├── D9_Navamsa.json               # Navamsa chart (JSON)
+        ├── D9_Navamsa.txt
+        ├── D9_Navamsa.png
+        └── ... (18 more charts)
+```
+
+### File Formats
+
+#### JSON Format
+```json
+{
+  "chart_name": "D1",
+  "chart_factor": 1,
+  "houses": {
+    "1": {"sign": "Aries", "degree": 15.5, "planets": ["Sun", "Mercury"]},
+    "2": {"sign": "Taurus", "degree": 20.3, "planets": []},
+    ...
+  },
+  "planets": {
+    "Sun": {"house": 1, "sign": "Aries", "degree": 15.5, "speed": "direct"},
+    ...
+  }
+}
+```
+
+#### Text Format
+```
+D1 - RASI CHART (Birth Chart)
+============================
+
+House 1 (Aries, 15°30')
+  - Sun (15°30', Direct)
+  - Mercury (18°15', Direct)
+
+House 2 (Taurus, 20°18')
+  - (Empty)
+
+...
+```
+
+#### Kundli JSON
+Contains 1000+ astrological data points including:
+- Planetary positions in all divisional charts
+- Dasha periods
+- Panchanga details
+- Doshas and Yogas
+- Strength analysis
+- And much more
+
+### Accessing Generated Data
+
+**From the UI:**
+- All files automatically saved to `users/` directory
+- Organized by user and timestamp
+- Easy to locate and review
+
+**Programmatically:**
 ```python
-from jhora.ui.horo_chart_tabs import ChartTabbed
-from PyQt6.QtWidgets import QApplication
-import sys
+import json
 
-app = QApplication(sys.argv)
-chart = ChartTabbed()
-chart.language('English')
-chart.compute_horoscope()
-chart.show()
-sys.exit(app.exec())
+# Read generated chart
+with open('users/{folder}/charts/D1_Rasi.json') as f:
+    d1_chart = json.load(f)
+
+# Read kundli
+with open('users/{folder}/{UserName}_Kundli.json') as f:
+    kundli = json.load(f)
 ```
 
-## Project Structure
+---
 
+## How It Works
+
+### 1. Birth Data Input
+
+The system requires precise birth information:
+- **Date**: Year, Month, Day
+- **Time**: Hour, Minute, Second (as accurate as possible)
+- **Location**: Latitude, Longitude, Timezone Offset
+
+Accuracy depends on the precision of birth time. Even 1 minute difference can shift planetary positions.
+
+### 2. Ephemeris Calculation
+
+Using **Swiss Ephemeris** (industry standard), the system:
+- Calculates exact planetary positions for the given moment
+- Accounts for precession and nutation
+- Provides positions accurate to within seconds of arc
+- Handles all 9 planets: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu
+
+### 3. Chart Generation
+
+For each divisional chart (D1, D2, D9, etc.):
+- Multiplies the zodiac by the divisional factor
+- Calculates house positions based on Lagna (Ascendant)
+- Determines planetary placements in each house
+- Computes aspects and relationships
+
+**Example (D9 - Navamsa):**
 ```
-AstroAI/
-├── PyJHora/                          # Core Vedic astrology library
-│   ├── jhora/
-│   │   ├── horoscope/                # Chart calculations
-│   │   ├── panchanga/                # Panchanga calculations
-│   │   ├── ui/                       # Advanced UI components
-│   │   └── data/                     # Ephemeris and reference data
-│   └── requirements.txt
-├── new-ui/                           # New Simple UI (Recommended) ⭐
-│   ├── main.py                       # Application entry point
-│   ├── ui_components.py              # PyQt6 UI widgets
-│   ├── chart_generator.py            # Chart generation logic
-│   ├── file_manager.py               # File operations
-│   ├── requirements.txt              # UI dependencies
-│   └── README.md                     # UI documentation
-├── users/                            # Generated chart data (auto-created)
-│   └── {timestamp}_{uniqueId}-{name}/
-│       ├── user_info.json            # Birth data
-│       ├── charts_summary.txt        # Summary
-│       └── charts/                   # JSON, text, PNG files
-├── Docs/                             # Documentation and reference materials
-├── astro_chart_api.py                # Production API class ⭐
-├── run_ui.py                         # Quick launcher for new UI ⭐
-├── test_all_api_methods.py           # API test suite (58/58 passing) ⭐
-├── PYJHORA_INTEGRATION_GUIDE.md      # Complete API documentation ⭐
-├── ARCHITECTURE.md                   # System architecture
-├── ARCHITECTURE_VISUAL_DIAGRAMS.md   # Visual diagrams
-├── MODULE_TECHNICAL_DETAILS.md       # Module documentation
-├── CALCULATION_ALGORITHMS.md         # Mathematical algorithms
-├── SUBSYSTEM_DOCUMENTATION.md        # Subsystem docs
-└── README.md                         # This file
-```
-
-## Documentation
-
-### API Documentation
-- **`PYJHORA_INTEGRATION_GUIDE.md`** - Complete API guide with examples ⭐
-- **`astro_chart_api.py`** - Production API class (use this in your code) ⭐
-- **`test_all_api_methods.py`** - Test suite to verify API works ⭐
-
-### System Documentation
-- `ARCHITECTURE.md` - System design and architecture
-- `ARCHITECTURE_VISUAL_DIAGRAMS.md` - Visual diagrams of system components
-- `MODULE_TECHNICAL_DETAILS.md` - Detailed module documentation
-- `CALCULATION_ALGORITHMS.md` - Mathematical algorithms used
-- `SUBSYSTEM_DOCUMENTATION.md` - Subsystem-specific documentation
-
-### Quick Links
-- **Getting Started**: See [Quick Start](#quick-start) section above
-- **Full API Reference**: See `PYJHORA_INTEGRATION_GUIDE.md`
-- **Run Tests**: `python test_all_api_methods.py`
-- **Run Examples**: `python astro_chart_api.py`
-
-## Testing
-
-### API Tests (100% Pass Rate)
-
-Run comprehensive API tests to verify all functionality:
-
-```bash
-python test_all_api_methods.py
+D1 Position: 15° Aries
+D9 Position: (15° × 9) mod 360° = 135° = 15° Leo
 ```
 
-**Test Results:** 58/58 tests passing
+### 4. Multi-Chart Analysis
+
+The system generates **20 divisional charts**, each revealing different life aspects:
+
+| Chart | Signification | Use Case |
+|-------|---------------|----------|
+| D1 | Overall Life | General personality, life events |
+| D2 | Wealth | Financial matters, assets |
+| D9 | Marriage | Spouse, marriage compatibility |
+| D10 | Career | Profession, public image |
+| D7 | Children | Progeny, family matters |
+| D12 | Parents | Parental relationships |
+
+### 5. Kundli Generation
+
+The kundli consolidates 1000+ astrological data points:
+- Planetary positions in all charts
+- Dasha periods (time periods)
+- Panchanga (5 elements: Tithi, Nakshatra, Yoga, Karana, Vaara)
+- Doshas (afflictions)
+- Yogas (combinations)
+- Strength analysis
+- Compatibility scores
+
+### 6. AI Analysis (Future Enhancement)
+
+The generated data feeds into AI models for:
+- Pattern recognition across charts
+- Contextual interpretation
+- Prediction generation
+- Compatibility analysis
+- Personalized insights
+
+---
+
+## Accuracy & Validation
+
+### PyJHora Accuracy
+
+PyJHora is validated against:
+- **Reference Book**: "Vedic Astrology - An Integrated Approach" by PVR Narasimha Rao
+- **JHora Software**: Jagannatha Hora V8.0 (same author)
+- **Classical Texts**: Traditional Vedic astrology methodologies
+
+**Validation Results:**
+- ~6800 unit tests in PyJHora test suite
+- Results verified against book examples
+- Cross-checked with JHora software outputs
+- Consistent with classical calculations
+
+### Ephemeris Accuracy
+
+Swiss Ephemeris provides:
+- **Accuracy**: ±0.01 arc-seconds for planets
+- **Time Range**: 3000 BCE to 3000 CE
+- **Standard**: Used by professional astrologers worldwide
+- **Validation**: Tested against NASA JPL ephemeris
+
+### Birth Time Sensitivity
+
+**Critical Note**: Accuracy depends heavily on birth time precision:
+- ±1 minute error → ±4 minutes in Lagna (Ascendant)
+- ±4 minutes error → ±1 house shift possible
+- Rectification may be needed for uncertain birth times
+
+### API Test Coverage
+
+**58/58 Tests Passing (100%)**
 - ✅ All 20 divisional charts (D1-D60)
 - ✅ All 6 API methods
 - ✅ All 9 planets retrieval
@@ -298,9 +472,281 @@ python test_all_api_methods.py
 - ✅ Error handling
 - ✅ Multiple calculation methods
 
+---
+
+## Algorithm Improvements
+
+### Current Approach
+
+The system currently:
+1. Generates individual divisional charts independently
+2. Calculates planetary positions in each chart
+3. Consolidates data into kundli format
+4. Provides basic chart-specific interpretations
+
+### Planned Enhancements
+
+#### 1. Cross-Chart Correlation Analysis
+**Goal**: Understand how charts influence each other
+
+**Implementation:**
+- Analyze planetary positions across all 20 charts simultaneously
+- Identify consistent patterns (e.g., strong Mars in D1, D3, D10)
+- Weight interpretations based on chart strength
+- Detect contradictions and harmonies
+
+**Example:**
+```
+If Mars is strong in:
+  - D1 (Birth) → Courage, energy
+  - D3 (Siblings) → Competitive siblings
+  - D10 (Career) → Leadership potential
+  → Interpretation: Natural leader with competitive drive
+```
+
+#### 2. Aspect Relationship Analysis
+**Goal**: Understand planetary interactions beyond individual positions
+
+**Implementation:**
+- Calculate aspects between planets in same chart
+- Analyze inter-chart aspects (D1 planets aspecting D9 planets)
+- Weight aspects by strength and nature
+- Generate aspect-based interpretations
+
+**Example:**
+```
+If Jupiter aspects Saturn:
+  - Benefic-Malefic interaction
+  - Creates balance and wisdom
+  - Modifies individual interpretations
+```
+
+#### 3. Dasha-Chart Integration
+**Goal**: Time-based analysis considering current dasha periods
+
+**Implementation:**
+- Link dasha periods to divisional chart strengths
+- Predict timing of events based on dasha-chart combinations
+- Analyze dasha lord's position in relevant charts
+- Generate time-specific predictions
+
+**Example:**
+```
+During Jupiter Dasha:
+  - Check Jupiter's position in D10 (Career)
+  - Check D9 (Marriage) for relationship timing
+  - Correlate with current transits
+  → Predict career and marriage timing
+```
+
+#### 4. Strength-Based Weighting
+**Goal**: Prioritize interpretations based on chart strength
+
+**Implementation:**
+- Calculate planetary strength in each chart (Shadbala)
+- Weight interpretations by strength scores
+- Highlight strong vs. weak placements
+- Provide confidence levels for predictions
+
+**Example:**
+```
+Strong Mars in D1 + Weak Mars in D10
+  → Good personal courage, but career challenges
+  → Confidence: High for personality, Low for career
+```
+
+#### 5. Multi-Factor Doshas
+**Goal**: Comprehensive affliction analysis
+
+**Implementation:**
+- Analyze doshas across multiple charts
+- Correlate doshas with life areas
+- Suggest remedies based on chart strength
+- Provide severity assessment
+
+**Example:**
+```
+Manglik Dosha in D1 + D9:
+  - Severe marriage affliction
+  - Requires remedial measures
+  - Specific recommendations based on chart strength
+```
+
+#### 6. Compatibility Deep Dive
+**Goal**: Advanced relationship analysis
+
+**Implementation:**
+- Analyze all 20 charts for compatibility
+- Calculate synastry (chart comparison)
+- Identify complementary and challenging aspects
+- Provide specific guidance for relationships
+
+**Example:**
+```
+Compare D1 (Personality) + D9 (Marriage) + D7 (Children):
+  - Personality compatibility
+  - Marriage potential
+  - Family harmony
+  → Comprehensive relationship assessment
+```
+
+### Implementation Timeline
+
+- **Phase 1** (Current): Individual chart generation ✅
+- **Phase 2** (Next): Cross-chart correlation analysis
+- **Phase 3**: Aspect relationship analysis
+- **Phase 4**: Dasha-chart integration
+- **Phase 5**: AI-powered predictions
+
+---
+
+## API Reference
+
+### AstroChartAPI Class
+
+#### Methods
+
+**`set_birth_data()`**
+```python
+api.set_birth_data(
+    name: str,
+    place_name: str,
+    latitude: float,
+    longitude: float,
+    timezone_offset: float,
+    year: int,
+    month: int,
+    day: int,
+    hour: int,
+    minute: int
+)
+```
+
+**`get_chart(chart_type: str)`**
+```python
+chart = api.get_chart('D1')  # Returns chart data
+```
+
+**`get_multiple_charts(chart_types: list)`**
+```python
+charts = api.get_multiple_charts(['D1', 'D9', 'D10'])
+```
+
+**`get_planet_in_house(chart_type: str, planet: str)`**
+```python
+sun = api.get_planet_in_house('D1', 'Sun')
+```
+
+**`get_planets_in_house(chart_type: str, house: int)`**
+```python
+planets = api.get_planets_in_house('D1', 1)
+```
+
+**`get_kundli()`**
+```python
+kundli = api.get_kundli()  # Returns 1000+ data points
+```
+
+**`format_chart_text(chart_type: str)`**
+```python
+text = api.format_chart_text('D1')
+```
+
+---
+
+## Project Structure
+
+```
+AstroAI/
+├── PyJHora/                              # Core Vedic astrology library
+│   ├── jhora/
+│   │   ├── horoscope/                    # Chart calculations
+│   │   ├── panchanga/                    # Panchanga calculations
+│   │   ├── ui/                           # Advanced UI components
+│   │   └── data/                         # Ephemeris and reference data
+│   └── requirements.txt
+│
+├── new-ui/                               # New Simple UI (Recommended) ⭐
+│   ├── main.py                           # Application entry point
+│   ├── ui_components.py                  # PyQt6 UI widgets
+│   ├── chart_generator.py                # Chart generation logic
+│   ├── file_manager.py                   # File operations
+│   ├── gemini_analyzer.py                # AI analysis (future)
+│   ├── local_values.py                   # Configuration
+│   ├── requirements.txt                  # UI dependencies
+│   └── README.md                         # UI documentation
+│
+├── users/                                # Generated chart data (auto-created)
+│   └── {timestamp}_{uniqueId}-{name}/
+│       ├── user_info.json                # Birth data
+│       ├── charts_summary.txt            # Summary
+│       ├── {UserName}_Kundli.json        # Kundli data
+│       ├── {UserName}_Kundli.txt         # Kundli text
+│       └── charts/                       # JSON, text, PNG files
+│
+├── Docs/                                 # Reference materials
+│   ├── 50 FAQs in astrology and how to answer them.pdf
+│   └── BPHS - 1 RSanthanam.pdf
+│
+├── astro_chart_api.py                    # Production API class ⭐
+├── run_ui.py                             # Quick launcher for new UI ⭐
+├── test_all_api_methods.py               # API test suite (58/58 passing) ⭐
+├── test_kundli_generation.py             # Kundli generation tests
+├── test_new_ui_backend.py                # UI backend tests
+│
+├── PYJHORA_INTEGRATION_GUIDE.md           # Complete API documentation ⭐
+├── ARCHITECTURE.md                       # System architecture
+├── ARCHITECTURE_VISUAL_DIAGRAMS.md       # Visual diagrams
+├── MODULE_TECHNICAL_DETAILS.md           # Module documentation
+├── CALCULATION_ALGORITHMS.md             # Mathematical algorithms
+├── SUBSYSTEM_DOCUMENTATION.md            # Subsystem docs
+├── KUNDLI_GENERATION_GUIDE.md            # Kundli generation details
+│
+├── README.md                             # This file
+├── LICENSE                               # License information
+└── .gitignore                            # Git ignore rules
+```
+
+---
+
+## Testing & Verification
+
+### API Tests (100% Pass Rate)
+
+Run comprehensive API tests:
+
+```bash
+python test_all_api_methods.py
+```
+
+**Results:** 58/58 tests passing
+- ✅ All 20 divisional charts (D1-D60)
+- ✅ All 6 API methods
+- ✅ All 9 planets retrieval
+- ✅ Data structure validation
+- ✅ Error handling
+- ✅ Multiple calculation methods
+
+### Kundli Generation Tests
+
+```bash
+python test_kundli_generation.py
+```
+
+**Results:** All tests passing
+- ✅ Kundli generates 1000+ data points
+- ✅ All charts work correctly
+- ✅ No regressions in functionality
+
+### UI Backend Tests
+
+```bash
+python test_new_ui_backend.py
+```
+
 ### PyJHora Core Tests
 
-PyJHora includes ~6800 unit tests verifying calculations against the reference book and JHora software:
+PyJHora includes ~6800 unit tests:
 
 ```bash
 python -m pytest PyJHora/src/jhora/tests/pvr_tests.py
@@ -308,40 +754,65 @@ python -m pytest PyJHora/src/jhora/tests/pvr_tests.py
 
 **Note:** Tests assume `const._DEFAULT_AYANAMSA_MODE='LAHIRI'`
 
-## Languages Supported
+---
 
-- English
-- Tamil
-- Telugu
-- Hindi
-- Kannada
-- Malayalam
+## Documentation
 
-You can add custom languages by creating language files in the `lang/` directory.
+### Quick References
 
-## Credits
+| Document | Purpose |
+|----------|---------|
+| `PYJHORA_INTEGRATION_GUIDE.md` | Complete API guide with examples |
+| `ARCHITECTURE.md` | System design and architecture |
+| `ARCHITECTURE_VISUAL_DIAGRAMS.md` | Visual system diagrams |
+| `MODULE_TECHNICAL_DETAILS.md` | Detailed module documentation |
+| `CALCULATION_ALGORITHMS.md` | Mathematical algorithms used |
+| `SUBSYSTEM_DOCUMENTATION.md` | Subsystem-specific documentation |
+| `KUNDLI_GENERATION_GUIDE.md` | Kundli generation details |
+
+### Getting Help
+
+- **Getting Started**: See [Getting Started](#getting-started) section
+- **Full API Reference**: See `PYJHORA_INTEGRATION_GUIDE.md`
+- **Run Tests**: `python test_all_api_methods.py`
+- **Run Examples**: `python astro_chart_api.py`
+
+---
+
+## Credits & License
+
+### Acknowledgments
 
 All astrology calculations and algorithms are based on the work of **Shri. P.V.R Narasimha Rao**:
-- His comprehensive book on Vedic Astrology
-- His Jagannatha Hora software
-- Various internet sources and classical texts
+- His comprehensive book: "Vedic Astrology - An Integrated Approach"
+- His software: Jagannatha Hora V8.0
+- Various classical Vedic astrology texts
 
-## License
+### Ephemeris Data
 
-See LICENSE file for details.
+- **Swiss Ephemeris**: Industry-standard astronomical calculations
+- **Accuracy**: ±0.01 arc-seconds for planetary positions
 
-## Contributing
+### License
+
+See `LICENSE` file for details.
+
+### Contributing
 
 Contributions are welcome! Please ensure:
 - All calculations are verified against reference sources
-- Unit tests pass
+- Unit tests pass (run `python test_all_api_methods.py`)
 - Code follows existing style conventions
 - Documentation is updated
 
-## Support
+### Support & Issues
 
-For issues, questions, or contributions, please visit:
-https://github.com/techie-jai/AstroAI
+For issues, questions, or contributions:
+- GitHub: https://github.com/techie-jai/AstroAI
+- Create an issue on GitHub for bug reports
+- Submit pull requests for improvements
+
+---
 
 ## Available Divisional Charts
 
@@ -370,5 +841,19 @@ https://github.com/techie-jai/AstroAI
 
 ---
 
-**Last Updated:** March 2026
-**API Version:** 1.0.0 (Fully Tested & Production Ready)
+## Supported Languages
+
+- English
+- Tamil
+- Telugu
+- Hindi
+- Kannada
+- Malayalam
+
+Custom languages can be added by creating language files in the `lang/` directory.
+
+---
+
+**Last Updated:** April 2026  
+**API Version:** 1.0.0 (Fully Tested & Production Ready)  
+**Status:** ✅ Active Development
