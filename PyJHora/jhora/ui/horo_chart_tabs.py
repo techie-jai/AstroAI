@@ -34,12 +34,9 @@ from PyQt6.QtWidgets import QStyledItemDelegate, QWidget, QVBoxLayout, QHBoxLayo
 from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtCore import Qt
 from _datetime import datetime, timedelta, timezone
-try:
-    import img2pdf
-    _IMG2PDF_AVAILABLE = True
-except Exception as e:
-    _IMG2PDF_AVAILABLE = False
-    print(f"Warning: img2pdf not available. PDF export will be disabled. Error: {e}")
+# Lazy import img2pdf to avoid blocking during module load
+_IMG2PDF_AVAILABLE = False
+img2pdf = None
 from PIL import Image
 import numpy as np
 from jhora import const, utils
@@ -5713,6 +5710,16 @@ class ChartTabbed(QWidget):
                 _combine_multiple_images(image_files[i:i+2],combined_image_file)
                 combined_image_files.append(combined_image_file)
                 ci += 1
+            # Lazy load img2pdf only when needed
+            global img2pdf, _IMG2PDF_AVAILABLE
+            if img2pdf is None:
+                try:
+                    import img2pdf
+                    _IMG2PDF_AVAILABLE = True
+                except Exception as e:
+                    _IMG2PDF_AVAILABLE = False
+                    print(f"Warning: Cannot create PDF. img2pdf library is not available. Error: {e}")
+            
             if _IMG2PDF_AVAILABLE:
                 with open(pdf_file_name,"wb") as f:
                     f.write(img2pdf.convert(combined_image_files))

@@ -31,11 +31,14 @@ from PyQt6.QtWidgets import QStyledItemDelegate, QWidget, QVBoxLayout, QHBoxLayo
 from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtCore import Qt, QTimer, QDateTime, QTimeZone
 from _datetime import datetime
-import img2pdf
+# Lazy import img2pdf to avoid blocking during module load
+_IMG2PDF_AVAILABLE = False
+img2pdf = None
 from PIL import Image
 from jhora import const, utils
 from jhora.panchanga import drik, pancha_paksha, vratha, info
-vratha.load_festival_data(const._FESTIVAL_FILE)
+# Lazy load festival data - will be loaded on first use instead of at import time
+# vratha.load_festival_data(const._FESTIVAL_FILE)
 _available_ayanamsa_modes = [k for k in list(const.available_ayanamsa_modes.keys()) if k not in ['SENTHIL','SIDM_USER']]
 _KEY_COLOR = 'brown'; _VALUE_COLOR = 'blue'; _HEADER_COLOR='green'
 _KEY_LENGTH=100; _VALUE_LENGTH=100; _HEADER_LENGTH=100
@@ -795,9 +798,22 @@ class PanchangaWidget(QWidget):
                 _combine_multiple_images(image_files[i:i+2],combined_image_file)
                 combined_image_files.append(combined_image_file)
                 ci += 1
-            with open(pdf_file_name,"wb") as f:
-                f.write(img2pdf.convert(combined_image_files))
-            f.close()
+            # Lazy load img2pdf only when needed
+            global img2pdf, _IMG2PDF_AVAILABLE
+            if img2pdf is None:
+                try:
+                    import img2pdf
+                    _IMG2PDF_AVAILABLE = True
+                except Exception as e:
+                    _IMG2PDF_AVAILABLE = False
+                    print(f"Error: img2pdf not available. Cannot create PDF. Error: {e}")
+            
+            if _IMG2PDF_AVAILABLE:
+                with open(pdf_file_name,"wb") as f:
+                    f.write(img2pdf.convert(combined_image_files))
+                f.close()
+            else:
+                print("Error: img2pdf not available. Cannot create PDF.")
         for image_file in image_files+combined_image_files:
             if os.path.exists(image_file):
                 os.remove(image_file)

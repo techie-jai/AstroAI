@@ -1,0 +1,17 @@
+{
+  "name": "John Doe",
+  "gender": "Female",
+  "year": 1996,
+  "month": 9,
+  "day": 21,
+  "hour": 1,
+  "minute": 50,
+  "second": 0,
+  "place_name": "India",
+  "latitude": 33.968,
+  "longitude": 77.5552,
+  "timezone_offset": 5.5,
+  "unique_id": "20260328_041454_99db8fec",
+  "generated_at": "2026-03-28T04:14:54.971521",
+  "version": "1.0.0"
+}
