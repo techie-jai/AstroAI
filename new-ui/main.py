@@ -23,6 +23,7 @@ swe.set_ephe_path(ephe_path)
 from ui_components import AstroAIMainWindow
 from chart_generator import ChartGeneratorWorker, ChartImageRenderer
 from file_manager import FileManager
+from gemini_analyzer import GeminiAnalyzer
 
 
 class AstroAIApplication:
@@ -39,9 +40,12 @@ class AstroAIApplication:
         self.current_folder = None
         self.generated_charts = []
         self.kundli_generated = False
+        self.kundli_json_path = None
+        self.analyzer = None
         
         # Connect signals
         self.window.generate_requested.connect(self.start_generation)
+        self.window.analyze_requested.connect(self.start_analysis)
         
         # Set window icon if available
         try:
@@ -101,12 +105,14 @@ class AstroAIApplication:
             kundli_filename = f"{user_name}_Kundli"
             
             # Save kundli JSON
-            self.file_manager.save_chart_json(self.current_folder, kundli_filename, kundli_data)
+            json_path = self.file_manager.save_chart_json(self.current_folder, kundli_filename, kundli_data)
             
             # Save kundli text
             self.file_manager.save_chart_text(self.current_folder, kundli_filename, kundli_text)
             
             self.kundli_generated = True
+            self.kundli_json_path = json_path
+            self.window.set_kundli_path(json_path)
             print(f"Kundli saved as: {kundli_filename}")
             
         except Exception as e:
@@ -179,6 +185,66 @@ class AstroAIApplication:
     def on_error(self, error_message: str):
         """Handle errors during generation"""
         print(f"Error: {error_message}")
+    
+    def start_analysis(self, kundli_json_path: str, api_key: str):
+        """Start kundli analysis with Gemini API"""
+        try:
+            self.window.update_progress(0, "Initializing AI analysis...")
+            self.window.enable_analyze_button(False)
+            
+            # Create analyzer
+            self.analyzer = GeminiAnalyzer(api_key)
+            
+            # Start analysis
+            self.analyzer.analyze_kundli(
+                kundli_json_path,
+                on_complete=self.on_analysis_complete,
+                on_error=self.on_analysis_error,
+                on_progress=self.on_analysis_progress
+            )
+            
+        except Exception as e:
+            self.window.show_error(f"Failed to start analysis: {str(e)}")
+            self.window.enable_analyze_button(True)
+    
+    def on_analysis_progress(self, message: str):
+        """Handle analysis progress updates"""
+        self.window.update_progress(50, message)
+    
+    def on_analysis_complete(self, analysis_text: str, analysis_json_path: str):
+        """Handle analysis completion"""
+        try:
+            # Save analysis result as text file
+            user_name = self.window.name_input.text()
+            analysis_filename = f"{user_name}_AI_Analysis"
+            
+            # Save as text file
+            analysis_text_path = os.path.join(self.current_folder, "charts", "text", f"{analysis_filename}.txt")
+            os.makedirs(os.path.dirname(analysis_text_path), exist_ok=True)
+            
+            with open(analysis_text_path, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("ASTROLOGICAL ANALYSIS BY GEMINI AI\n")
+                f.write("=" * 80 + "\n\n")
+                f.write(analysis_text)
+                f.write("\n\n" + "=" * 80 + "\n")
+            
+            self.window.update_progress(100, "Analysis complete!")
+            self.window.show_success(self.current_folder)
+            self.window.enable_analyze_button(True)
+            
+            print(f"Analysis saved as: {analysis_filename}")
+            print(f"Analysis JSON saved at: {analysis_json_path}")
+            
+        except Exception as e:
+            self.window.show_error(f"Error saving analysis: {str(e)}")
+            self.window.enable_analyze_button(True)
+    
+    def on_analysis_error(self, error_message: str):
+        """Handle analysis errors"""
+        self.window.show_error(error_message)
+        self.window.update_progress(0, "Analysis failed")
+        self.window.enable_analyze_button(True)
     
     def run(self):
         """Run the application"""

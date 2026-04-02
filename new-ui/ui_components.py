@@ -10,7 +10,7 @@ import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QComboBox, QPushButton, QProgressBar,
                              QDateEdit, QTimeEdit, QMessageBox, QCompleter,
-                             QGroupBox, QFormLayout, QTextEdit)
+                             QGroupBox, QFormLayout, QTextEdit, QDialog)
 from PyQt6.QtCore import Qt, QDate, QTime, pyqtSignal
 from PyQt6.QtGui import QFont, QDoubleValidator
 
@@ -30,6 +30,7 @@ class AstroAIMainWindow(QWidget):
     """Main window for AstroAI chart generation"""
     
     generate_requested = pyqtSignal(dict)
+    analyze_requested = pyqtSignal(str, str)  # (kundli_json_path, api_key)
     
     def __init__(self):
         super().__init__()
@@ -78,6 +79,9 @@ class AstroAIMainWindow(QWidget):
         progress_group = self._create_progress_group()
         main_layout.addWidget(progress_group)
         
+        # Buttons layout
+        buttons_layout = QHBoxLayout()
+        
         # Generate button
         self.generate_btn = QPushButton("Generate All Charts")
         self.generate_btn.setMinimumHeight(50)
@@ -96,7 +100,30 @@ class AstroAIMainWindow(QWidget):
                 color: #666666;
             }
         """)
-        main_layout.addWidget(self.generate_btn)
+        buttons_layout.addWidget(self.generate_btn)
+        
+        # Analyse using AI button
+        self.analyze_btn = QPushButton("Analyse using AI")
+        self.analyze_btn.setMinimumHeight(50)
+        self.analyze_btn.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        self.analyze_btn.setEnabled(False)
+        self.analyze_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #0b7dda;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
+        buttons_layout.addWidget(self.analyze_btn)
+        
+        main_layout.addLayout(buttons_layout)
         
         # Status label
         self.status_label = QLabel("")
@@ -216,6 +243,7 @@ class AstroAIMainWindow(QWidget):
     def _connect_signals(self):
         """Connect UI signals"""
         self.generate_btn.clicked.connect(self._on_generate_clicked)
+        self.analyze_btn.clicked.connect(self._on_analyze_clicked)
         self.place_input.textChanged.connect(self._on_place_changed)
         
         # Connect validation to all required fields
@@ -325,6 +353,28 @@ class AstroAIMainWindow(QWidget):
         # Emit signal
         self.generate_requested.emit(user_data)
     
+    def _on_analyze_clicked(self):
+        """Handle analyze button click"""
+        # Show API key dialog
+        dialog = APIKeyDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            api_key = dialog.get_api_key()
+            if api_key.strip():
+                # Emit signal with kundli path and API key
+                self.analyze_requested.emit(self.kundli_json_path, api_key)
+            else:
+                QMessageBox.warning(self, "Missing API Key", 
+                                  "Please enter your Gemini API key.")
+    
+    def set_kundli_path(self, kundli_path: str):
+        """Set the path to the kundli JSON file"""
+        self.kundli_json_path = kundli_path
+        self.analyze_btn.setEnabled(True)
+    
+    def enable_analyze_button(self, enabled: bool):
+        """Enable or disable the analyze button"""
+        self.analyze_btn.setEnabled(enabled)
+    
     def set_generating_state(self, is_generating: bool):
         """Set UI state during generation"""
         self.generate_btn.setEnabled(not is_generating)
@@ -384,3 +434,56 @@ class AstroAIMainWindow(QWidget):
         except Exception as e:
             QMessageBox.warning(self, "Cannot Open Folder", 
                               f"Could not open folder: {str(e)}")
+
+
+class APIKeyDialog(QDialog):
+    """Dialog for entering Gemini API key"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Enter Gemini API Key")
+        self.setMinimumWidth(500)
+        self._init_ui()
+    
+    def _init_ui(self):
+        """Initialize the dialog UI"""
+        layout = QVBoxLayout()
+        
+        # Info label
+        info_label = QLabel("Enter your Google Gemini API key to analyse the kundli:")
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+        
+        # API key input
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setPlaceholderText("Paste your Gemini API key here...")
+        self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        layout.addWidget(self.api_key_input)
+        
+        # Info about getting API key
+        help_label = QLabel(
+            "Get your API key from: https://makersuite.google.com/app/apikey\n"
+            "Keep your API key secure and never share it."
+        )
+        help_label.setWordWrap(True)
+        help_label.setStyleSheet("color: #666; font-size: 10px; font-style: italic;")
+        layout.addWidget(help_label)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        
+        ok_btn = QPushButton("Analyse")
+        ok_btn.clicked.connect(self.accept)
+        button_layout.addWidget(ok_btn)
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+    
+    def get_api_key(self) -> str:
+        """Get the entered API key"""
+        return self.api_key_input.text()
