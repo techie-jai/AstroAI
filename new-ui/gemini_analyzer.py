@@ -94,7 +94,7 @@ Please provide a comprehensive astrological analysis covering:
 Format your response in a clear, readable manner."""
         
         # Call Gemini API with both prompt and JSON data
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3-pro-preview')
         response = model.generate_content(prompt)
         
         return response.text
