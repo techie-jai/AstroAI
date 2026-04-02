@@ -211,30 +211,18 @@ class AstroAIApplication:
         """Handle analysis progress updates"""
         self.window.update_progress(50, message)
     
-    def on_analysis_complete(self, analysis_text: str, analysis_json_path: str):
+    def on_analysis_complete(self, analysis_text: str, analysis_pdf_path: str):
         """Handle analysis completion"""
         try:
-            # Save analysis result as text file
             user_name = self.window.name_input.text()
             analysis_filename = f"{user_name}_AI_Analysis"
-            
-            # Save as text file
-            analysis_text_path = os.path.join(self.current_folder, "charts", "text", f"{analysis_filename}.txt")
-            os.makedirs(os.path.dirname(analysis_text_path), exist_ok=True)
-            
-            with open(analysis_text_path, 'w', encoding='utf-8') as f:
-                f.write("=" * 80 + "\n")
-                f.write("ASTROLOGICAL ANALYSIS BY GEMINI AI\n")
-                f.write("=" * 80 + "\n\n")
-                f.write(analysis_text)
-                f.write("\n\n" + "=" * 80 + "\n")
             
             self.window.update_progress(100, "Analysis complete!")
             self.window.show_success(self.current_folder)
             self.window.enable_analyze_button(True)
             
             print(f"Analysis saved as: {analysis_filename}")
-            print(f"Analysis JSON saved at: {analysis_json_path}")
+            print(f"Analysis PDF saved at: {analysis_pdf_path}")
             
         except Exception as e:
             self.window.show_error(f"Error saving analysis: {str(e)}")
