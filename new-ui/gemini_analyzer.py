@@ -9,6 +9,11 @@ import os
 from typing import Dict, Optional
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
 
+try:
+    from local_values import GEMINI_API_KEY
+except ImportError:
+    GEMINI_API_KEY = None
+
 
 class GeminiAnalyzerWorker(QObject):
     """Worker thread for Gemini API analysis"""

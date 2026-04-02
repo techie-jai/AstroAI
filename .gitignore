@@ -38,3 +38,7 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local configuration files with sensitive data
+local_values.py
+new-ui/local_values.py

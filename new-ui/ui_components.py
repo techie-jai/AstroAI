@@ -14,6 +14,11 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt, QDate, QTime, pyqtSignal
 from PyQt6.QtGui import QFont, QDoubleValidator
 
+try:
+    from local_values import GEMINI_API_KEY
+except ImportError:
+    GEMINI_API_KEY = None
+
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'PyJHora'))
 
@@ -355,16 +360,15 @@ class AstroAIMainWindow(QWidget):
     
     def _on_analyze_clicked(self):
         """Handle analyze button click"""
-        # Show API key dialog
-        dialog = APIKeyDialog(self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            api_key = dialog.get_api_key()
-            if api_key.strip():
-                # Emit signal with kundli path and API key
-                self.analyze_requested.emit(self.kundli_json_path, api_key)
-            else:
-                QMessageBox.warning(self, "Missing API Key", 
-                                  "Please enter your Gemini API key.")
+        # Use API key from local_values.py
+        if not GEMINI_API_KEY:
+            QMessageBox.critical(self, "Missing API Key", 
+                               "Gemini API key not found in local_values.py.\n"
+                               "Please add your API key to the local_values.py file.")
+            return
+        
+        # Emit signal with kundli path and API key
+        self.analyze_requested.emit(self.kundli_json_path, GEMINI_API_KEY)
     
     def set_kundli_path(self, kundli_path: str):
         """Set the path to the kundli JSON file"""
