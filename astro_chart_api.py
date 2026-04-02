@@ -62,6 +62,7 @@ class AstroChartAPI:
         """Initialize the API"""
         self.current_horoscope = None
         self.current_birth_data = None
+        self.current_kundli_data = None
     
     def set_birth_data(self, 
                        name: str,
@@ -282,6 +283,77 @@ class AstroChartAPI:
         
         chart_data = self.get_chart(chart_type)
         return chart_data['houses'][house_number - 1]
+    
+    def get_kundli(self) -> Dict:
+        """
+        Generate complete kundli (horoscope information) with all components
+        
+        Returns:
+            Dictionary with complete kundli data including:
+            - horoscope_info: Dictionary with all astrological information
+            - horoscope_charts: List of chart representations
+            - birth_data: Birth information
+        """
+        if not self.current_horoscope:
+            raise ValueError("Birth data not set. Call set_birth_data() first.")
+        
+        try:
+            horoscope_info, horoscope_charts, vimsottari_info = self.current_horoscope.get_horoscope_information()
+            
+            self.current_kundli_data = {
+                'horoscope_info': horoscope_info,
+                'horoscope_charts': horoscope_charts,
+                'vimsottari_info': vimsottari_info,
+                'birth_data': {
+                    'name': self.current_birth_data['name'],
+                    'place': self.current_birth_data['place_name'],
+                    'date': f"{self.current_birth_data['year']}-{self.current_birth_data['month']:02d}-{self.current_birth_data['day']:02d}",
+                    'time': f"{self.current_birth_data['hour']:02d}:{self.current_birth_data['minute']:02d}:{self.current_birth_data['second']:02d}",
+                    'latitude': self.current_birth_data['latitude'],
+                    'longitude': self.current_birth_data['longitude'],
+                    'timezone_offset': self.current_birth_data['timezone_offset']
+                }
+            }
+            
+            return self.current_kundli_data
+        except Exception as e:
+            raise ValueError(f"Failed to generate kundli: {str(e)}")
+    
+    def format_kundli_text(self) -> str:
+        """
+        Format complete kundli as readable text
+        
+        Returns:
+            Formatted string representation of the kundli
+        """
+        if not self.current_kundli_data:
+            self.get_kundli()
+        
+        lines = []
+        lines.append("=" * 100)
+        lines.append("COMPLETE KUNDLI (HOROSCOPE)")
+        lines.append("=" * 100)
+        
+        birth_data = self.current_kundli_data['birth_data']
+        lines.append(f"\nName: {birth_data['name']}")
+        lines.append(f"Place: {birth_data['place']}")
+        lines.append(f"Date: {birth_data['date']}")
+        lines.append(f"Time: {birth_data['time']}")
+        lines.append(f"Latitude: {birth_data['latitude']}")
+        lines.append(f"Longitude: {birth_data['longitude']}")
+        lines.append(f"Timezone Offset: {birth_data['timezone_offset']}")
+        
+        lines.append("\n" + "=" * 100)
+        lines.append("ASTROLOGICAL INFORMATION")
+        lines.append("=" * 100)
+        
+        horoscope_info = self.current_kundli_data['horoscope_info']
+        for key, value in horoscope_info.items():
+            lines.append(f"{key}: {value}")
+        
+        lines.append("\n" + "=" * 100)
+        
+        return "\n".join(lines)
     
     def format_chart_text(self, chart_type: str = 'D1') -> str:
         """

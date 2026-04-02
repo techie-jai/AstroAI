@@ -32,6 +32,7 @@ class ChartGeneratorWorker(QObject):
     
     progress = pyqtSignal(int, str)  # (percentage, message)
     chart_generated = pyqtSignal(str, dict, str)  # (chart_type, chart_data, chart_text)
+    kundli_generated = pyqtSignal(dict, str)  # (kundli_data, kundli_text)
     finished = pyqtSignal(bool, str)  # (success, message)
     error = pyqtSignal(str)
     
@@ -47,7 +48,7 @@ class ChartGeneratorWorker(QObject):
         self.should_stop = True
     
     def run(self):
-        """Generate all charts"""
+        """Generate kundli and all charts"""
         try:
             # Set ephemeris path again to ensure it's correct
             import swisseph as swe
@@ -77,6 +78,15 @@ class ChartGeneratorWorker(QObject):
                 second=self.user_data.get('second', 0)
             )
             
+            # Generate complete kundli first
+            self.progress.emit(8, "Generating complete kundli...")
+            try:
+                kundli_data = self.api.get_kundli()
+                kundli_text = self.api.format_kundli_text()
+                self.kundli_generated.emit(kundli_data, kundli_text)
+            except Exception as e:
+                self.error.emit(f"Warning: Could not generate kundli: {str(e)}")
+            
             # Get all chart types
             chart_types = list(AstroChartAPI.CHART_TYPES.keys())
             total_charts = len(chart_types)
@@ -103,7 +113,7 @@ class ChartGeneratorWorker(QObject):
                     self.error.emit(f"Error generating {chart_type}: {str(e)}")
             
             self.progress.emit(95, "Finalizing...")
-            self.finished.emit(True, f"Successfully generated {total_charts} charts")
+            self.finished.emit(True, f"Successfully generated kundli and {total_charts} charts")
             
         except Exception as e:
             self.error.emit(f"Chart generation failed: {str(e)}")

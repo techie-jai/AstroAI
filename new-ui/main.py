@@ -38,6 +38,7 @@ class AstroAIApplication:
         self.worker_thread = None
         self.current_folder = None
         self.generated_charts = []
+        self.kundli_generated = False
         
         # Connect signals
         self.window.generate_requested.connect(self.start_generation)
@@ -74,6 +75,7 @@ class AstroAIApplication:
             # Connect signals
             self.worker_thread.started.connect(self.worker.run)
             self.worker.progress.connect(self.on_progress)
+            self.worker.kundli_generated.connect(self.on_kundli_generated)
             self.worker.chart_generated.connect(self.on_chart_generated)
             self.worker.finished.connect(self.on_generation_finished)
             self.worker.error.connect(self.on_error)
@@ -91,6 +93,24 @@ class AstroAIApplication:
     def on_progress(self, percentage: int, message: str):
         """Handle progress updates"""
         self.window.update_progress(percentage, message)
+    
+    def on_kundli_generated(self, kundli_data: dict, kundli_text: str):
+        """Handle kundli generation"""
+        try:
+            user_name = self.window.name_input.text()
+            kundli_filename = f"{user_name}_Kundli"
+            
+            # Save kundli JSON
+            self.file_manager.save_chart_json(self.current_folder, kundli_filename, kundli_data)
+            
+            # Save kundli text
+            self.file_manager.save_chart_text(self.current_folder, kundli_filename, kundli_text)
+            
+            self.kundli_generated = True
+            print(f"Kundli saved as: {kundli_filename}")
+            
+        except Exception as e:
+            print(f"Error saving kundli: {e}")
     
     def on_chart_generated(self, chart_type: str, chart_data: dict, chart_text: str):
         """Handle individual chart generation"""
@@ -131,12 +151,15 @@ class AstroAIApplication:
         if success:
             # Create summary file
             try:
+                user_name = self.window.name_input.text()
                 summary_data = {
-                    'name': self.window.name_input.text(),
+                    'name': user_name,
                     'date': self.window.dob_input.date().toString("yyyy-MM-dd"),
                     'time': self.window.tob_input.time().toString("HH:mm:ss"),
                     'place': self.window.place_input.text(),
                     'generated_at': self.file_manager._get_timestamp(),
+                    'kundli_generated': self.kundli_generated,
+                    'kundli_filename': f"{user_name}_Kundli" if self.kundli_generated else None,
                     'charts': self.generated_charts
                 }
                 self.file_manager.create_summary_file(self.current_folder, summary_data)
