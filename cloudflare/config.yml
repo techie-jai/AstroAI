@@ -1,0 +1,22 @@
+# Cloudflare Tunnel Configuration
+# This file routes traffic from Cloudflare to your local services
+# Place this in ~/.cloudflared/config.yml after creating the tunnel
+
+tunnel: astroai
+credentials-file: /path/to/.cloudflared/astroai.json
+
+# Ingress rules - traffic routing
+ingress:
+  # Frontend (React app)
+  - hostname: astroai.yourdomain.com
+    service: http://localhost:3000
+    
+  # Backend API
+  - hostname: api.astroai.yourdomain.com
+    service: http://localhost:8000
+    
+  # Catch-all for undefined routes
+  - service: http_status:404
+
+# Optional: Logging configuration
+logLevel: info

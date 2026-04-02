@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ENVIRONMENT=production
+      - DEBUG=False
+    volumes:
+      - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+      - ./users:/app/users
+    networks:
+      - astroai-network
+
+  frontend:
+    image: node:18-alpine
+    working_dir: /app/frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+    command: sh -c "npm install && npm run dev"
+    networks:
+      - astroai-network
+    depends_on:
+      - backend
+
+networks:
+  astroai-network:
+    driver: bridge
+
+volumes:
+  users:
