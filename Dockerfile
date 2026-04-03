@@ -12,7 +12,13 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -20,12 +26,37 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY astro_chart_api.py .
 COPY PyJHora/ ./PyJHora/
+COPY frontend/package*.json ./frontend/
+COPY frontend/src ./frontend/src
+COPY frontend/index.html ./frontend/
+COPY frontend/vite.config.ts ./frontend/
+COPY frontend/tsconfig.json ./frontend/
+COPY frontend/tsconfig.node.json ./frontend/
+COPY frontend/tailwind.config.js ./frontend/
+COPY frontend/postcss.config.js ./frontend/
+
+RUN mkdir -p /app/new-ui
 
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
+WORKDIR /app/frontend
+RUN npm ci
+
+WORKDIR /app
+
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV VITE_API_BASE_URL=http://localhost:8000/api
+ENV VITE_FIREBASE_API_KEY=""
+ENV VITE_FIREBASE_AUTH_DOMAIN=""
+ENV VITE_FIREBASE_PROJECT_ID=""
+ENV VITE_FIREBASE_STORAGE_BUCKET=""
+ENV VITE_FIREBASE_MESSAGING_SENDER_ID=""
+ENV VITE_FIREBASE_APP_ID=""
 
 EXPOSE 8000 3000
 
-CMD ["sh", "-c", "python backend/main.py"]
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]

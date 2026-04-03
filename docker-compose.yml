@@ -1,39 +1,31 @@
-version: '3.8'
-
 services:
-  backend:
+  astroai:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+      - "3000:3000"
     environment:
       - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
       - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - ENVIRONMENT=production
       - DEBUG=False
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+      - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
+      - VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN}
+      - VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID}
+      - VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET}
+      - VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID}
+      - VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ./users:/app/users
     networks:
       - astroai-network
-
-  frontend:
-    image: node:18-alpine
-    working_dir: /app/frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app/frontend
-      - /app/frontend/node_modules
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --allowed-hosts localhost,127.0.0.1,192.168.1.36,kendraa.ai,.kendraa.ai"
-    networks:
-      - astroai-network
-    depends_on:
-      - backend
+    stdin_open: true
+    tty: true
 
 networks:
   astroai-network:

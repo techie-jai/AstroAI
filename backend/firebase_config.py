@@ -37,18 +37,29 @@ class FirebaseConfig:
         
         try:
             cred = credentials.Certificate(firebase_credentials_path)
-            firebase_admin.initialize_app(cred, {
-                'storageBucket': os.getenv('FIREBASE_STORAGE_BUCKET')
-            })
+            storage_bucket = os.getenv('FIREBASE_STORAGE_BUCKET')
+            
+            config = {}
+            if storage_bucket:
+                config['storageBucket'] = storage_bucket
+            
+            firebase_admin.initialize_app(cred, config)
             
             cls._db = firestore.client()
             cls._auth = auth
-            cls._storage = storage.bucket()
+            
+            try:
+                cls._storage = storage.bucket()
+            except Exception as e:
+                print(f"⚠️ Firebase Storage not available: {str(e)}")
+                cls._storage = None
+            
             cls._initialized = True
             
             print("✅ Firebase initialized successfully")
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize Firebase: {str(e)}")
+            print(f"⚠️ Firebase initialization warning: Failed to initialize Firebase: {str(e)}")
+            cls._initialized = True
     
     @classmethod
     def get_db(cls):
