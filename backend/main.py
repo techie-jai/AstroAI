@@ -1,9 +1,10 @@
 import os
+import csv
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Optional, List, Dict
 from firebase_admin import firestore
 from google.cloud.firestore import Increment
 
@@ -744,6 +745,56 @@ async def get_available_charts():
         "total": len(charts),
         "charts": charts
     }
+
+
+@app.get("/api/cities/search")
+async def search_cities(query: str = "") -> List[Dict]:
+    """Search for cities by name or partial match"""
+    try:
+        cities_file = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "PyJHora",
+            "jhora",
+            "data",
+            "world_cities_with_tz.csv"
+        )
+        
+        if not os.path.exists(cities_file):
+            raise HTTPException(status_code=404, detail="Cities database not found")
+        
+        results = []
+        query_lower = query.lower().strip()
+        
+        with open(cities_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if len(row) >= 6:
+                    country, city_name, lat, lon, tz_name, tz_offset = row[0], row[1], row[2], row[3], row[4], row[5]
+                    
+                    if query_lower and query_lower not in city_name.lower():
+                        continue
+                    
+                    try:
+                        results.append({
+                            "name": f"{city_name},{country[:2]}",
+                            "city": city_name,
+                            "country": country,
+                            "latitude": float(lat),
+                            "longitude": float(lon),
+                            "timezone": float(tz_offset),
+                            "timezone_name": tz_name
+                        })
+                    except (ValueError, IndexError):
+                        continue
+                    
+                    if len(results) >= 50:
+                        break
+        
+        return results
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching cities: {str(e)}")
 
 
 @app.exception_handler(HTTPException)

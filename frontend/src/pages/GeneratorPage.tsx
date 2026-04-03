@@ -2,10 +2,16 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
+import { searchCities, CityData } from '../data/cities'
 
 export default function GeneratorPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = React.useState(false)
+  const [showSuggestions, setShowSuggestions] = React.useState(false)
+  const [citySuggestions, setCitySuggestions] = React.useState<CityData[]>([])
+  const [searchLoading, setSearchLoading] = React.useState(false)
+  const suggestionsRef = React.useRef<HTMLDivElement>(null)
+  
   const [formData, setFormData] = React.useState({
     name: 'Jai',
     place_name: 'Allahabad',
@@ -21,10 +27,41 @@ export default function GeneratorPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+    if (name !== 'place_name') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: isNaN(Number(value)) ? value : Number(value)
+      }))
+    }
+  }
+
+  const handlePlaceChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
     setFormData(prev => ({
       ...prev,
-      [name]: isNaN(Number(value)) ? value : Number(value)
+      place_name: value
     }))
+    
+    if (value.trim() && value.length > 1) {
+      setSearchLoading(true)
+      const suggestions = await searchCities(value)
+      setCitySuggestions(suggestions)
+      setShowSuggestions(true)
+      setSearchLoading(false)
+    } else {
+      setShowSuggestions(false)
+    }
+  }
+
+  const selectCity = (city: CityData) => {
+    setFormData(prev => ({
+      ...prev,
+      place_name: city.name,
+      latitude: city.latitude,
+      longitude: city.longitude,
+      timezone_offset: city.timezone
+    }))
+    setShowSuggestions(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,6 +87,17 @@ export default function GeneratorPage() {
     }
   }
 
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -73,15 +121,48 @@ export default function GeneratorPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Place of Birth</label>
-              <input
-                type="text"
-                name="place_name"
-                value={formData.place_name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="City, Country"
-              />
+              <div className="relative" ref={suggestionsRef}>
+                <input
+                  type="text"
+                  name="place_name"
+                  value={formData.place_name}
+                  onChange={handlePlaceChange}
+                  onFocus={() => formData.place_name.trim() && setShowSuggestions(true)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Start typing city name..."
+                  autoComplete="off"
+                />
+                {showSuggestions && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    {searchLoading ? (
+                      <div className="p-4 text-center text-gray-500">
+                        <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                        <span className="ml-2">Searching cities...</span>
+                      </div>
+                    ) : citySuggestions.length > 0 ? (
+                      citySuggestions.map((city) => (
+                        <button
+                          key={city.name}
+                          type="button"
+                          onClick={() => selectCity(city)}
+                          className="w-full text-left px-4 py-2 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none transition border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="font-medium text-gray-900">{city.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {city.latitude.toFixed(4)}, {city.longitude.toFixed(4)} | UTC{city.timezone > 0 ? '+' : ''}{city.timezone}
+                          </div>
+                        </button>
+                      ))
+                    ) : formData.place_name.trim() ? (
+                      <div className="p-4 text-center text-gray-500">
+                        No cities found
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Tip: Start typing a city name to see suggestions from thousands of cities</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
