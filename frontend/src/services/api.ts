@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -9,13 +9,60 @@ const apiClient = axios.create({
   },
 })
 
+// Request interceptor to add Firebase token to every request
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('firebaseToken')
+  console.log('[API] Request to:', config.url)
+  console.log('[API] Token from localStorage:', token ? `${token.substring(0, 50)}...` : 'NOT FOUND')
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+    console.log('[API] Authorization header set:', config.headers.Authorization ? 'YES' : 'NO')
+  } else {
+    console.error('[API] ERROR: No Firebase token in localStorage!')
   }
+  
   return config
+}, (error) => {
+  console.error('[API] Request interceptor error:', error)
+  return Promise.reject(error)
 })
+
+// Response interceptor for error handling and token refresh
+apiClient.interceptors.response.use(
+  (response) => {
+    console.log('[API] Response:', response.status, response.statusText)
+    return response
+  },
+  async (error) => {
+    console.error('[API] Error Response:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    })
+    
+    // If 401, try to refresh token and retry
+    if (error.response?.status === 401) {
+      console.warn('[API] Got 401, attempting to refresh token...')
+      try {
+        const { useAuthStore } = await import('../store/authStore')
+        const refreshToken = useAuthStore.getState().refreshToken
+        const newToken = await refreshToken()
+        
+        if (newToken) {
+          console.log('[API] Token refreshed, retrying request...')
+          error.config.headers.Authorization = `Bearer ${newToken}`
+          return apiClient(error.config)
+        }
+      } catch (refreshError) {
+        console.error('[API] Token refresh failed:', refreshError)
+      }
+    }
+    
+    return Promise.reject(error)
+  }
+)
 
 export const api = {
   // Auth

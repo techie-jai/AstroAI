@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from typing import Optional
 from firebase_admin import firestore
+from google.cloud.firestore import Increment
 
 from models import (
     BirthData, GenerateKundliRequest, GenerateAnalysisRequest,
@@ -24,9 +25,12 @@ app = FastAPI(
 
 origins = [
     "http://localhost:3000",
+    "http://localhost:3001",
     "http://localhost:8000",
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
     "http://127.0.0.1:8000",
+    "http://127.0.0.1:50530",  # Browser preview proxy
 ]
 
 app.add_middleware(
@@ -181,17 +185,23 @@ async def generate_kundli(
         Generated kundli data
     """
     try:
+        print(f"[KUNDLI] Starting generation for user: {current_user.get('uid')}")
         birth_data_dict = request.birth_data.dict()
+        print(f"[KUNDLI] Birth data: {birth_data_dict}")
         
         result = astrology_service.generate_kundli(birth_data_dict)
+        print(f"[KUNDLI] Generation result: success={result.get('success')}")
         
         if not result.get('success'):
+            error_msg = result.get('error', 'Failed to generate kundli')
+            print(f"[KUNDLI] Generation failed: {error_msg}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get('error', 'Failed to generate kundli')
+                detail=error_msg
             )
         
         kundli_id = result['kundli_id']
+        print(f"[KUNDLI] Generated kundli_id: {kundli_id}")
         
         calculation_data = {
             'birth_data': birth_data_dict,
@@ -202,22 +212,54 @@ async def generate_kundli(
             }
         }
         
+        print(f"[KUNDLI] Saving calculation to Firebase...")
         saved_id = FirebaseService.save_calculation(current_user['uid'], calculation_data)
+        print(f"[KUNDLI] Calculation saved: {saved_id}")
         
+        print(f"[KUNDLI] Saving kundli data to Firestore...")
+        db = firestore.client()
+        db.collection('kundlis').document(kundli_id).set({
+            'user_id': current_user['uid'],
+            'birth_data': birth_data_dict,
+            'horoscope_info': result['data'].get('horoscope_info', {}),
+            'generated_at': result['generated_at'],
+            'calculation_id': saved_id
+        })
+        print(f"[KUNDLI] Kundli data saved")
+        
+        print(f"[KUNDLI] Ensuring user profile exists...")
+        user_profile = FirebaseService.get_user_profile(current_user['uid'])
+        if not user_profile:
+            print(f"[KUNDLI] User profile doesn't exist, creating...")
+            FirebaseService.create_user_profile(
+                current_user['uid'],
+                current_user.get('email', ''),
+                current_user.get('display_name')
+            )
+        
+        print(f"[KUNDLI] Updating user profile...")
         FirebaseService.update_user_profile(
             current_user['uid'],
-            {'total_calculations': firestore.increment(1)}
+            {'total_calculations': Increment(1)}
         )
+        print(f"[KUNDLI] User profile updated")
         
-        return {
+        response_data = {
             "kundli_id": kundli_id,
             "calculation_id": saved_id,
             "birth_data": birth_data_dict,
             "generated_at": result['generated_at'],
             "horoscope_info_keys": list(result['data'].get('horoscope_info', {}).keys())[:10]
         }
+        print(f"[KUNDLI] Returning response: {response_data}")
+        return response_data
     
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"[KUNDLI] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
@@ -278,17 +320,33 @@ async def get_kundli(
         Kundli data
     """
     try:
-        calculations = FirebaseService.get_user_calculations(current_user['uid'])
+        print(f"[GET_KUNDLI] Fetching kundli: {kundli_id} for user: {current_user.get('uid')}")
+        db = firestore.client()
         
-        for calc in calculations:
-            if calc.get('result_summary', {}).get('kundli_id') == kundli_id:
-                return {
-                    "kundli_id": kundli_id,
-                    "calculation_id": calc.get('calculation_id'),
-                    "birth_data": calc.get('birth_data'),
-                    "created_at": calc.get('created_at')
-                }
+        # Try to get from kundlis collection
+        kundli_doc = db.collection('kundlis').document(kundli_id).get()
         
+        if kundli_doc.exists:
+            kundli_data = kundli_doc.to_dict()
+            print(f"[GET_KUNDLI] Found kundli in kundlis collection")
+            
+            # Verify ownership
+            if kundli_data.get('user_id') != current_user['uid']:
+                print(f"[GET_KUNDLI] Unauthorized access attempt")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Unauthorized"
+                )
+            
+            return {
+                "kundli_id": kundli_id,
+                "birth_data": kundli_data.get('birth_data'),
+                "horoscope_info": kundli_data.get('horoscope_info', {}),
+                "generated_at": kundli_data.get('generated_at'),
+                "calculation_id": kundli_data.get('calculation_id')
+            }
+        
+        print(f"[GET_KUNDLI] Kundli not found: {kundli_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Kundli not found"

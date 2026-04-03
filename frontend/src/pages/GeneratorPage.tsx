@@ -7,16 +7,16 @@ export default function GeneratorPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = React.useState(false)
   const [formData, setFormData] = React.useState({
-    name: '',
-    place_name: '',
-    latitude: 0,
-    longitude: 0,
+    name: 'Jai',
+    place_name: 'Allahabad',
+    latitude: 25.4683,
+    longitude: 81.8546,
     timezone_offset: 5.5,
-    year: 2000,
-    month: 1,
-    day: 1,
-    hour: 12,
-    minute: 0,
+    year: 1995,
+    month: 12,
+    day: 28,
+    hour: 18,
+    minute: 50,
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,9 +35,16 @@ export default function GeneratorPage() {
       const response = await api.generateKundli(formData)
       toast.success('Kundli generated successfully!')
       navigate(`/results/${response.data.kundli_id}`)
-    } catch (error) {
-      toast.error('Failed to generate kundli')
-      console.error(error)
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.response?.data?.error || error?.message || 'Failed to generate kundli'
+      toast.error(errorMessage)
+      console.error('Kundli generation error:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+        fullError: error
+      })
     } finally {
       setLoading(false)
     }

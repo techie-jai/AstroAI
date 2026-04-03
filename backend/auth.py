@@ -14,6 +14,7 @@ async def verify_token(authorization: Optional[str] = Header(None)):
         Decoded token claims
     """
     if not authorization:
+        print("[AUTH] Missing authorization header")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authorization header",
@@ -23,6 +24,7 @@ async def verify_token(authorization: Optional[str] = Header(None)):
     # Extract token from "Bearer <token>"
     parts = authorization.split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
+        print(f"[AUTH] Invalid header format: {authorization[:50]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization header format",
@@ -30,15 +32,18 @@ async def verify_token(authorization: Optional[str] = Header(None)):
         )
     
     token = parts[1]
+    print(f"[AUTH] Verifying token: {token[:20]}...")
     decoded = FirebaseService.verify_token(token)
     
     if not decoded:
+        print("[AUTH] Token verification returned None")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    print(f"[AUTH] Token verified successfully for user: {decoded.get('uid')}")
     return decoded
 
 

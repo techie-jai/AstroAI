@@ -89,9 +89,12 @@ class FirebaseService:
         try:
             auth_client = FirebaseConfig.get_auth()
             decoded_token = auth_client.verify_id_token(token)
+            print(f"[TOKEN VERIFIED] UID: {decoded_token.get('uid')}, Email: {decoded_token.get('email')}")
             return decoded_token
         except Exception as e:
-            print(f"Token verification failed: {str(e)}")
+            print(f"[TOKEN VERIFICATION FAILED] Error: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
     
     @staticmethod
