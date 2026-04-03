@@ -189,8 +189,6 @@ class FirebaseService:
             db = FirebaseConfig.get_db()
             docs = db.collection('calculations')\
                 .where('user_id', '==', uid)\
-                .order_by('created_at', direction=firestore.Query.DESCENDING)\
-                .limit(limit)\
                 .stream()
             
             calculations = []
@@ -199,7 +197,8 @@ class FirebaseService:
                 calc['calculation_id'] = doc.id
                 calculations.append(calc)
             
-            return calculations
+            calculations.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            return calculations[:limit]
         except Exception as e:
             print(f"Failed to get calculations: {str(e)}")
             return []

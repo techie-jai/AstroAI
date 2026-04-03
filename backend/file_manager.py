@@ -1,0 +1,274 @@
+"""
+File Manager - Handles local file operations for kundli and chart storage
+Saves files to local PC, not Firebase
+"""
+
+import os
+import json
+import uuid
+from datetime import datetime
+from typing import Dict, Optional, Tuple
+import re
+
+
+class FileManager:
+    """Manages local file operations for saving kundli and chart data"""
+    
+    def __init__(self, base_dir: str = "users"):
+        """
+        Initialize FileManager
+        
+        Args:
+            base_dir: Base directory for storing user data (default: users/)
+        """
+        self.base_dir = base_dir
+        if not os.path.exists(self.base_dir):
+            os.makedirs(self.base_dir)
+    
+    def create_user_folder(self, user_name: str) -> Tuple[str, str]:
+        """
+        Create a unique folder for the user
+        
+        Args:
+            user_name: User's name
+            
+        Returns:
+            Tuple of (folder_path, unique_id)
+        """
+        # Generate unique ID
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = f"{timestamp}_{uuid.uuid4().hex[:8]}"
+        
+        # Sanitize name for folder
+        safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '_')
+        if not safe_name:
+            safe_name = "User"
+        
+        # Create folder name
+        folder_name = f"{unique_id}-{safe_name}"
+        folder_path = os.path.join(self.base_dir, folder_name)
+        
+        # Create directory structure
+        os.makedirs(folder_path, exist_ok=True)
+        os.makedirs(os.path.join(folder_path, "kundli"), exist_ok=True)
+        os.makedirs(os.path.join(folder_path, "charts", "json"), exist_ok=True)
+        os.makedirs(os.path.join(folder_path, "charts", "text"), exist_ok=True)
+        os.makedirs(os.path.join(folder_path, "charts", "images"), exist_ok=True)
+        os.makedirs(os.path.join(folder_path, "analysis"), exist_ok=True)
+        
+        return folder_path, unique_id
+    
+    def save_user_info(self, folder_path: str, user_data: Dict) -> str:
+        """
+        Save user information to JSON file
+        
+        Args:
+            folder_path: Path to user's folder
+            user_data: Dictionary containing user birth data
+            
+        Returns:
+            Path to saved file
+        """
+        file_path = os.path.join(folder_path, "user_info.json")
+        
+        # Add metadata
+        user_data['generated_at'] = datetime.now().isoformat()
+        user_data['version'] = '1.0.0'
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(user_data, f, indent=2, ensure_ascii=False)
+        
+        return file_path
+    
+    def save_kundli_json(self, folder_path: str, user_name: str, kundli_data: Dict) -> str:
+        """
+        Save kundli data as JSON
+        
+        Args:
+            folder_path: Path to user's folder
+            user_name: User's name for filename
+            kundli_data: Kundli data dictionary
+            
+        Returns:
+            Path to saved file
+        """
+        filename = f"{user_name}_Kundli.json"
+        file_path = os.path.join(folder_path, "kundli", filename)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(kundli_data, f, indent=2, ensure_ascii=False)
+        
+        return file_path
+    
+    def save_kundli_text(self, folder_path: str, user_name: str, kundli_text: str) -> str:
+        """
+        Save kundli as formatted text
+        
+        Args:
+            folder_path: Path to user's folder
+            user_name: User's name for filename
+            kundli_text: Formatted text representation
+            
+        Returns:
+            Path to saved file
+        """
+        filename = f"{user_name}_Kundli.txt"
+        file_path = os.path.join(folder_path, "kundli", filename)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(kundli_text)
+        
+        return file_path
+    
+    def save_chart_json(self, folder_path: str, chart_type: str, chart_data: Dict) -> str:
+        """
+        Save chart data as JSON
+        
+        Args:
+            folder_path: Path to user's folder
+            chart_type: Chart type (e.g., 'D1', 'D9')
+            chart_data: Chart data dictionary
+            
+        Returns:
+            Path to saved file
+        """
+        file_path = os.path.join(folder_path, "charts", "json", f"{chart_type}.json")
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(chart_data, f, indent=2, ensure_ascii=False)
+        
+        return file_path
+    
+    def save_chart_text(self, folder_path: str, chart_type: str, chart_text: str) -> str:
+        """
+        Save chart as formatted text
+        
+        Args:
+            folder_path: Path to user's folder
+            chart_type: Chart type (e.g., 'D1', 'D9')
+            chart_text: Formatted text representation
+            
+        Returns:
+            Path to saved file
+        """
+        file_path = os.path.join(folder_path, "charts", "text", f"{chart_type}.txt")
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(chart_text)
+        
+        return file_path
+    
+    def save_analysis_pdf(self, folder_path: str, user_name: str, pdf_content: bytes) -> str:
+        """
+        Save analysis as PDF
+        
+        Args:
+            folder_path: Path to user's folder
+            user_name: User's name for filename
+            pdf_content: PDF file content as bytes
+            
+        Returns:
+            Path to saved file
+        """
+        filename = f"{user_name}_AI_Analysis.pdf"
+        file_path = os.path.join(folder_path, "analysis", filename)
+        
+        with open(file_path, 'wb') as f:
+            f.write(pdf_content)
+        
+        return file_path
+    
+    def save_analysis_text(self, folder_path: str, user_name: str, analysis_text: str) -> str:
+        """
+        Save analysis as text
+        
+        Args:
+            folder_path: Path to user's folder
+            user_name: User's name for filename
+            analysis_text: Analysis text content
+            
+        Returns:
+            Path to saved file
+        """
+        filename = f"{user_name}_AI_Analysis.txt"
+        file_path = os.path.join(folder_path, "analysis", filename)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(analysis_text)
+        
+        return file_path
+    
+    def get_kundli_json_path(self, folder_path: str, user_name: str) -> Optional[str]:
+        """
+        Get path to kundli JSON file
+        
+        Args:
+            folder_path: Path to user's folder
+            user_name: User's name
+            
+        Returns:
+            Path to kundli JSON file if exists, None otherwise
+        """
+        file_path = os.path.join(folder_path, "kundli", f"{user_name}_Kundli.json")
+        return file_path if os.path.exists(file_path) else None
+    
+    def read_kundli_json(self, file_path: str) -> Optional[Dict]:
+        """
+        Read kundli JSON file
+        
+        Args:
+            file_path: Path to kundli JSON file
+            
+        Returns:
+            Kundli data dictionary if file exists, None otherwise
+        """
+        if not os.path.exists(file_path):
+            return None
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    def create_summary_file(self, folder_path: str, summary_data: Dict) -> str:
+        """
+        Create a summary file with all information
+        
+        Args:
+            folder_path: Path to user's folder
+            summary_data: Summary information
+            
+        Returns:
+            Path to saved file
+        """
+        file_path = os.path.join(folder_path, "summary.txt")
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write("=" * 80 + "\n")
+            f.write("ASTROLOGICAL ANALYSIS SUMMARY\n")
+            f.write("=" * 80 + "\n\n")
+            
+            f.write(f"Name: {summary_data.get('name', 'N/A')}\n")
+            f.write(f"Date of Birth: {summary_data.get('date', 'N/A')}\n")
+            f.write(f"Time of Birth: {summary_data.get('time', 'N/A')}\n")
+            f.write(f"Place: {summary_data.get('place', 'N/A')}\n")
+            f.write(f"Generated: {summary_data.get('generated_at', 'N/A')}\n\n")
+            
+            f.write("=" * 80 + "\n")
+            f.write("FILES GENERATED\n")
+            f.write("=" * 80 + "\n\n")
+            
+            if summary_data.get('kundli_generated'):
+                f.write("✓ Kundli JSON\n")
+                f.write("✓ Kundli Text\n\n")
+            
+            for chart_info in summary_data.get('charts', []):
+                f.write(f"✓ {chart_info['type']}: {chart_info['name']}\n")
+            
+            if summary_data.get('analysis_generated'):
+                f.write("\n✓ AI Analysis (Text)\n")
+                f.write("✓ AI Analysis (PDF)\n")
+        
+        return file_path
+    
+    def _get_timestamp(self) -> str:
+        """Get current timestamp as ISO format string"""
+        return datetime.now().isoformat()

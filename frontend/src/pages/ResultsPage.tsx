@@ -25,8 +25,6 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
-  const [geminiApiKey, setGeminiApiKey] = useState('')
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false)
 
   useEffect(() => {
     const fetchKundli = async () => {
@@ -49,19 +47,11 @@ export default function ResultsPage() {
   }, [kundliId])
 
   const handleAnalyze = async () => {
-    if (!geminiApiKey.trim()) {
-      toast.error('Please enter your Gemini API key')
-      return
-    }
-
     setAnalyzing(true)
     try {
       const response = await api.generateAnalysis(kundliId || '', 'comprehensive')
-      
-      // For now, show a placeholder message
-      // In production, this would call a backend endpoint that uses Gemini
-      setAnalysis(`Analysis requested. Status: ${response.data.status}`)
-      toast.success('Analysis request submitted')
+      setAnalysis(response.data.analysis_text || 'Analysis generated successfully')
+      toast.success('Analysis generated successfully')
     } catch (error) {
       toast.error('Failed to generate analysis')
       console.error(error)
@@ -155,54 +145,23 @@ export default function ResultsPage() {
               <p className="text-gray-600">
                 Get a comprehensive AI-powered analysis of your kundli using Google Gemini API.
               </p>
-
-              {!showApiKeyInput ? (
-                <button
-                  onClick={() => setShowApiKeyInput(true)}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  <span>Generate AI Analysis</span>
-                </button>
-              ) : (
-                <div className="space-y-4">
-                  <input
-                    type="password"
-                    value={geminiApiKey}
-                    onChange={(e) => setGeminiApiKey(e.target.value)}
-                    placeholder="Enter your Gemini API key"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={analyzing}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                    >
-                      {analyzing ? (
-                        <>
-                          <Loader className="w-5 h-5 animate-spin" />
-                          <span>Analyzing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5" />
-                          <span>Analyze</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowApiKeyInput(false)
-                        setGeminiApiKey('')
-                      }}
-                      className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold py-2 px-4 rounded-lg transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+              >
+                {analyzing ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    <span>Generate AI Analysis</span>
+                  </>
+                )}
+              </button>
             </div>
           ) : (
             <div className="bg-white rounded-lg p-6">
