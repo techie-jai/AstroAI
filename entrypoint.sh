@@ -57,9 +57,10 @@ echo "==========================================================================
 echo ""
 echo "Backend:  http://localhost:8000"
 echo "Frontend: http://localhost:3000"
-echo "Domain:   http://kendraa.ai"
+echo "Domain:   https://kendraa.ai (via Cloudflare Tunnel)"
 echo ""
-echo "Both services are running. Check logs above for details."
+echo "Services are running. Cloudflared tunnel will be managed by docker-compose."
+echo "Check logs above for details."
 echo ""
 
 wait $BACKEND_PID $FRONTEND_PID

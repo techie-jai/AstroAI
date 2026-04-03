@@ -1,22 +1,46 @@
-# Cloudflare Tunnel Configuration
-# This file routes traffic from Cloudflare to your local services
-# Place this in ~/.cloudflared/config.yml after creating the tunnel
+# Cloudflare Tunnel Configuration for AstroAI
+# Routes traffic from Cloudflare to Docker services
+# For Docker: credentials-file points to mounted volume
 
 tunnel: astroai
-credentials-file: /path/to/.cloudflared/astroai.json
+credentials-file: /root/.cloudflared/astroai.json
 
 # Ingress rules - traffic routing
 ingress:
-  # Frontend (React app)
-  - hostname: astroai.yourdomain.com
-    service: http://localhost:3000
+  # Frontend (React app) - kendraa.ai
+  - hostname: kendraa.ai
+    service: http://astroai:3000
+    originRequest:
+      headers:
+        add:
+          X-Forwarded-For: ""
+    
+  # www subdomain
+  - hostname: www.kendraa.ai
+    service: http://astroai:3000
+    originRequest:
+      headers:
+        add:
+          X-Forwarded-For: ""
     
   # Backend API
-  - hostname: api.astroai.yourdomain.com
-    service: http://localhost:8000
+  - hostname: api.kendraa.ai
+    service: http://astroai:8000
+    originRequest:
+      headers:
+        add:
+          X-Forwarded-For: ""
     
   # Catch-all for undefined routes
   - service: http_status:404
 
-# Optional: Logging configuration
+# Logging configuration
 logLevel: info
+
+# Optional: Enable debug logging
+# logLevel: debug
+
+# Optional: Connection settings
+# maxIdleConnections: 100
+# keepAliveTimeout: 30s
+# tlsTimeout: 10s

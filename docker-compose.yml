@@ -27,6 +27,17 @@ services:
     stdin_open: true
     tty: true
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: astroai-cloudflared
+    command: tunnel run --token ${CLOUDFLARED_TUNNEL_TOKEN} --protocol http2
+    environment:
+      - CLOUDFLARED_TUNNEL_TOKEN=${CLOUDFLARED_TUNNEL_TOKEN}
+      - TUNNEL_TRANSPORT_PROTOCOL=http2
+    networks:
+      - astroai-network
+    restart: unless-stopped
+
 networks:
   astroai-network:
     driver: bridge
