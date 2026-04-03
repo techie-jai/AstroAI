@@ -4,6 +4,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ .
+ENV VITE_API_BASE_URL=http://astroai:8000/api
 RUN npm run build
 
 FROM python:3.11-slim
@@ -47,7 +48,7 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
-ENV VITE_API_BASE_URL=http://localhost:8000/api
+ENV VITE_API_BASE_URL=http://astroai:8000/api
 ENV VITE_FIREBASE_API_KEY=""
 ENV VITE_FIREBASE_AUTH_DOMAIN=""
 ENV VITE_FIREBASE_PROJECT_ID=""

@@ -1,6 +1,34 @@
 import axios from 'axios'
 
-const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+// Determine API base URL based on current domain
+const getApiBaseUrl = () => {
+  const envUrl = (import.meta as any).env.VITE_API_BASE_URL
+  const hostname = window.location.hostname
+  
+  console.log('[API] Current hostname:', hostname)
+  console.log('[API] Env VITE_API_BASE_URL:', envUrl)
+  
+  // If explicitly set in environment AND we're on production domain, use it
+  if (envUrl && envUrl.trim() && hostname.includes('kendraa.ai')) {
+    console.log('[API] Using env VITE_API_BASE_URL for kendraa.ai:', envUrl)
+    return envUrl
+  }
+  
+  // For local development (localhost, 127.0.0.1, or any non-production domain)
+  if (!hostname.includes('kendraa.ai')) {
+    const url = 'http://localhost:8000/api'
+    console.log('[API] Detected local development, using localhost:', url)
+    return url
+  }
+  
+  // Fallback for production
+  const fallbackUrl = 'https://api.kendraa.ai/api'
+  console.log('[API] Using fallback production URL:', fallbackUrl)
+  return fallbackUrl
+}
+
+const API_BASE_URL = getApiBaseUrl()
+console.log('[API] Final API_BASE_URL:', API_BASE_URL)
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
