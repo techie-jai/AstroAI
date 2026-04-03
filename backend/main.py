@@ -33,6 +33,9 @@ origins = [
     "http://127.0.0.1:3001",
     "http://127.0.0.1:8000",
     "http://127.0.0.1:50530",  # Browser preview proxy
+    "http://192.168.1.36:3000",  # Local network IP
+    "http://192.168.1.36:3001",
+    "http://192.168.1.36:8000",
 ]
 
 app.add_middleware(
