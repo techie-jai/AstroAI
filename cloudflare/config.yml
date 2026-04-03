@@ -3,7 +3,8 @@
 # For Docker: credentials-file points to mounted volume
 
 tunnel: astroai
-credentials-file: /root/.cloudflared/astroai.json
+credentials-file: /etc/cloudflared/astroai.json
+origincert: /root/.cloudflared/cert.pem
 
 # Ingress rules - traffic routing
 ingress:
@@ -14,6 +15,7 @@ ingress:
       headers:
         add:
           X-Forwarded-For: ""
+      disableH2: true
     
   # www subdomain
   - hostname: www.kendraa.ai
@@ -22,6 +24,7 @@ ingress:
       headers:
         add:
           X-Forwarded-For: ""
+      disableH2: true
     
   # Backend API
   - hostname: api.kendraa.ai
@@ -30,6 +33,7 @@ ingress:
       headers:
         add:
           X-Forwarded-For: ""
+      disableH2: true
     
   # Catch-all for undefined routes
   - service: http_status:404
