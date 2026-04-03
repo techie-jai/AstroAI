@@ -36,6 +36,12 @@ origins = [
     "http://192.168.1.36:3000",  # Local network IP
     "http://192.168.1.36:3001",
     "http://192.168.1.36:8000",
+    "http://172.23.0.3:3000",  # Docker internal network
+    "http://172.23.0.2:3000",  # Docker internal network (alternative)
+    "https://kendraa.ai",  # Production domain
+    "https://www.kendraa.ai",  # Production domain with www
+    "http://kendraa.ai",  # HTTP fallback
+    "http://www.kendraa.ai",  # HTTP fallback with www
 ]
 
 app.add_middleware(

@@ -2,29 +2,40 @@ import axios from 'axios'
 
 // Determine API base URL based on current domain
 const getApiBaseUrl = () => {
-  const envUrl = (import.meta as any).env.VITE_API_BASE_URL
   const hostname = window.location.hostname
+  const protocol = window.location.protocol
+  const port = window.location.port
   
   console.log('[API] Current hostname:', hostname)
-  console.log('[API] Env VITE_API_BASE_URL:', envUrl)
+  console.log('[API] Current protocol:', protocol)
+  console.log('[API] Current port:', port)
   
-  // If explicitly set in environment AND we're on production domain, use it
-  if (envUrl && envUrl.trim() && hostname.includes('kendraa.ai')) {
-    console.log('[API] Using env VITE_API_BASE_URL for kendraa.ai:', envUrl)
-    return envUrl
-  }
-  
-  // For local development (localhost, 127.0.0.1, or any non-production domain)
-  if (!hostname.includes('kendraa.ai')) {
-    const url = 'http://localhost:8000/api'
-    console.log('[API] Detected local development, using localhost:', url)
+  // For production domain (kendraa.ai), use api subdomain
+  if (hostname.includes('kendraa.ai')) {
+    const url = `${protocol}//api.kendraa.ai/api`
+    console.log('[API] Detected production domain, using api subdomain:', url)
     return url
   }
   
-  // Fallback for production
-  const fallbackUrl = 'https://api.kendraa.ai/api'
-  console.log('[API] Using fallback production URL:', fallbackUrl)
-  return fallbackUrl
+  // For localhost, use localhost:8000
+  if (hostname === 'localhost') {
+    const url = `${protocol}//localhost:8000/api`
+    console.log('[API] Detected localhost, using localhost:8000:', url)
+    return url
+  }
+  
+  // For 127.0.0.1 (including browser preview proxies), use localhost:8000 instead
+  // This allows browser preview to reach the local Docker backend
+  if (hostname === '127.0.0.1') {
+    const url = `${protocol}//localhost:8000/api`
+    console.log('[API] Detected 127.0.0.1 (browser preview), using localhost:8000:', url)
+    return url
+  }
+  
+  // Fallback: use localhost:8000
+  const url = `${protocol}//localhost:8000/api`
+  console.log('[API] Using fallback localhost:8000:', url)
+  return url
 }
 
 const API_BASE_URL = getApiBaseUrl()
