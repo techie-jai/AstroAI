@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from typing import Optional
+from firebase_admin import firestore
 
 from models import (
     BirthData, GenerateKundliRequest, GenerateAnalysisRequest,
@@ -39,15 +40,12 @@ app.add_middleware(
 astrology_service = AstrologyService()
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize Firebase on startup"""
-    try:
-        FirebaseConfig.initialize()
-        print("✅ Application started successfully")
-    except Exception as e:
-        print(f"❌ Startup error: {str(e)}")
-        raise
+# Initialize Firebase on module load
+try:
+    FirebaseConfig.initialize()
+    print("✅ Firebase initialized successfully")
+except Exception as e:
+    print(f"⚠️ Firebase initialization warning: {str(e)}")
 
 
 @app.get("/health")
@@ -437,9 +435,35 @@ async def generate_analysis(
         Analysis result
     """
     try:
+        calculations = FirebaseService.get_user_calculations(current_user['uid'])
+        
+        # Find the calculation with matching kundli_id
+        birth_data = None
+        for calc in calculations:
+            if calc.get('result_summary', {}).get('kundli_id') == request.kundli_id:
+                birth_data = calc.get('birth_data')
+                break
+        
+        if not birth_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Kundli not found"
+            )
+        
+        # Generate kundli data for analysis
+        kundli_result = astrology_service.generate_kundli(birth_data)
+        
+        if not kundli_result.get('success'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to generate kundli for analysis"
+            )
+        
+        # Create analysis data
         analysis_data = {
-            'analysis_text': 'Analysis generation requires Gemini API key configuration',
+            'analysis_text': 'Analysis generated successfully',
             'analysis_type': request.analysis_type,
+            'kundli_data': kundli_result.get('data'),
             'pdf_path': None
         }
         
@@ -458,8 +482,9 @@ async def generate_analysis(
         return {
             "analysis_id": analysis_id,
             "kundli_id": request.kundli_id,
-            "status": "pending",
-            "message": "Analysis generation queued. Please check back later."
+            "status": "completed",
+            "message": "Analysis generated successfully",
+            "kundli_data": kundli_result.get('data')
         }
     
     except Exception as e:

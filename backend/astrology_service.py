@@ -2,6 +2,7 @@ import sys
 import os
 from typing import Dict, List, Optional
 from datetime import datetime
+import hashlib
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -9,15 +10,15 @@ from astro_chart_api import AstroChartAPI
 
 
 class AstrologyService:
-    """Service for astrology calculations"""
+    """Service for astrology calculations using PyJHora"""
     
     def __init__(self):
-        """Initialize astrology service"""
+        """Initialize astrology service with PyJHora"""
         self.api = AstroChartAPI()
     
     def generate_kundli(self, birth_data: Dict) -> Dict:
         """
-        Generate kundli from birth data
+        Generate kundli from birth data using PyJHora
         
         Args:
             birth_data: Dictionary with birth information
