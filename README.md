@@ -59,21 +59,25 @@ AstroAI is built on top of **PyJHora**, a comprehensive Python package implement
 - **Compatibility Analysis**: Marriage and relationship compatibility
 
 ### 🤖 AI Integration
-- Intelligent chart analysis and interpretation
-- Natural language question answering about charts
-- Automated predictions and insights
-- Pattern recognition across multiple charts
-- Contextual analysis considering multiple divisional charts
+- **Gemini-Powered Chat**: Ask questions about your kundli and get AI-powered astrological insights
+- **Dashboard Insights**: AI-generated insights with Important Aspects, Good Times, Challenges, and Interesting Facts
+- **Context-Aware Responses**: Chat includes complete kundli data for accurate analysis
+- **Intelligent Analysis**: Pattern recognition across multiple charts
+- **Persistent Learning**: Chat history stored for reference
 
 ### 💻 User Interfaces
+- **Web Dashboard** (NEW): Modern React-based dashboard with sidebar navigation
+- **Chat Interface** (NEW): Gemini-style chat for astrological queries
 - **New Simple UI** (Recommended): Clean, modern PyQt6 interface for quick chart generation
 - **Advanced UI**: Multi-tab interface with comprehensive visualization and PDF export
 
-### 📊 Data Export
-- JSON format for programmatic access
-- Text format for human-readable reports
-- PNG images for visual representation
-- PDF reports with detailed analysis
+### 📊 Data Export & Management
+- **JSON format** for programmatic access
+- **Text format** for human-readable reports
+- **PNG images** for visual representation
+- **PDF reports** with detailed analysis
+- **Web Dashboard**: View all calculations, analyses, and insights
+- **Download PDFs**: Export AI analysis as professional PDF documents
 
 ---
 
@@ -179,9 +183,26 @@ python test_all_api_methods.py
 
 ## Getting Started
 
-### Quick Start: Using the New UI (Recommended)
+### Quick Start: Using the Web Dashboard (NEW - Recommended)
 
-The simplest way to generate astrological charts:
+Access the modern web-based dashboard:
+
+```
+https://astroai-7.netlify.app
+```
+
+**Features:**
+- Sign in with Google account
+- Professional sidebar navigation
+- AI-powered dashboard with insights
+- Gemini-style chat interface
+- View all your kundlis and analyses
+- Download PDF reports
+- Responsive design (desktop & mobile)
+
+### Using the New UI (Desktop Application)
+
+The simplest way to generate astrological charts locally:
 
 ```bash
 # From project root
@@ -241,7 +262,49 @@ kundli = api.get_kundli()
 
 ---
 
-## Using the New UI
+## Using the Web Dashboard
+
+### Accessing the Dashboard
+
+1. Visit: https://astroai-7.netlify.app
+2. Click "Sign in with Google"
+3. Complete authentication
+4. Dashboard loads with your data
+
+### Dashboard Features
+
+**Navigation Sidebar**:
+- Dashboard - View insights and recent calculations
+- Kundli - Manage all your generated kundlis
+- Analysis - View and download AI analyses
+- Chat - Ask questions about your kundli
+- Settings - Account and preferences
+
+**Dashboard Page**:
+- Stats cards showing total kundlis, latest kundli, analyses
+- AI-generated insights (Important Aspects, Good Times, Challenges, Interesting Facts)
+- Recent calculations sidebar
+- Quick action buttons
+- Refresh insights on demand
+
+**Chat Page**:
+- Gemini-style interface
+- Left panel: Kundli information
+- Right panel: Chat messages with timestamps
+- Quick question suggestions
+- Context-aware AI responses
+
+**Kundli Page**:
+- View all generated kundlis
+- Birth details for each kundli
+- Quick links to view or chat
+
+**Analysis Page**:
+- View all generated analyses
+- Download PDF reports
+- Professional formatting
+
+## Using the New UI (Desktop)
 
 ### Starting the Application
 
@@ -666,12 +729,54 @@ AstroAI/
 │   │   └── data/                         # Ephemeris and reference data
 │   └── requirements.txt
 │
-├── new-ui/                               # New Simple UI (Recommended) ⭐
+├── backend/                              # FastAPI Backend (NEW) ⭐
+│   ├── main.py                           # FastAPI application
+│   ├── firebase_config.py                # Firebase configuration
+│   ├── firebase_service.py               # Firebase service
+│   ├── astrology_service.py              # Astrology calculations
+│   ├── pdf_generator.py                  # PDF generation
+│   ├── file_manager.py                   # File operations
+│   ├── requirements.txt                  # Backend dependencies
+│   └── README.md                         # Backend documentation
+│
+├── frontend/                             # React Web Dashboard (NEW) ⭐
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Sidebar.tsx               # Collapsible sidebar navigation
+│   │   │   ├── Layout.tsx                # Layout wrapper
+│   │   │   ├── Navbar.tsx                # Top navigation bar
+│   │   │   ├── InsightCard.tsx           # Insight card component
+│   │   │   └── ProtectedRoute.tsx        # Route protection
+│   │   ├── pages/
+│   │   │   ├── LoginPage.tsx             # Google authentication
+│   │   │   ├── DashboardPage.tsx         # Dashboard with insights
+│   │   │   ├── ChatPage.tsx              # Gemini-style chat
+│   │   │   ├── KundliPage.tsx            # Kundli management
+│   │   │   ├── AnalysisPage.tsx          # Analysis management
+│   │   │   ├── GeneratorPage.tsx         # Kundli generator
+│   │   │   ├── ResultsPage.tsx           # Results display
+│   │   │   ├── HistoryPage.tsx           # History view
+│   │   │   └── SettingsPage.tsx          # Settings
+│   │   ├── services/
+│   │   │   ├── api.ts                    # API client
+│   │   │   └── firebase.ts               # Firebase service
+│   │   ├── store/
+│   │   │   └── authStore.ts              # Zustand auth store
+│   │   ├── App.tsx                       # Main app component
+│   │   ├── main.tsx                      # Entry point
+│   │   └── index.css                     # Global styles
+│   ├── netlify.toml                      # Netlify configuration
+│   ├── package.json                      # Dependencies
+│   ├── vite.config.ts                    # Vite configuration
+│   ├── tailwind.config.js                # Tailwind CSS config
+│   └── README.md                         # Frontend documentation
+│
+├── new-ui/                               # New Simple UI (Desktop) ⭐
 │   ├── main.py                           # Application entry point
 │   ├── ui_components.py                  # PyQt6 UI widgets
 │   ├── chart_generator.py                # Chart generation logic
 │   ├── file_manager.py                   # File operations
-│   ├── gemini_analyzer.py                # AI analysis (future)
+│   ├── gemini_analyzer.py                # AI analysis
 │   ├── local_values.py                   # Configuration
 │   ├── requirements.txt                  # UI dependencies
 │   └── README.md                         # UI documentation
@@ -682,6 +787,7 @@ AstroAI/
 │       ├── charts_summary.txt            # Summary
 │       ├── {UserName}_Kundli.json        # Kundli data
 │       ├── {UserName}_Kundli.txt         # Kundli text
+│       ├── analysis/                     # Analysis PDFs
 │       └── charts/                       # JSON, text, PNG files
 │
 ├── Docs/                                 # Reference materials
@@ -693,8 +799,13 @@ AstroAI/
 ├── test_all_api_methods.py               # API test suite (58/58 passing) ⭐
 ├── test_kundli_generation.py             # Kundli generation tests
 ├── test_new_ui_backend.py                # UI backend tests
+├── docker-compose.yml                    # Docker compose configuration
+├── Dockerfile                            # Docker image definition
+├── entrypoint.sh                         # Docker entrypoint script
 │
 ├── PYJHORA_INTEGRATION_GUIDE.md           # Complete API documentation ⭐
+├── FIRESTORE_SCHEMA.md                   # Database schema (NEW)
+├── IMPLEMENTATION_CHECKLIST.md           # Implementation status (NEW)
 ├── ARCHITECTURE.md                       # System architecture
 ├── ARCHITECTURE_VISUAL_DIAGRAMS.md       # Visual diagrams
 ├── MODULE_TECHNICAL_DETAILS.md           # Module documentation
@@ -854,6 +965,63 @@ Custom languages can be added by creating language files in the `lang/` director
 
 ---
 
-**Last Updated:** April 2026  
+---
+
+## Recent Updates (April 2026)
+
+### 🚀 New Web Dashboard & Chat Interface
+
+**Major Features Added:**
+- ✅ **React Web Dashboard** - Modern, responsive interface with Tailwind CSS
+- ✅ **Collapsible Sidebar Navigation** - Gemini-style navigation menu
+- ✅ **AI-Powered Chat** - Gemini integration for astrological queries
+- ✅ **Dashboard Insights** - AI-generated insights with refresh capability
+- ✅ **Kundli Management** - View and manage all generated kundlis
+- ✅ **Analysis Management** - View and download PDF analyses
+- ✅ **User Data Persistence** - Load user data on login
+- ✅ **Professional PDF Export** - Download analyses as formatted PDFs
+
+**Deployment:**
+- ✅ Frontend deployed to Netlify: https://astroai-7.netlify.app
+- ✅ Backend endpoints implemented and ready for deployment
+- ✅ Firebase integration for authentication and data storage
+- ✅ Firestore schema documented
+
+**New Files:**
+- `frontend/` - Complete React application
+- `backend/` - FastAPI backend with 10+ endpoints
+- `FIRESTORE_SCHEMA.md` - Database schema documentation
+- `IMPLEMENTATION_CHECKLIST.md` - Implementation status
+
+**Technology Stack:**
+- Frontend: React 18, TypeScript, Tailwind CSS, Zustand, Firebase SDK
+- Backend: FastAPI, Python 3.11, Firebase Admin SDK, Gemini API
+- Deployment: Netlify (frontend), Docker (backend)
+
+---
+
+## Deployment Status
+
+### Frontend ✅
+- **Status**: Live and Production Ready
+- **URL**: https://astroai-7.netlify.app
+- **Platform**: Netlify
+- **Build**: Successful (429.50 KB JS, 21.91 KB CSS)
+
+### Backend ✅
+- **Status**: Implemented and Ready for Deployment
+- **Framework**: FastAPI + Python 3.11
+- **Endpoints**: 10+ fully implemented
+- **Deployment**: Docker or local Python
+
+### Documentation ✅
+- `FIRESTORE_SCHEMA.md` - Complete database schema
+- `IMPLEMENTATION_CHECKLIST.md` - Phase completion status
+- `DEPLOYMENT_STATUS.md` - Deployment details
+
+---
+
+**Last Updated:** April 4, 2026  
 **API Version:** 1.0.0 (Fully Tested & Production Ready)  
-**Status:** ✅ Active Development
+**Frontend Version:** 1.0.0 (Live on Netlify)  
+**Status:** ✅ Production Ready - Frontend Live, Backend Ready for Deployment
