@@ -12,15 +12,18 @@
 4. [Installation & Setup](#installation--setup)
 5. [Getting Started](#getting-started)
 6. [Using the New UI](#using-the-new-ui)
-7. [Generated Data & Output](#generated-data--output)
-8. [How It Works](#how-it-works)
-9. [Accuracy & Validation](#accuracy--validation)
-10. [Algorithm Improvements](#algorithm-improvements)
-11. [API Reference](#api-reference)
-12. [Project Structure](#project-structure)
-13. [Testing & Verification](#testing--verification)
-14. [Documentation](#documentation)
-15. [Credits & License](#credits--license)
+7. [Backend API & Web Platform](#backend-api--web-platform)
+8. [Docker & Deployment](#docker--deployment)
+9. [Cloudflare Integration](#cloudflare-integration)
+10. [Generated Data & Output](#generated-data--output)
+11. [How It Works](#how-it-works)
+12. [Accuracy & Validation](#accuracy--validation)
+13. [Algorithm Improvements](#algorithm-improvements)
+14. [API Reference](#api-reference)
+15. [Project Structure](#project-structure)
+16. [Testing & Verification](#testing--verification)
+17. [Documentation](#documentation)
+18. [Credits & License](#credits--license)
 
 ---
 
@@ -71,6 +74,14 @@ AstroAI is built on top of **PyJHora**, a comprehensive Python package implement
 - **Chat Interface** (NEW): Gemini-style chat for astrological queries
 - **New Simple UI** (Recommended): Clean, modern PyQt6 interface for quick chart generation
 - **Advanced UI**: Multi-tab interface with comprehensive visualization and PDF export
+- **Web Platform**: React-based frontend with FastAPI backend for cloud deployment
+
+### 🌐 Web Platform Features
+- **User Authentication**: Firebase Google Sign-In and Email/Password
+- **Cloud Storage**: Firebase Firestore for user data and calculations
+- **PDF Generation**: Professional AI analysis reports with download capability
+- **Responsive Design**: Mobile-friendly React interface with Tailwind CSS
+- **Real-time Updates**: WebSocket support for live progress tracking
 
 ### 📊 Data Export & Management
 - **JSON format** for programmatic access
@@ -84,41 +95,101 @@ AstroAI is built on top of **PyJHora**, a comprehensive Python package implement
 
 ## System Architecture
 
+### Complete Platform Architecture
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      AstroAI Platform                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌──────────────────┐  ┌──────────────────┐                 │
-│  │   New Simple UI  │  │   Advanced UI    │                 │
-│  │   (PyQt6)        │  │   (PyQt6 Tabs)   │                 │
-│  └────────┬─────────┘  └────────┬─────────┘                 │
-│           │                      │                           │
-│           └──────────┬───────────┘                           │
-│                      │                                       │
-│           ┌──────────▼──────────┐                           │
-│           │  AstroChartAPI      │                           │
-│           │  (Production API)   │                           │
-│           └──────────┬──────────┘                           │
-│                      │                                       │
-│           ┌──────────▼──────────┐                           │
-│           │     PyJHora         │                           │
-│           │  (Core Calculations)│                           │
-│           └──────────┬──────────┘                           │
-│                      │                                       │
-│        ┌─────────────┼─────────────┐                        │
-│        │             │             │                        │
-│   ┌────▼───┐  ┌─────▼────┐  ┌────▼───┐                    │
-│   │ Charts │  │Panchanga │  │ Doshas │                    │
-│   │Calc.   │  │& Dasha   │  │& Yogas │                    │
-│   └────────┘  └──────────┘  └────────┘                    │
-│                                                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │         Ephemeris Data (Swiss Ephemeris)             │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                               │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         AstroAI Platform (v2.0)                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                    Client Layer                                  │    │
+│  ├─────────────────────────────────────────────────────────────────┤    │
+│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐  │    │
+│  │  │  New Simple UI   │  │   Advanced UI    │  │  Web Platform│  │    │
+│  │  │   (PyQt6)        │  │   (PyQt6 Tabs)   │  │  (React)     │  │    │
+│  │  └────────┬─────────┘  └────────┬─────────┘  └──────┬───────┘  │    │
+│  │           │                      │                   │          │    │
+│  └───────────┼──────────────────────┼───────────────────┼──────────┘    │
+│              │                      │                   │               │
+│  ┌───────────┼──────────────────────┼───────────────────┼──────────┐    │
+│  │           │                      │                   │          │    │
+│  │  ┌────────▼──────────────────────▼───────────────────▼────────┐ │    │
+│  │  │         AstroChartAPI (Local) + FastAPI Backend (Cloud)    │ │    │
+│  │  │         - Kundli Generation                                │ │    │
+│  │  │         - Chart Generation (D1-D60)                        │ │    │
+│  │  │         - PDF Analysis Generation                          │ │    │
+│  │  │         - Firebase Integration                             │ │    │
+│  │  └────────┬──────────────────────────────────────────────────┘ │    │
+│  │           │                                                    │    │
+│  │  ┌────────▼──────────────────────────────────────────────────┐ │    │
+│  │  │              PyJHora Core Library                          │ │    │
+│  │  │         (Vedic Astrology Calculations)                    │ │    │
+│  │  └────────┬──────────────────────────────────────────────────┘ │    │
+│  │           │                                                    │    │
+│  │  ┌────────┴──────────────────────────────────────────────────┐ │    │
+│  │  │    ┌──────────┐  ┌──────────┐  ┌──────────┐              │ │    │
+│  │  │    │ Charts   │  │Panchanga │  │ Doshas   │              │ │    │
+│  │  │    │Calc.     │  │& Dasha   │  │& Yogas   │              │ │    │
+│  │  │    └──────────┘  └──────────┘  └──────────┘              │ │    │
+│  │  └────────────────────────────────────────────────────────────┘ │    │
+│  │                                                                  │    │
+│  └──────────────────────────────────────────────────────────────────┘    │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────┐    │
+│  │                   Storage & Services Layer                        │    │
+│  ├──────────────────────────────────────────────────────────────────┤    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │    │
+│  │  │   Firebase   │  │   Firestore  │  │  Firebase Storage    │   │    │
+│  │  │   Auth       │  │  (User Data) │  │  (PDF Reports)       │   │    │
+│  │  └──────────────┘  └──────────────┘  └──────────────────────┘   │    │
+│  │  ┌──────────────────────────────────────────────────────────┐   │    │
+│  │  │      Swiss Ephemeris Data (Astronomical Calculations)    │   │    │
+│  │  └──────────────────────────────────────────────────────────┘   │    │
+│  └──────────────────────────────────────────────────────────────────┘    │
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────┐    │
+│  │                  Deployment & Infrastructure                      │    │
+│  ├──────────────────────────────────────────────────────────────────┤    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │    │
+│  │  │   Docker     │  │  Cloudflare  │  │  HTTPS/SSL           │   │    │
+│  │  │  Containers  │  │   Tunnel     │  │  (Zero Trust)        │   │    │
+│  │  └──────────────┘  └──────────────┘  └──────────────────────┘   │    │
+│  └──────────────────────────────────────────────────────────────────┘    │
+│                                                                            │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Architecture Layers
+
+**Client Layer:**
+- Local desktop applications (PyQt6-based)
+- Web browser interface (React + TypeScript)
+- Real-time progress tracking and notifications
+
+**API Layer:**
+- AstroChartAPI for local chart generation
+- FastAPI backend for web platform
+- RESTful endpoints for all operations
+- Firebase authentication middleware
+
+**Core Calculation Layer:**
+- PyJHora library (Vedic astrology engine)
+- 1000+ astrological data points per kundli
+- 20 divisional charts (D1-D60)
+- Dasha, Panchanga, Doshas, Yogas calculations
+
+**Storage Layer:**
+- Firebase Firestore (user data, calculations metadata)
+- Firebase Storage (PDF reports)
+- Local file system (new-ui application)
+- Swiss Ephemeris database
+
+**Infrastructure:**
+- Docker containerization for backend
+- Cloudflare Tunnel for secure remote access
+- HTTPS/SSL encryption
+- Zero-trust security model
 
 ---
 
@@ -222,6 +293,7 @@ python main.py
 - Generates all 20 divisional charts with one click
 - Real-time progress tracking
 - Organized output folders
+- AI analysis with PDF generation (requires Gemini API key)
 
 ### Using the API (For Developers)
 
@@ -346,24 +418,64 @@ python run_ui.py
 
 ## Generated Data & Output
 
-### Output Directory Structure
+### Output Directory Structure (New UI - Local)
 
 ```
 users/
 └── {timestamp}_{uniqueId}-{name}/
     ├── user_info.json                    # Birth data
     ├── charts_summary.txt                # Summary of all charts
-    ├── {UserName}_Kundli.json            # Comprehensive astrological data
+    ├── {UserName}_Kundli.json            # Comprehensive astrological data (1000+ points)
     ├── {UserName}_Kundli.txt             # Formatted kundli text
+    ├── {UserName}_AI_Analysis.pdf        # AI analysis report (if generated)
     └── charts/
-        ├── D1_Rasi.json                  # Birth chart (JSON)
-        ├── D1_Rasi.txt                   # Birth chart (Text)
-        ├── D1_Rasi.png                   # Birth chart (Image)
-        ├── D9_Navamsa.json               # Navamsa chart (JSON)
-        ├── D9_Navamsa.txt
-        ├── D9_Navamsa.png
-        └── ... (18 more charts)
+        ├── json/
+        │   ├── D1_Rasi.json              # Birth chart (JSON)
+        │   ├── D9_Navamsa.json           # Navamsa chart (JSON)
+        │   └── ... (18 more charts)
+        ├── text/
+        │   ├── D1_Rasi.txt               # Birth chart (Text)
+        │   ├── D9_Navamsa.txt            # Navamsa chart (Text)
+        │   └── ... (18 more charts)
+        └── images/
+            ├── D1_Rasi.png               # Birth chart (Image)
+            ├── D9_Navamsa.png            # Navamsa chart (Image)
+            └── ... (18 more charts)
 ```
+
+### Cloud Storage (Web Platform)
+
+**Firebase Firestore:**
+- User authentication data
+- Calculation metadata
+- Analysis history
+- User preferences
+
+**Firebase Storage:**
+- PDF analysis reports
+- Chart images
+- User-generated documents
+
+### Data Generation Features
+
+**Kundli Data (1000+ Points):**
+- Planetary positions in all 20 divisional charts
+- Dasha periods (Vimsottari, Ashtottari, etc.)
+- Panchanga details (Tithi, Nakshatra, Yoga, Karana, Vaara)
+- Doshas (Kala Sarpa, Manglik, Pitru, etc.)
+- Yogas (284+ classical yogas)
+- Strength analysis (Shadbala)
+- Compatibility scores
+- And much more
+
+**PDF Analysis Report:**
+- Professional formatting with A4 page size
+- Birth information table
+- Planetary positions summary
+- Detailed AI analysis text
+- Color-coded headers and tables
+- Footer with disclaimer
+- UTF-8 character support
 
 ### File Formats
 
@@ -921,7 +1033,7 @@ AstroAI/
 │   └── {timestamp}_{uniqueId}-{name}/
 │       ├── user_info.json                # Birth data
 │       ├── charts_summary.txt            # Summary
-│       ├── {UserName}_Kundli.json        # Kundli data
+│       ├── {UserName}_Kundli.json        # Kundli data (1000+ points)
 │       ├── {UserName}_Kundli.txt         # Kundli text
 │       ├── analysis/                     # Analysis PDFs
 │       └── charts/                       # JSON, text, PNG files
@@ -932,6 +1044,12 @@ AstroAI/
 │
 ├── astro_chart_api.py                    # Production API class ⭐
 ├── run_ui.py                             # Quick launcher for new UI ⭐
+├── start_all.py                          # Start all services
+├── start_all.ps1                         # Start all (PowerShell)
+├── docker-compose.yml                    # Docker Compose configuration ⭐
+├── Dockerfile                            # Docker image definition
+├── entrypoint.sh                         # Docker entrypoint script
+│
 ├── test_all_api_methods.py               # API test suite (58/58 passing) ⭐
 ├── test_kundli_generation.py             # Kundli generation tests
 ├── test_new_ui_backend.py                # UI backend tests
@@ -948,11 +1066,55 @@ AstroAI/
 ├── CALCULATION_ALGORITHMS.md             # Mathematical algorithms
 ├── SUBSYSTEM_DOCUMENTATION.md            # Subsystem docs
 ├── KUNDLI_GENERATION_GUIDE.md            # Kundli generation details
+├── DEPLOYMENT_GUIDE.md                   # Complete deployment guide ⭐
+├── CLOUDFLARE_INTEGRATION.md             # Cloudflare setup guide ⭐
+├── DOCKER_SETUP.md                       # Docker setup guide ⭐
+├── TESTING_GUIDE.md                      # Testing framework ⭐
+├── OPTIMIZATION_GUIDE.md                 # Performance optimization ⭐
+├── FINAL_CHECKLIST.md                    # Deployment checklist ⭐
+│
+├── firebase.json                         # Firebase configuration
+├── firestore.indexes.json                # Firestore indexes
+├── firestore.rules                       # Firestore security rules
+├── storage.rules                         # Storage security rules
+├── .firebaserc                           # Firebase project config
 │
 ├── README.md                             # This file
 ├── LICENSE                               # License information
 └── .gitignore                            # Git ignore rules
 ```
+
+### Key Directories
+
+**Backend (`backend/`):**
+- FastAPI REST API with 20+ endpoints
+- Firebase integration (Auth, Firestore, Storage)
+- PDF generation with reportlab
+- Pydantic models for validation
+
+**Frontend (`frontend/`):**
+- React 18 with TypeScript
+- Tailwind CSS for styling
+- Zustand for state management
+- Firebase SDK integration
+
+**Cloudflare (`cloudflare/`):**
+- Tunnel configuration and setup
+- Automated setup scripts
+- Testing utilities
+- Documentation
+
+**New UI (`new-ui/`):**
+- PyQt6 desktop application
+- Local chart generation
+- File management
+- AI analysis integration
+
+**Docker:**
+- Multi-stage Dockerfile for optimized images
+- docker-compose.yml for orchestration
+- Environment configuration
+- Health checks and dependencies
 
 ---
 
@@ -985,11 +1147,32 @@ python test_kundli_generation.py
 - ✅ All charts work correctly
 - ✅ No regressions in functionality
 
+### Backend Endpoint Tests
+
+```bash
+python test_backend_endpoints.py
+```
+
+Tests all FastAPI endpoints including:
+- Authentication endpoints
+- Kundli generation
+- Analysis generation
+- PDF download
+- History retrieval
+
 ### UI Backend Tests
 
 ```bash
 python test_new_ui_backend.py
 ```
+
+### Complete Flow Tests
+
+```bash
+python test_backend_flow.py
+```
+
+Tests the complete workflow from user registration to PDF generation.
 
 ### PyJHora Core Tests
 
@@ -1001,28 +1184,102 @@ python -m pytest PyJHora/src/jhora/tests/pvr_tests.py
 
 **Note:** Tests assume `const._DEFAULT_AYANAMSA_MODE='LAHIRI'`
 
+### Docker Testing
+
+```bash
+# Build and run tests in Docker
+docker-compose up --build
+
+# Run specific test suite
+docker-compose exec backend python test_backend_endpoints.py
+
+# View logs
+docker-compose logs -f backend
+```
+
+### Cloudflare Tunnel Testing
+
+```bash
+# Windows PowerShell
+.\cloudflare\test-tunnel.ps1
+
+# Linux/macOS
+bash cloudflare/test-tunnel.sh
+```
+
+### Performance Testing
+
+See `TESTING_GUIDE.md` for:
+- Load testing procedures
+- Performance benchmarks
+- Memory profiling
+- Database query optimization tests
+
 ---
 
 ## Documentation
 
-### Quick References
+### Complete Documentation Index
 
-| Document | Purpose |
-|----------|---------|
-| `PYJHORA_INTEGRATION_GUIDE.md` | Complete API guide with examples |
-| `ARCHITECTURE.md` | System design and architecture |
-| `ARCHITECTURE_VISUAL_DIAGRAMS.md` | Visual system diagrams |
-| `MODULE_TECHNICAL_DETAILS.md` | Detailed module documentation |
-| `CALCULATION_ALGORITHMS.md` | Mathematical algorithms used |
-| `SUBSYSTEM_DOCUMENTATION.md` | Subsystem-specific documentation |
-| `KUNDLI_GENERATION_GUIDE.md` | Kundli generation details |
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| `README.md` | Project overview and quick start | Everyone |
+| `PYJHORA_INTEGRATION_GUIDE.md` | Complete API guide with examples | Developers |
+| `ARCHITECTURE.md` | System design and architecture | Architects, Developers |
+| `ARCHITECTURE_VISUAL_DIAGRAMS.md` | Visual system diagrams | Everyone |
+| `MODULE_TECHNICAL_DETAILS.md` | Detailed module documentation | Developers |
+| `CALCULATION_ALGORITHMS.md` | Mathematical algorithms used | Astrology Experts |
+| `SUBSYSTEM_DOCUMENTATION.md` | Subsystem-specific documentation | Developers |
+| `KUNDLI_GENERATION_GUIDE.md` | Kundli generation details | Developers |
+| `DEPLOYMENT_GUIDE.md` | Complete deployment guide | DevOps, Developers |
+| `CLOUDFLARE_INTEGRATION.md` | Cloudflare Tunnel setup | DevOps, System Admins |
+| `DOCKER_SETUP.md` | Docker containerization guide | DevOps, Developers |
+| `TESTING_GUIDE.md` | Testing framework and procedures | QA, Developers |
+| `OPTIMIZATION_GUIDE.md` | Performance optimization | Developers, DevOps |
+| `FINAL_CHECKLIST.md` | Pre/post-deployment checklist | DevOps, Project Managers |
+| `backend/README.md` | Backend API documentation | Backend Developers |
+| `frontend/README.md` | Frontend setup and features | Frontend Developers |
+| `cloudflare/README.md` | Cloudflare quick reference | DevOps |
+| `new-ui/README.md` | New UI documentation | End Users, Developers |
+
+### Quick Start Guides
+
+**For End Users:**
+1. Install dependencies: `pip install -r backend/requirements.txt`
+2. Run the new UI: `python run_ui.py`
+3. Enter birth details and generate charts
+
+**For Web Platform Users:**
+1. Visit `https://kendraa.ai` (or your custom domain)
+2. Sign in with Google or email
+3. Generate kundli and analysis
+4. Download PDF reports
+
+**For Developers:**
+1. Clone repository: `git clone https://github.com/techie-jai/AstroAI.git`
+2. Set up backend: `cd backend && pip install -r requirements.txt`
+3. Set up frontend: `cd frontend && npm install`
+4. Configure Firebase credentials
+5. Run tests: `python test_all_api_methods.py`
+6. Start services: `python start_all.py` or `docker-compose up`
+
+**For DevOps/Deployment:**
+1. Read `DEPLOYMENT_GUIDE.md`
+2. Configure Docker: `docker-compose build`
+3. Set up Cloudflare: `cd cloudflare && .\setup.ps1`
+4. Deploy: `docker-compose up -d`
+5. Verify: `.\cloudflare\test-tunnel.ps1`
 
 ### Getting Help
 
 - **Getting Started**: See [Getting Started](#getting-started) section
 - **Full API Reference**: See `PYJHORA_INTEGRATION_GUIDE.md`
+- **Backend Setup**: See `backend/README.md`
+- **Frontend Setup**: See `frontend/README.md`
+- **Deployment**: See `DEPLOYMENT_GUIDE.md`
 - **Run Tests**: `python test_all_api_methods.py`
 - **Run Examples**: `python astro_chart_api.py`
+- **Issues**: Create an issue on GitHub
 
 ---
 
@@ -1051,6 +1308,7 @@ Contributions are welcome! Please ensure:
 - Unit tests pass (run `python test_all_api_methods.py`)
 - Code follows existing style conventions
 - Documentation is updated
+- Backend and frontend changes are tested
 
 ### Support & Issues
 
@@ -1058,6 +1316,7 @@ For issues, questions, or contributions:
 - GitHub: https://github.com/techie-jai/AstroAI
 - Create an issue on GitHub for bug reports
 - Submit pull requests for improvements
+- Check existing documentation first
 
 ---
 
@@ -1085,6 +1344,46 @@ For issues, questions, or contributions:
 | D40 | 40 | Khavedamsa | Effects |
 | D45 | 45 | Akshavedamsa | General |
 | D60 | 60 | Shashtyamsa | Well-being |
+
+---
+
+## Technology Stack
+
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand
+- **UI Components**: Lucide React icons, shadcn/ui
+- **Build Tool**: Vite
+- **Authentication**: Firebase SDK
+- **HTTP Client**: Axios
+
+### Backend
+- **Framework**: FastAPI (Python)
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Admin SDK
+- **PDF Generation**: ReportLab
+- **Validation**: Pydantic
+- **CORS**: FastAPI CORS middleware
+- **Async**: Python asyncio
+
+### Core Calculations
+- **Astrology Engine**: PyJHora
+- **Ephemeris**: Swiss Ephemeris (pyswisseph)
+- **Date/Time**: python-dateutil, pytz
+- **Geolocation**: geopy, geocoder, timezonefinder
+
+### Desktop UI
+- **Framework**: PyQt6
+- **Image Processing**: Pillow
+- **PDF Export**: img2pdf
+- **HTTP**: requests
+
+### Infrastructure
+- **Containerization**: Docker, Docker Compose
+- **Tunneling**: Cloudflare Tunnel
+- **Security**: HTTPS/SSL, Zero-trust model
+- **Cloud**: Firebase (Auth, Firestore, Storage)
 
 ---
 
