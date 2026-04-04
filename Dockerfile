@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY astro_chart_api.py .
 COPY PyJHora/ ./PyJHora/
+RUN mkdir -p /app/users /app/users/charts /app/users/analysis
 COPY frontend/package*.json ./frontend/
 COPY frontend/src ./frontend/src
 COPY frontend/index.html ./frontend/
@@ -36,8 +37,6 @@ COPY frontend/tsconfig.json ./frontend/
 COPY frontend/tsconfig.node.json ./frontend/
 COPY frontend/tailwind.config.js ./frontend/
 COPY frontend/postcss.config.js ./frontend/
-
-RUN mkdir -p /app/new-ui
 
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
