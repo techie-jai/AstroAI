@@ -1134,6 +1134,99 @@ Custom languages can be added by creating language files in the `lang/` director
 - Backend: FastAPI, Python 3.11, Firebase Admin SDK, Gemini API
 - Deployment: Netlify (frontend), Docker (backend)
 
+### 🔐 Gemini API Key Configuration (April 5, 2026)
+
+**Security Update:**
+- ✅ **Removed hardcoded API keys** from `new-ui/local_values.py`
+- ✅ **Environment variable support** - Load API key from `GEMINI_API_KEY` env var
+- ✅ **Docker `.env` file support** - Secure configuration for containerized deployment
+- ✅ **Git protection** - `.env` files excluded from version control
+
+**Setup Instructions:**
+
+**For Local Development:**
+```powershell
+# Set environment variable (Windows PowerShell)
+$env:GEMINI_API_KEY = "YOUR_NEW_API_KEY_HERE"
+
+# Or create backend/.env file
+GEMINI_API_KEY=YOUR_NEW_API_KEY_HERE
+```
+
+**For Docker Deployment:**
+```bash
+# Create .env file in project root
+GEMINI_API_KEY=YOUR_NEW_API_KEY_HERE
+FIREBASE_STORAGE_BUCKET=your-bucket
+VITE_FIREBASE_API_KEY=your-key
+# ... other variables
+
+# Build and run
+docker-compose build
+docker-compose up -d
+```
+
+**Getting a New API Key:**
+1. Visit [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new API key for Gemini API
+3. Replace the old key with the new one
+4. Restart your backend/Docker containers
+
+### 🎯 Insights & Analysis Features (April 5, 2026)
+
+**New Modules:**
+- ✅ **insights_extractor.py** - Automatic insights extraction from Gemini analysis
+- ✅ **analysis_formatter.py** - Professional analysis formatting
+- ✅ **pdf_generator.py** - High-quality PDF generation with reportlab
+
+**Insights Features:**
+- Dashboard insights with 4 categories: Health, Career, Relationships, Money
+- Automatic extraction from Gemini analysis
+- Firebase storage with full metadata
+- Refresh capability on dashboard
+- Professional PDF reports with birth info, planetary summary, and analysis
+
+**New Endpoints:**
+- `POST /api/analysis/generate` - Generate AI analysis with insights
+- `GET /api/dashboard/insights/{kundli_id}` - Fetch dashboard insights
+- `GET /api/analysis/download/{kundli_id}` - Download PDF report
+- `GET /api/insights/{kundli_id}` - Fetch full insights
+
+### 🐳 Docker Configuration (April 5, 2026)
+
+**Docker Setup:**
+- ✅ **Multi-stage Dockerfile** - Optimized image size with frontend build
+- ✅ **docker-compose.yml** - Complete service orchestration
+- ✅ **Environment variable support** - Secure credential handling
+- ✅ **Volume mounts** - Persistent user data storage
+- ✅ **Health checks** - Service monitoring
+
+**Docker Files Included:**
+- `Dockerfile` - Multi-stage build with Node + Python
+- `docker-compose.yml` - Backend + Frontend + Cloudflare tunnel
+- `.env.example` - Configuration template
+- `entrypoint.sh` - Container startup script
+
+**Building & Running:**
+```bash
+# Build Docker image
+docker-compose build
+
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f astroai
+
+# Stop services
+docker-compose down
+```
+
+**Services:**
+- Backend API: http://localhost:8000
+- Frontend: http://localhost:3000
+- Cloudflare Tunnel: Automatic HTTPS with custom domain
+
 ---
 
 ## Deployment Status
