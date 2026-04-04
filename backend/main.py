@@ -783,31 +783,34 @@ async def get_dashboard_insights(
         print(f"[INSIGHTS] Fetching insights for kundli_id: {kundli_id}, force_refresh: {force_refresh}")
         
         db = FirebaseConfig.get_db()
-        
-        if not force_refresh:
-            try:
-                insights_doc = db.collection('calculations').where('result_summary.kundli_id', '==', kundli_id).stream()
-                for doc in insights_doc:
-                    calc_data = doc.to_dict()
-                    if calc_data.get('dashboard_insights'):
-                        print(f"[INSIGHTS] Found cached insights")
-                        return calc_data.get('dashboard_insights')
-            except Exception as e:
-                print(f"[INSIGHTS] Could not retrieve cached insights: {str(e)}")
-        
-        print(f"[INSIGHTS] Generating new insights for kundli_id: {kundli_id}")
-        
         calculations = FirebaseService.get_user_calculations(current_user['uid'])
-        kundli_data = None
-        user_folder = None
-        birth_data = None
         
+        # Find the calculation with matching kundli_id
+        matching_calc = None
         for calc in calculations:
             result_summary = calc.get('result_summary', {})
             if result_summary.get('kundli_id') == kundli_id:
-                user_folder = result_summary.get('user_folder')
-                birth_data = calc.get('birth_data', {})
+                matching_calc = calc
                 break
+        
+        if not matching_calc:
+            print(f"[INSIGHTS] Kundli {kundli_id} not found in user calculations")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Kundli {kundli_id} not found"
+            )
+        
+        # Check for cached insights if not forcing refresh
+        if not force_refresh and matching_calc.get('dashboard_insights'):
+            print(f"[INSIGHTS] Found cached insights")
+            return matching_calc.get('dashboard_insights')
+        
+        print(f"[INSIGHTS] Generating new insights for kundli_id: {kundli_id}")
+        
+        result_summary = matching_calc.get('result_summary', {})
+        user_folder = result_summary.get('user_folder')
+        birth_data = matching_calc.get('birth_data', {})
+        kundli_data = None
         
         if not user_folder:
             raise HTTPException(
@@ -876,14 +879,14 @@ Birth Data: Name: {birth_data.get('name')}, Date: {birth_data.get('year')}-{birt
         }
         
         try:
-            calculations = FirebaseService.get_user_calculations(current_user['uid'])
-            for calc in calculations:
-                result_summary = calc.get('result_summary', {})
-                if result_summary.get('kundli_id') == kundli_id:
-                    db.collection('calculations').document(calc.get('calculation_id')).update({
-                        'dashboard_insights': insights_data
-                    })
-                    break
+            calc_id = matching_calc.get('calculation_id')
+            if calc_id:
+                db.collection('calculations').document(calc_id).update({
+                    'dashboard_insights': insights_data
+                })
+                print(f"[INSIGHTS] Insights saved to Firebase")
+            else:
+                print(f"[INSIGHTS] Warning: Could not find calculation_id to save insights")
         except Exception as e:
             print(f"[INSIGHTS] Could not save insights to Firebase: {str(e)}")
         

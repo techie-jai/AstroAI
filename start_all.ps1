@@ -1,5 +1,5 @@
 # AstroAI Complete Startup Script (PowerShell)
-# Simple script that starts backend and frontend
+# Directly starts backend and React frontend without options
 
 Write-Host ""
 Write-Host "================================================================================" -ForegroundColor Cyan
@@ -19,11 +19,11 @@ Write-Host ""
 # Start backend in a new window
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$BackendDir'; python main.py"
 
-Write-Host "Waiting 5 seconds for backend to start..." -ForegroundColor Cyan
-Start-Sleep -Seconds 5
+Write-Host "Waiting 8 seconds for backend to initialize..." -ForegroundColor Cyan
+Start-Sleep -Seconds 8
 
 Write-Host ""
-Write-Host "Starting Frontend..." -ForegroundColor Green
+Write-Host "Starting Web Dashboard (React)..." -ForegroundColor Green
 Write-Host "Command: cd frontend && npm run dev" -ForegroundColor Yellow
 Write-Host ""
 
@@ -38,12 +38,12 @@ Write-Host ""
 Write-Host "Backend:  http://localhost:8000" -ForegroundColor Green
 Write-Host "Frontend: http://localhost:3000 (or 3001 if 3000 is in use)" -ForegroundColor Green
 Write-Host ""
-Write-Host "Opening browser in 3 seconds..." -ForegroundColor Cyan
+Write-Host "Opening browser in 5 seconds..." -ForegroundColor Cyan
 Write-Host ""
 
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 5
 Start-Process "http://localhost:3000"
 
-Write-Host "Done! Both services are starting in separate windows." -ForegroundColor Green
+Write-Host "Done! Services are starting in separate windows." -ForegroundColor Green
 Write-Host "Check the terminal windows for logs." -ForegroundColor Cyan
 Write-Host ""
