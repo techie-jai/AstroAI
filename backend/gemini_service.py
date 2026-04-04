@@ -87,6 +87,30 @@ class GeminiService:
         except Exception as e:
             raise Exception(f"Failed to generate analysis with Gemini: {str(e)}")
     
+    def generate_response(self, prompt: str) -> str:
+        """
+        Generate a response from Gemini for a given prompt
+        
+        Args:
+            prompt: The prompt to send to Gemini
+            
+        Returns:
+            Response text from Gemini
+        """
+        if not self.initialized or not self.model:
+            raise Exception("Gemini service not initialized. Please set GEMINI_API_KEY environment variable.")
+        
+        try:
+            response = self.model.generate_content(prompt)
+            
+            if response.text:
+                return response.text
+            else:
+                return "Unable to generate response. Please try again."
+        
+        except Exception as e:
+            raise Exception(f"Failed to generate response with Gemini: {str(e)}")
+    
     def _build_analysis_prompt(self, kundli_data: Dict, user_name: str, analysis_type: str) -> str:
         """
         Build a detailed prompt for Gemini based on kundli data

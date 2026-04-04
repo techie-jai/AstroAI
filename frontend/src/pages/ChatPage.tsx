@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
-import { Send, Loader } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Send, Loader, ArrowLeft } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -16,38 +16,61 @@ interface KundliInfo {
   place: string
 }
 
+interface Calculation {
+  calculation_id: string
+  kundli_id: string
+  name: string
+  birth_date: string
+}
+
 export default function ChatPage() {
   const { kundliId } = useParams<{ kundliId: string }>()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [kundliInfo, setKundliInfo] = useState<KundliInfo | null>(null)
   const [loadingKundli, setLoadingKundli] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [calculations, setCalculations] = useState<Calculation[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Initialize - fetch calculations if no kundliId, or fetch kundli info if kundliId provided
   useEffect(() => {
-    const fetchKundliInfo = async () => {
+    const init = async () => {
       try {
-        setLoadingKundli(true)
-        const response = await api.getKundli(kundliId!)
-        setKundliInfo({
-          name: response.data.birth_data?.name || 'Unknown',
-          birth_date: `${response.data.birth_data?.year}-${response.data.birth_data?.month}-${response.data.birth_data?.day}`,
-          place: response.data.birth_data?.place || 'Unknown',
-        })
-      } catch (error) {
-        console.error('Failed to fetch kundli info:', error)
-        toast.error('Failed to load kundli information')
+        if (!kundliId) {
+          // No kundliId - fetch available kundlis
+          const response = await api.getUserCalculations()
+          const calcs = response.data.calculations || []
+          setCalculations(calcs)
+          if (calcs.length === 0) {
+            setError('No kundlis found. Please generate a kundli first.')
+          } else {
+            setError('Select a kundli to start chatting.')
+          }
+        } else {
+          // Has kundliId - fetch kundli info
+          const response = await api.getKundli(kundliId)
+          const birthData = response.data.birth_data || {}
+          setKundliInfo({
+            name: birthData.name || 'Unknown',
+            birth_date: `${birthData.year || 'N/A'}-${birthData.month || 'N/A'}-${birthData.day || 'N/A'}`,
+            place: birthData.place_name || birthData.place || 'Unknown',
+          })
+        }
+      } catch (err: any) {
+        const errorMsg = err.response?.data?.detail || err.message || 'Failed to load data'
+        setError(errorMsg)
       } finally {
         setLoadingKundli(false)
       }
     }
-
-    if (kundliId) {
-      fetchKundliInfo()
-    }
+    
+    init()
   }, [kundliId])
 
+  // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -55,7 +78,10 @@ export default function ChatPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!inputValue.trim() || !kundliId) return
+    if (!inputValue.trim() || !kundliId) {
+      console.log('[ChatPage] Cannot send message - inputValue or kundliId missing')
+      return
+    }
 
     const userMessage: Message = {
       role: 'user',
@@ -68,12 +94,14 @@ export default function ChatPage() {
     setLoading(true)
 
     try {
+      console.log('[ChatPage] Sending message:', inputValue)
       const response = await api.sendChatMessage(
         kundliId,
         inputValue,
         messages.map(m => ({ role: m.role, content: m.content }))
       )
 
+      console.log('[ChatPage] Response received:', response.data)
       const assistantMessage: Message = {
         role: 'assistant',
         content: response.data.response || 'Unable to generate response',
@@ -81,25 +109,90 @@ export default function ChatPage() {
       }
 
       setMessages(prev => [...prev, assistantMessage])
-    } catch (error) {
-      console.error('Failed to send message:', error)
-      toast.error('Failed to send message')
+    } catch (error: any) {
+      console.error('[ChatPage] Failed to send message:', error)
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to send message'
+      toast.error(errorMsg)
       setMessages(prev => prev.slice(0, -1))
     } finally {
       setLoading(false)
     }
   }
 
+  // Loading state
   if (loadingKundli) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '48px', height: '48px', border: '4px solid #4f46e5', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }}></div>
+          <p style={{ color: '#4b5563' }}>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // No kundliId - show selection screen
+  if (!kundliId) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6', padding: '16px' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', padding: '32px', maxWidth: '448px', width: '100%' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '16px' }}>Select a Kundli</h2>
+          <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px' }}>{error || 'Choose a kundli to chat about'}</p>
+          
+          {calculations.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '256px', overflowY: 'auto' }}>
+                {calculations.map((calc) => (
+                  <button
+                    key={calc.kundli_id}
+                    onClick={() => navigate(`/chat/${calc.kundli_id}`)}
+                    style={{ width: '100%', textAlign: 'left', padding: '12px', borderRadius: '8px', backgroundColor: '#eef2ff', border: '1px solid #c7d2fe', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#e0e7ff')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#eef2ff')}
+                  >
+                    <p style={{ fontWeight: '600', color: '#312e81', fontSize: '14px' }}>{calc.name}</p>
+                    <p style={{ fontSize: '12px', color: '#4f46e5' }}>{calc.birth_date}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#4f46e5', color: 'white', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'background-color 0.2s' }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#4338ca')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#4f46e5')}
+          >
+            <ArrowLeft size={18} />
+            <span>Back to Dashboard</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error && !kundliInfo) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6', padding: '16px' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', padding: '32px', maxWidth: '448px', width: '100%', textAlign: 'center' }}>
+          <p style={{ color: '#dc2626', marginBottom: '16px', fontWeight: '600' }}>Error Loading Kundli</p>
+          <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px' }}>{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#4f46e5', color: 'white', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+          >
+            <ArrowLeft size={18} />
+            <span>Back to Dashboard</span>
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full bg-gray-50">
+    <div className="flex w-full h-full bg-gray-50">
       {/* Left Panel - Kundli Info */}
       <div className="w-64 bg-gradient-to-b from-indigo-900 to-purple-900 text-white p-6 border-r border-indigo-800 overflow-y-auto">
         <h2 className="text-2xl font-bold mb-6">Kundli Info</h2>

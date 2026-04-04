@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -1116,9 +1117,7 @@ async def download_analysis_pdf(
 
 @app.post("/api/chat/message")
 async def send_chat_message(
-    kundli_id: str,
-    user_message: str,
-    chat_history: List[Dict] = None,
+    request_body: dict,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -1133,6 +1132,16 @@ async def send_chat_message(
         AI response
     """
     try:
+        kundli_id = request_body.get('kundli_id')
+        user_message = request_body.get('user_message')
+        chat_history = request_body.get('chat_history', [])
+        
+        if not kundli_id or not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="kundli_id and user_message are required"
+            )
+        
         print(f"[CHAT] Processing message for kundli_id: {kundli_id}, user: {current_user.get('uid')}")
         
         if not gemini_service:
@@ -1141,35 +1150,21 @@ async def send_chat_message(
                 detail="Gemini service not available"
             )
         
-        calculations = FirebaseService.get_user_calculations(current_user['uid'])
-        kundli_data = None
-        user_folder = None
-        birth_data = None
+        # Fetch kundli data from Firebase (same way as /api/kundli/{kundli_id} endpoint)
+        print(f"[CHAT] Fetching kundli from Firebase: {kundli_id}")
+        kundli_data = FirebaseService.get_kundli(current_user['uid'], kundli_id)
         
-        for calc in calculations:
-            result_summary = calc.get('result_summary', {})
-            if result_summary.get('kundli_id') == kundli_id:
-                user_folder = result_summary.get('user_folder')
-                birth_data = calc.get('birth_data', {})
-                break
-        
-        if not user_folder:
+        if not kundli_data:
+            print(f"[CHAT] ERROR: Kundli not found in Firebase for kundli_id: {kundli_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Kundli {kundli_id} not found"
             )
         
-        kundli_json_path = os.path.join(user_folder, f"{birth_data.get('name', 'User')}_Kundli.json")
-        if os.path.exists(kundli_json_path):
-            with open(kundli_json_path, 'r') as f:
-                kundli_data = json.load(f)
+        print(f"[CHAT] Kundli data loaded from Firebase successfully")
+        birth_data = kundli_data.get('birth_data', {})
         
-        if not kundli_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Kundli data not found"
-            )
-        
+        print(f"[CHAT] Kundli data loaded, preparing context...")
         horoscope_info = kundli_data.get('horoscope_info', {})
         horoscope_text = json.dumps(horoscope_info, indent=2)[:2000]
         
@@ -1204,14 +1199,20 @@ User: {user_message}
 
 Please provide a helpful and accurate response based on the kundli data provided."""
         
-        response_text = gemini_service.generate_response(full_prompt)
+        print(f"[CHAT] Calling Gemini service...")
+        try:
+            response_text = gemini_service.generate_response(full_prompt)
+            print(f"[CHAT] Response generated successfully: {response_text[:100]}...")
+        except Exception as e:
+            print(f"[CHAT] ERROR generating response: {str(e)}")
+            raise
         
-        print(f"[CHAT] Response generated successfully")
+        print(f"[CHAT] Returning response to client")
         return {
             'kundli_id': kundli_id,
             'user_message': user_message,
             'response': response_text,
-            'timestamp': firestore.SERVER_TIMESTAMP
+            'timestamp': datetime.now().isoformat()
         }
     
     except HTTPException:
