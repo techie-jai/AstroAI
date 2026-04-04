@@ -201,11 +201,46 @@ export default function ResultsPage() {
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-lg p-6">
-              <p className="text-gray-700 whitespace-pre-wrap">{analysis}</p>
+            <div className="bg-white rounded-lg p-8">
+              <div className="prose prose-sm max-w-none">
+                {analysis.split('\n').map((line, idx) => {
+                  const trimmed = line.trim()
+                  
+                  // Empty lines
+                  if (!trimmed) {
+                    return <div key={idx} className="h-2" />
+                  }
+                  
+                  // Section headings (all caps or quoted)
+                  if (trimmed.match(/^[A-Z\s\.]+$/) && trimmed.length > 5 || 
+                      (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+                    return (
+                      <h3 key={idx} className="text-lg font-bold text-indigo-700 mt-6 mb-3 border-b-2 border-indigo-200 pb-2">
+                        {trimmed.replace(/^"|"$/g, '')}
+                      </h3>
+                    )
+                  }
+                  
+                  // Numbered points
+                  if (trimmed.match(/^\d+[\.\)]\s+/)) {
+                    return (
+                      <div key={idx} className="ml-4 mb-3 text-gray-700">
+                        <p className="text-base leading-relaxed">{trimmed}</p>
+                      </div>
+                    )
+                  }
+                  
+                  // Regular paragraphs
+                  return (
+                    <p key={idx} className="text-gray-700 leading-relaxed mb-4">
+                      {trimmed}
+                    </p>
+                  )
+                })}
+              </div>
               <button
                 onClick={() => setAnalysis(null)}
-                className="mt-4 text-indigo-600 hover:text-indigo-700 font-semibold"
+                className="mt-8 text-indigo-600 hover:text-indigo-700 font-semibold"
               >
                 Generate New Analysis
               </button>

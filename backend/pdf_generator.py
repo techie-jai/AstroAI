@@ -12,6 +12,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from analysis_formatter import AnalysisFormatter
 
 
 class PDFGenerator:
@@ -182,16 +183,27 @@ class PDFGenerator:
         
         # Add main analysis section
         elements.append(Paragraph("Detailed Astrological Analysis", heading_style))
+        elements.append(Spacer(1, 0.15*inch))
+        
+        # Format analysis text first
+        formatted_text = AnalysisFormatter.format_analysis(analysis_text)
         
         # Parse analysis text and add with proper formatting
-        analysis_paragraphs = analysis_text.split('\n\n')
-        for para in analysis_paragraphs:
-            if para.strip():
-                # Check if this is a section heading (numbered or bold)
-                if para.strip() and any(para.strip().startswith(f"{i}.") for i in range(1, 10)):
-                    elements.append(Paragraph(para.strip(), heading_style))
-                else:
-                    elements.append(Paragraph(para.strip(), body_style))
+        lines = formatted_text.split('\n')
+        for line in lines:
+            stripped = line.strip()
+            
+            if not stripped:
+                elements.append(Spacer(1, 0.1*inch))
+            elif AnalysisFormatter._is_section_heading(stripped):
+                elements.append(Spacer(1, 0.1*inch))
+                elements.append(Paragraph(stripped, heading_style))
+                elements.append(Spacer(1, 0.1*inch))
+            elif AnalysisFormatter._is_numbered_point(stripped):
+                elements.append(Spacer(1, 0.08*inch))
+                elements.append(Paragraph(stripped, body_style))
+            else:
+                elements.append(Paragraph(stripped, body_style))
         
         # Add footer
         elements.append(Spacer(1, 0.3*inch))

@@ -18,6 +18,7 @@ from gemini_service import GeminiService
 from auth import verify_token, get_current_user
 from file_manager import FileManager
 from pdf_generator import PDFGenerator
+from analysis_formatter import AnalysisFormatter
 from fastapi.responses import FileResponse
 
 load_dotenv()
@@ -751,9 +752,13 @@ async def generate_analysis(
                 detail=f"Failed to generate analysis: {str(e)}"
             )
         
+        # Format analysis text for better presentation
+        print(f"[ANALYSIS] Formatting analysis text...")
+        formatted_analysis_text = AnalysisFormatter.format_analysis(analysis_text)
+        
         # Save analysis text locally
         print(f"[ANALYSIS] Saving analysis locally...")
-        analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, analysis_text)
+        analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, formatted_analysis_text)
         print(f"[ANALYSIS] Analysis saved: {analysis_text_path}")
         
         # Generate PDF report
@@ -778,7 +783,7 @@ async def generate_analysis(
             "kundli_id": request.kundli_id,
             "status": "completed",
             "message": "Analysis generated successfully",
-            "analysis_text": analysis_text,
+            "analysis_text": formatted_analysis_text,
             "analysis_text_path": analysis_text_path,
             "analysis_pdf_path": analysis_pdf_path
         }
