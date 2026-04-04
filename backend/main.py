@@ -10,7 +10,7 @@ from google.cloud.firestore import Increment
 
 from models import (
     BirthData, GenerateKundliRequest, GenerateAnalysisRequest,
-    KundliResponse, AnalysisResponse, ErrorResponse
+    KundliResponse, AnalysisResponse, ErrorResponse, CreateProfileRequest
 )
 from firebase_config import FirebaseConfig, FirebaseService
 from astrology_service import AstrologyService
@@ -149,21 +149,17 @@ async def verify_firebase_token(token: str):
 
 
 @app.post("/api/auth/create-profile")
-async def create_user_profile(
-    token: str,
-    display_name: Optional[str] = None
-):
+async def create_user_profile(request: CreateProfileRequest):
     """
     Create user profile after authentication
     
     Args:
-        token: Firebase ID token
-        display_name: Optional display name
+        request: CreateProfileRequest with token and optional display_name
         
     Returns:
         User profile information
     """
-    decoded = FirebaseService.verify_token(token)
+    decoded = FirebaseService.verify_token(request.token)
     if not decoded:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -173,7 +169,7 @@ async def create_user_profile(
     uid = decoded['uid']
     email = decoded.get('email')
     
-    success = FirebaseService.create_user_profile(uid, email, display_name)
+    success = FirebaseService.create_user_profile(uid, email, request.display_name)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -291,6 +287,7 @@ async def generate_kundli(
         chart_types = request.chart_types or ['D1', 'D7', 'D9', 'D10']
         charts_result = astrology_service.generate_charts(birth_data_dict, chart_types)
         
+        charts_dict = {}
         if charts_result.get('success'):
             charts_dict = charts_result.get('charts', {})
             print(f"[KUNDLI] Generated {len(charts_dict)} charts")
@@ -305,6 +302,21 @@ async def generate_kundli(
                 print(f"[KUNDLI] Saved chart: {chart_type}")
         else:
             print(f"[KUNDLI] Chart generation failed: {charts_result.get('error', 'Unknown error')}")
+        
+        # Save complete kundli data to Firebase for LLM access
+        print(f"[KUNDLI] Saving complete kundli data to Firebase...")
+        kundli_firebase_data = {
+            'kundli_id': kundli_id,
+            'birth_data': birth_data_dict,
+            'horoscope_info': kundli_data.get('horoscope_info', {}),
+            'chart_types': request.chart_types or ['D1', 'D7', 'D9', 'D10'],
+            'charts': charts_dict,
+            'generated_at': result['generated_at'],
+            'user_folder': user_folder,
+            'unique_id': unique_id
+        }
+        kundli_firebase_id = FirebaseService.save_kundli(current_user['uid'], kundli_firebase_data)
+        print(f"[KUNDLI] Kundli data saved to Firebase: {kundli_firebase_id}")
         
         # Save to Firebase for auth/tracking only
         print(f"[KUNDLI] Saving calculation metadata to Firebase...")
@@ -347,6 +359,7 @@ async def generate_kundli(
             "kundli_text_path": kundli_text_path,
             "birth_data": birth_data_dict,
             "generated_at": result['generated_at'],
+            "firebase_kundli_id": kundli_firebase_id,
             "horoscope_info_keys": list(kundli_data.get('horoscope_info', {}).keys())[:10]
         }
         print(f"[KUNDLI] Returning response: {response_data}")
@@ -409,18 +422,26 @@ async def get_kundli(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Get stored kundli data from local files
+    Get stored kundli data from Firebase (for LLM access)
     
     Args:
         kundli_id: Kundli ID
         
     Returns:
-        Kundli data
+        Complete kundli data including horoscope_info
     """
     try:
         print(f"[GET_KUNDLI] Fetching kundli: {kundli_id} for user: {current_user.get('uid')}")
         
-        # Get calculation metadata from Firebase to find user folder
+        # Try to get kundli from Firebase first (for LLM access)
+        kundli_data = FirebaseService.get_kundli(current_user['uid'], kundli_id)
+        
+        if kundli_data:
+            print(f"[GET_KUNDLI] Kundli data loaded from Firebase")
+            return kundli_data
+        
+        # Fallback: Get from local files if not in Firebase
+        print(f"[GET_KUNDLI] Kundli not found in Firebase, trying local files...")
         calculations = FirebaseService.get_user_calculations(current_user['uid'])
         print(f"[GET_KUNDLI] Found {len(calculations)} calculations")
         
@@ -455,9 +476,9 @@ async def get_kundli(
                 detail="Kundli file not found"
             )
         
-        kundli_data = file_manager.read_kundli_json(kundli_json_path)
+        kundli_file_data = file_manager.read_kundli_json(kundli_json_path)
         
-        if not kundli_data:
+        if not kundli_file_data:
             print(f"[GET_KUNDLI] Failed to read kundli data from file")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -469,8 +490,8 @@ async def get_kundli(
         return {
             "kundli_id": kundli_id,
             "birth_data": birth_data,
-            "horoscope_info": kundli_data.get('horoscope_info', {}),
-            "generated_at": kundli_data.get('generated_at'),
+            "horoscope_info": kundli_file_data.get('horoscope_info', {}),
+            "generated_at": kundli_file_data.get('generated_at'),
             "kundli_json_path": kundli_json_path
         }
     
@@ -509,6 +530,38 @@ async def get_calculation_history(
         }
     
     except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/api/kundlis/list")
+async def get_user_kundlis(
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get all kundlis for current user (for LLM access)
+    
+    Args:
+        limit: Maximum number of kundlis to return
+        
+    Returns:
+        List of kundli documents with all data
+    """
+    try:
+        print(f"[GET_KUNDLIS] Fetching kundlis for user: {current_user.get('uid')}")
+        kundlis = FirebaseService.get_user_kundlis(current_user['uid'], limit)
+        print(f"[GET_KUNDLIS] Found {len(kundlis)} kundlis")
+        
+        return {
+            "total": len(kundlis),
+            "kundlis": kundlis
+        }
+    
+    except Exception as e:
+        print(f"[GET_KUNDLIS] ERROR: {type(e).__name__}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)

@@ -93,3 +93,9 @@ class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
     status_code: int
+
+
+class CreateProfileRequest(BaseModel):
+    """Request to create user profile"""
+    token: str = Field(..., description="Firebase ID token")
+    display_name: Optional[str] = Field(None, description="Optional display name")

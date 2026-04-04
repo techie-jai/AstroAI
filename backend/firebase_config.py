@@ -215,6 +215,134 @@ class FirebaseService:
             return []
     
     @staticmethod
+    def _convert_keys_to_strings(obj):
+        """
+        Recursively convert all dictionary keys to strings for Firestore compatibility
+        """
+        if isinstance(obj, dict):
+            return {str(k): FirebaseService._convert_keys_to_strings(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [FirebaseService._convert_keys_to_strings(item) for item in obj]
+        else:
+            return obj
+    
+    @staticmethod
+    def save_kundli(uid: str, kundli_data: dict) -> Optional[str]:
+        """
+        Save complete kundli data to Firestore for LLM access
+        
+        Args:
+            uid: User ID
+            kundli_data: Complete kundli data including horoscope_info
+            
+        Returns:
+            Kundli ID or None if failed
+        """
+        try:
+            db = FirebaseConfig.get_db()
+            doc_ref = db.collection('kundlis').document()
+            
+            # Ensure all values are properly typed
+            kundli_id = str(kundli_data.get('kundli_id', ''))
+            unique_id = str(kundli_data.get('unique_id', ''))
+            user_folder = str(kundli_data.get('user_folder', ''))
+            generated_at = str(kundli_data.get('generated_at', ''))
+            
+            if not kundli_id or not unique_id:
+                print(f"Failed to save kundli: Missing required fields (kundli_id or unique_id)")
+                return None
+            
+            # Convert all dictionary keys to strings for Firestore compatibility
+            horoscope_info = FirebaseService._convert_keys_to_strings(kundli_data.get('horoscope_info', {}))
+            charts = FirebaseService._convert_keys_to_strings(kundli_data.get('charts', {}))
+            birth_data = FirebaseService._convert_keys_to_strings(kundli_data.get('birth_data', {}))
+            
+            doc_ref.set({
+                'user_id': uid,
+                'kundli_id': kundli_id,
+                'birth_data': birth_data,
+                'horoscope_info': horoscope_info,
+                'chart_types': kundli_data.get('chart_types', []),
+                'charts': charts,
+                'generated_at': generated_at,
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'user_folder': user_folder,
+                'unique_id': unique_id
+            })
+            print(f"[FIREBASE] Kundli saved successfully: {doc_ref.id}")
+            return doc_ref.id
+        except Exception as e:
+            print(f"Failed to save kundli: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    @staticmethod
+    def get_kundli(uid: str, kundli_id: str) -> Optional[dict]:
+        """
+        Retrieve kundli data from Firestore
+        
+        Args:
+            uid: User ID
+            kundli_id: Kundli ID
+            
+        Returns:
+            Kundli data dictionary or None if not found
+        """
+        try:
+            db = FirebaseConfig.get_db()
+            # Ensure kundli_id is a string
+            kundli_id_str = str(kundli_id)
+            
+            docs = db.collection('kundlis')\
+                .where('user_id', '==', uid)\
+                .where('kundli_id', '==', kundli_id_str)\
+                .stream()
+            
+            for doc in docs:
+                kundli = doc.to_dict()
+                kundli['firebase_id'] = doc.id
+                return kundli
+            
+            return None
+        except Exception as e:
+            print(f"Failed to get kundli: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    @staticmethod
+    def get_user_kundlis(uid: str, limit: int = 50) -> list:
+        """
+        Get all kundlis for a user
+        
+        Args:
+            uid: User ID
+            limit: Maximum number of kundlis to return
+            
+        Returns:
+            List of kundli documents
+        """
+        try:
+            db = FirebaseConfig.get_db()
+            docs = db.collection('kundlis')\
+                .where('user_id', '==', uid)\
+                .order_by('created_at', direction=firestore.Query.DESCENDING)\
+                .limit(limit)\
+                .stream()
+            
+            kundlis = []
+            for doc in docs:
+                kundli = doc.to_dict()
+                kundli['firebase_id'] = doc.id
+                kundlis.append(kundli)
+            
+            return kundlis
+        except Exception as e:
+            print(f"Failed to get user kundlis: {str(e)}")
+            return []
+    
+    @staticmethod
     def save_analysis(uid: str, kundli_id: str, analysis_data: dict) -> Optional[str]:
         """
         Save analysis to Firestore

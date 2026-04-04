@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { initializeApp } from 'firebase/app'
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth'
+import { api } from '../services/api'
 
 const firebaseConfig = {
   apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY,
@@ -87,6 +88,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           photoURL: result.user.photoURL,
         },
       })
+      
+      console.log('[AUTH] Creating user profile in Firestore...')
+      try {
+        await api.createProfile(token, result.user.displayName || undefined)
+        console.log('[AUTH] User profile created in Firestore')
+      } catch (profileError) {
+        console.warn('[AUTH] Failed to create profile, but login continues:', profileError)
+      }
       
       console.log('[AUTH] Login complete, user set in store')
     } catch (error) {
