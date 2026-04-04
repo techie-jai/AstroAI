@@ -1,0 +1,9 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Users can upload to their own folder
+    match /users/{uid}/{allPaths=**} {
+      allow read, write: if request.auth.uid == uid;
+    }
+  }
+}

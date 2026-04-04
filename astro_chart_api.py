@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 """
-Astrology Chart API - Generate Divisional Charts using PyJHora
-
-This module provides a simple API interface to generate various divisional charts
-(D1, D7, D9, D10, etc.) from birth details.
+Simplified Astrology Chart API - Generate Divisional Charts using PyJHora
+Bypasses problematic Horoscope class and uses core chart generation logic directly
 """
 
 import sys
@@ -12,26 +10,26 @@ import os
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
-# Add PyJHora to path
+# Add parent directory and PyJHora to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'PyJHora'))
 
 # Set ephemeris path BEFORE importing any jhora modules
 import swisseph as swe
 ephe_path = os.path.join(os.path.dirname(__file__), 'PyJHora', 'jhora', 'data', 'ephe')
 ephe_path = os.path.abspath(ephe_path)
+print(f"Setting ephemeris path to: {ephe_path}")
 swe.set_ephe_path(ephe_path)
 
+# Import only what we need from jhora
 from jhora import const, utils
 from jhora.panchanga import drik
-from jhora.horoscope import main
 from jhora.horoscope.chart import charts
-
-# Initialize language resources
-utils.set_language('en')
 
 class AstroChartAPI:
     """
-    API for generating astrological charts using PyJHora
+    Simplified API for generating astrological charts using PyJHora
+    Bypasses the problematic Horoscope class initialization
     """
     
     # Divisional chart mappings
@@ -60,7 +58,6 @@ class AstroChartAPI:
     
     def __init__(self):
         """Initialize the API"""
-        self.current_horoscope = None
         self.current_birth_data = None
         self.current_kundli_data = None
     
@@ -84,13 +81,14 @@ class AstroChartAPI:
             place_name: Birth place
             latitude: Latitude in decimal degrees
             longitude: Longitude in decimal degrees
-            timezone_offset: Timezone offset from UTC (e.g., 5.5 for IST)
+            timezone_offset: Timezone offset from UTC
             year, month, day: Birth date
             hour, minute, second: Birth time (24-hour format)
         
         Returns:
             Dictionary with birth data
         """
+        # Create drik objects for calculations
         birth_date = drik.Date(year, month, day)
         birth_time = f"{hour}:{minute}:{second}"
         place = drik.Place(place_name, latitude, longitude, timezone_offset)
@@ -112,18 +110,6 @@ class AstroChartAPI:
             'second': second
         }
         
-        # Generate horoscope object
-        self.current_horoscope = main.Horoscope(
-            place_with_country_code=place_name,
-            latitude=latitude,
-            longitude=longitude,
-            timezone_offset=timezone_offset,
-            date_in=birth_date,
-            birth_time=birth_time,
-            calculation_type='drik',
-            language='en'
-        )
-        
         return self.current_birth_data
     
     def get_chart(self, chart_type: str = 'D1', chart_method: int = 1) -> Dict:
@@ -135,12 +121,7 @@ class AstroChartAPI:
             chart_method: Calculation method (1 = Traditional Parasara)
         
         Returns:
-            Dictionary with chart data including:
-            - chart_type: Type of chart
-            - chart_name: Full name of chart
-            - planets: List of planet positions
-            - houses: Dictionary of houses with planets
-            - ascendant: Ascendant information
+            Dictionary with chart data
         """
         if not self.current_birth_data:
             raise ValueError("Birth data not set. Call set_birth_data() first.")
@@ -158,7 +139,7 @@ class AstroChartAPI:
              self.current_birth_data['second'])
         )
         
-        # Get planet positions
+        # Get planet positions using core chart logic
         planet_positions = charts.divisional_chart(
             jd,
             self.current_birth_data['place'],
@@ -185,8 +166,8 @@ class AstroChartAPI:
                     'longitude_dms': utils.to_dms(longitude, is_lat_long='plong')
                 }
             else:
-                planet_name = utils.PLANET_NAMES[planet_id]
-                planet_short = utils.PLANET_SHORT_NAMES[planet_id]
+                planet_name = utils.PLANET_NAMES.get(planet_id, f"Planet {planet_id}")
+                planet_short = utils.PLANET_SHORT_NAMES.get(planet_id, str(planet_id))
             
             planet_info = {
                 'id': planet_id,
@@ -237,73 +218,43 @@ class AstroChartAPI:
         
         return results
     
-    def get_planet_in_house(self, chart_type: str, planet_name: str) -> Optional[Dict]:
-        """
-        Get the house position of a specific planet in a chart
-        
-        Args:
-            chart_type: Chart type (D1, D9, etc.)
-            planet_name: Planet name (e.g., 'Sun', 'Moon', 'Mars', 'Rahu'/'Raagu', 'Ketu'/'Kethu')
-        
-        Returns:
-            Dictionary with planet position info or None if not found
-        """
-        chart_data = self.get_chart(chart_type)
-        
-        # Normalize the search name (handle both Rahu/Raagu and Ketu/Kethu)
-        search_name = planet_name.lower()
-        if search_name == 'rahu':
-            search_name = 'raagu'
-        elif search_name == 'ketu':
-            search_name = 'kethu'
-        
-        for planet in chart_data['planets']:
-            # Check both full name and short name, handle special symbols
-            planet_full = planet['name'].replace('☉', '').replace('☾', '').replace('♂', '').replace('☿', '').replace('♃', '').replace('♀', '').replace('♄', '').replace('☊', '').replace('☋', '').replace('⛢', '').replace('♆', '').replace('♇', '').strip()
-            planet_short = planet['short_name'].replace('☉', '').replace('☾', '').replace('♂', '').replace('☿', '').replace('♃', '').replace('♀', '').replace('♄', '').replace('☊', '').replace('☋', '').replace('⛢', '').replace('♆', '').replace('♇', '').strip()
-            
-            if planet_full.lower() == search_name or planet_short.lower() == search_name:
-                return planet
-        
-        return None
-    
-    def get_planets_in_house(self, chart_type: str, house_number: int) -> List[Dict]:
-        """
-        Get all planets in a specific house
-        
-        Args:
-            chart_type: Chart type (D1, D9, etc.)
-            house_number: House number (1-12)
-        
-        Returns:
-            List of planets in that house
-        """
-        if house_number < 1 or house_number > 12:
-            raise ValueError("House number must be between 1 and 12")
-        
-        chart_data = self.get_chart(chart_type)
-        return chart_data['houses'][house_number - 1]
-    
     def get_kundli(self) -> Dict:
         """
-        Generate complete kundli (horoscope information) with all components
+        Generate complete kundli with basic horoscope information
         
         Returns:
-            Dictionary with complete kundli data including:
-            - horoscope_info: Dictionary with all astrological information
-            - horoscope_charts: List of chart representations
-            - birth_data: Birth information
+            Dictionary with kundli data
         """
-        if not self.current_horoscope:
+        if not self.current_birth_data:
             raise ValueError("Birth data not set. Call set_birth_data() first.")
         
         try:
-            horoscope_info, horoscope_charts, vimsottari_info = self.current_horoscope.get_horoscope_information()
+            # Generate D1 chart as the main kundli
+            d1_chart = self.get_chart('D1')
+            
+            # Create basic horoscope info from D1 chart
+            horoscope_info = {
+                'name': self.current_birth_data['name'],
+                'place': self.current_birth_data['place_name'],
+                'date': f"{self.current_birth_data['year']}-{self.current_birth_data['month']:02d}-{self.current_birth_data['day']:02d}",
+                'time': f"{self.current_birth_data['hour']:02d}:{self.current_birth_data['minute']:02d}:{self.current_birth_data['second']:02d}",
+                'latitude': self.current_birth_data['latitude'],
+                'longitude': self.current_birth_data['longitude'],
+                'timezone_offset': self.current_birth_data['timezone_offset'],
+                'ascendant': d1_chart['ascendant']['house_name'] if d1_chart['ascendant'] else 'Unknown',
+                'ascendant_longitude': d1_chart['ascendant']['longitude'] if d1_chart['ascendant'] else 0,
+            }
+            
+            # Add planet positions
+            for planet in d1_chart['planets']:
+                if planet['id'] != 'L':
+                    horoscope_info[f"{planet['name']}_house"] = planet['house_name']
+                    horoscope_info[f"{planet['name']}_longitude"] = planet['longitude']
             
             self.current_kundli_data = {
                 'horoscope_info': horoscope_info,
-                'horoscope_charts': horoscope_charts,
-                'vimsottari_info': vimsottari_info,
+                'horoscope_charts': {'D1': d1_chart},
+                'vimsottari_info': {},
                 'birth_data': {
                     'name': self.current_birth_data['name'],
                     'place': self.current_birth_data['place_name'],
@@ -377,7 +328,8 @@ class AstroChartAPI:
         lines.append(f"Date: {chart_data['birth_data']['date']}")
         lines.append(f"Time: {chart_data['birth_data']['time']}")
         lines.append("-" * 80)
-        lines.append(f"Ascendant: {chart_data['ascendant']['house_name']} {chart_data['ascendant']['longitude_dms']}")
+        if chart_data['ascendant']:
+            lines.append(f"Ascendant: {chart_data['ascendant']['house_name']} {chart_data['ascendant']['longitude_dms']}")
         lines.append("-" * 80)
         lines.append("\nPlanet Positions:")
         lines.append("-" * 80)
@@ -399,144 +351,3 @@ class AstroChartAPI:
         lines.append("=" * 80)
         
         return "\n".join(lines)
-
-
-# ============================================================================
-# Example Usage Functions
-# ============================================================================
-
-def example_basic_usage():
-    """Example: Basic usage of the API"""
-    print("\n" + "=" * 80)
-    print("EXAMPLE 1: Basic Chart Generation")
-    print("=" * 80)
-    
-    # Create API instance
-    api = AstroChartAPI()
-    
-    # Set birth data
-    api.set_birth_data(
-        name="Example Person",
-        place_name="Chennai,IN",
-        latitude=13.0827,
-        longitude=80.2707,
-        timezone_offset=5.5,
-        year=1990,
-        month=6,
-        day=15,
-        hour=10,
-        minute=30,
-        second=0
-    )
-    
-    # Generate D1 chart
-    d1_chart = api.get_chart('D1')
-    print(f"\nChart Type: {d1_chart['chart_name']}")
-    print(f"Ascendant: {d1_chart['ascendant']['house_name']}")
-    print(f"\nPlanets:")
-    for planet in d1_chart['planets'][:5]:  # Show first 5
-        print(f"  {planet['name']:15s} in {planet['house_name']}")
-
-
-def example_multiple_charts():
-    """Example: Generate multiple charts"""
-    print("\n" + "=" * 80)
-    print("EXAMPLE 2: Multiple Charts (D1, D7, D9, D10)")
-    print("=" * 80)
-    
-    api = AstroChartAPI()
-    
-    api.set_birth_data(
-        name="Example Person",
-        place_name="Mumbai,IN",
-        latitude=19.0760,
-        longitude=72.8777,
-        timezone_offset=5.5,
-        year=1985,
-        month=3,
-        day=20,
-        hour=14,
-        minute=45
-    )
-    
-    # Generate multiple charts
-    charts = api.get_multiple_charts(['D1', 'D7', 'D9', 'D10'])
-    
-    for chart_type, chart_data in charts.items():
-        print(f"\n{chart_data['chart_name']} ({chart_type}):")
-        print(f"  Signification: {chart_data['signification']}")
-        print(f"  Ascendant: {chart_data['ascendant']['house_name']}")
-
-
-def example_query_specific_info():
-    """Example: Query specific information"""
-    print("\n" + "=" * 80)
-    print("EXAMPLE 3: Query Specific Information")
-    print("=" * 80)
-    
-    api = AstroChartAPI()
-    
-    api.set_birth_data(
-        name="Example Person",
-        place_name="Delhi,IN",
-        latitude=28.6139,
-        longitude=77.2090,
-        timezone_offset=5.5,
-        year=1995,
-        month=12,
-        day=10,
-        hour=8,
-        minute=15
-    )
-    
-    # Find where Sun is in D1
-    sun_position = api.get_planet_in_house('D1', 'Sun')
-    print(f"\nSun in D1 Chart:")
-    print(f"  House: {sun_position['house_name']}")
-    print(f"  Longitude: {sun_position['longitude_dms']}")
-    
-    # Find all planets in house 1 of D9
-    planets_in_1st = api.get_planets_in_house('D9', 1)
-    print(f"\nPlanets in 1st house of D9 (Navamsa):")
-    for planet in planets_in_1st:
-        print(f"  {planet['name']}")
-
-
-def example_formatted_output():
-    """Example: Formatted text output"""
-    print("\n" + "=" * 80)
-    print("EXAMPLE 4: Formatted Chart Output")
-    print("=" * 80)
-    
-    api = AstroChartAPI()
-    
-    api.set_birth_data(
-        name="Example Person",
-        place_name="Bangalore,IN",
-        latitude=12.9716,
-        longitude=77.5946,
-        timezone_offset=5.5,
-        year=2000,
-        month=1,
-        day=1,
-        hour=12,
-        minute=0
-    )
-    
-    # Print formatted D10 chart
-    print(api.format_chart_text('D10'))
-
-
-if __name__ == "__main__":
-    # Run all examples
-    example_basic_usage()
-    example_multiple_charts()
-    example_query_specific_info()
-    example_formatted_output()
-    
-    print("\n" + "=" * 80)
-    print("API READY FOR USE")
-    print("=" * 80)
-    print("\nAvailable chart types:")
-    for chart_type, (factor, name, sig) in AstroChartAPI.CHART_TYPES.items():
-        print(f"  {chart_type:5s} - {name:30s} ({sig})")

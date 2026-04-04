@@ -24,6 +24,7 @@ from ui_components import AstroAIMainWindow
 from chart_generator import ChartGeneratorWorker, ChartImageRenderer
 from file_manager import FileManager
 from gemini_analyzer import GeminiAnalyzer
+from api_client import AstroAIAPIClient
 
 
 class AstroAIApplication:
@@ -34,6 +35,7 @@ class AstroAIApplication:
         self.window = AstroAIMainWindow()
         self.file_manager = FileManager(base_dir=os.path.join(os.path.dirname(__file__), '..', 'users'))
         self.image_renderer = ChartImageRenderer(chart_style='south_indian')
+        self.api_client = AstroAIAPIClient(base_url="http://localhost:8000")
         
         self.worker = None
         self.worker_thread = None
@@ -41,7 +43,9 @@ class AstroAIApplication:
         self.generated_charts = []
         self.kundli_generated = False
         self.kundli_json_path = None
+        self.kundli_id = None
         self.analyzer = None
+        self.birth_data = None
         
         # Connect signals
         self.window.generate_requested.connect(self.start_generation)
@@ -59,6 +63,9 @@ class AstroAIApplication:
     def start_generation(self, user_data: dict):
         """Start chart generation process"""
         try:
+            # Store birth data for API call later
+            self.birth_data = user_data.copy()
+            
             # Create user folder
             self.window.update_progress(0, "Creating user folder...")
             self.current_folder, unique_id = self.file_manager.create_user_folder(user_data['name'])

@@ -42,3 +42,17 @@ Thumbs.db
 # Local configuration files with sensitive data
 local_values.py
 new-ui/local_values.py
+
+# Firebase and credential files
+firebase-credentials.json
+*.json.backup
+backend/test_with_real_token.py
+
+# Debug and test files
+frontend/src/pages/*.debug
+frontend/test_flow.md
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
