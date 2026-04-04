@@ -17,6 +17,8 @@ from astrology_service import AstrologyService
 from gemini_service import GeminiService
 from auth import verify_token, get_current_user
 from file_manager import FileManager
+from pdf_generator import PDFGenerator
+from fastapi.responses import FileResponse
 
 load_dotenv()
 
@@ -754,19 +756,109 @@ async def generate_analysis(
         analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, analysis_text)
         print(f"[ANALYSIS] Analysis saved: {analysis_text_path}")
         
+        # Generate PDF report
+        print(f"[ANALYSIS] Generating PDF report...")
+        try:
+            pdf_content = PDFGenerator.generate_analysis_pdf(
+                analysis_text=analysis_text,
+                kundli_data=kundli_data,
+                birth_data=birth_data,
+                user_name=user_name
+            )
+            
+            # Save PDF to file
+            analysis_pdf_path = file_manager.save_analysis_pdf(user_folder, user_name, pdf_content)
+            print(f"[ANALYSIS] PDF saved: {analysis_pdf_path}")
+        except Exception as e:
+            print(f"[ANALYSIS] Warning: Could not generate PDF: {str(e)}")
+            analysis_pdf_path = None
+        
         return {
             "analysis_id": request.kundli_id,
             "kundli_id": request.kundli_id,
             "status": "completed",
             "message": "Analysis generated successfully",
             "analysis_text": analysis_text,
-            "analysis_text_path": analysis_text_path
+            "analysis_text_path": analysis_text_path,
+            "analysis_pdf_path": analysis_pdf_path
         }
     
     except HTTPException:
         raise
     except Exception as e:
         print(f"[ANALYSIS] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/api/analysis/download/{kundli_id}")
+async def download_analysis_pdf(
+    kundli_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Download AI analysis as PDF
+    
+    Args:
+        kundli_id: Kundli ID to download analysis for
+        
+    Returns:
+        PDF file for download
+    """
+    try:
+        print(f"[DOWNLOAD] Downloading analysis PDF for kundli_id: {kundli_id}, user: {current_user.get('uid')}")
+        
+        # Get calculation metadata from Firebase to find user folder
+        calculations = FirebaseService.get_user_calculations(current_user['uid'])
+        
+        user_folder = None
+        birth_data = None
+        
+        for calc in calculations:
+            result_summary = calc.get('result_summary', {})
+            calc_kundli_id = result_summary.get('kundli_id')
+            
+            if calc_kundli_id == kundli_id:
+                user_folder = result_summary.get('user_folder')
+                birth_data = calc.get('birth_data')
+                break
+        
+        if not user_folder or not birth_data:
+            print(f"[DOWNLOAD] Kundli not found for ID: {kundli_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Kundli not found"
+            )
+        
+        # Get PDF file path
+        user_name = birth_data.get('name', 'User')
+        pdf_filename = f"{user_name}_AI_Analysis.pdf"
+        pdf_path = os.path.join(user_folder, "analysis", pdf_filename)
+        
+        if not os.path.exists(pdf_path):
+            print(f"[DOWNLOAD] PDF file not found: {pdf_path}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Analysis PDF not found. Please generate the analysis first."
+            )
+        
+        print(f"[DOWNLOAD] Returning PDF file: {pdf_path}")
+        
+        # Return PDF file
+        return FileResponse(
+            path=pdf_path,
+            filename=pdf_filename,
+            media_type="application/pdf"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[DOWNLOAD] ERROR: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(

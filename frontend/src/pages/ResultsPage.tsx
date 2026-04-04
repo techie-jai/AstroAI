@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../services/api'
+import apiClient from '../services/api'
 import toast from 'react-hot-toast'
 import { Sparkles, Download, Loader } from 'lucide-react'
 
@@ -25,6 +26,7 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     const fetchKundli = async () => {
@@ -57,6 +59,41 @@ export default function ResultsPage() {
       console.error(error)
     } finally {
       setAnalyzing(false)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!kundliId) {
+      toast.error('Kundli ID not found')
+      return
+    }
+
+    setDownloading(true)
+    try {
+      const response = await apiClient.get(`/analysis/download/${kundliId}`, {
+        responseType: 'blob'
+      })
+
+      const blob = response.data
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${kundli?.birth_data.name || 'Analysis'}_AI_Analysis.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      toast.success('PDF downloaded successfully')
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        toast.error('Analysis PDF not found. Please generate the analysis first.')
+      } else {
+        toast.error('Failed to download PDF')
+      }
+      console.error(error)
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -182,12 +219,39 @@ export default function ResultsPage() {
             <Download className="w-6 h-6 text-indigo-600 mr-3" />
             <h2 className="text-2xl font-bold text-gray-900">Download Results</h2>
           </div>
-          <p className="text-gray-600 mb-4">
-            Your kundli data has been generated and saved. You can access it through your calculation history.
-          </p>
-          <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition">
-            View in History
-          </button>
+          {analysis ? (
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Your AI analysis has been generated. Download the professional PDF report below.
+              </p>
+              <button
+                onClick={handleDownloadPDF}
+                disabled={downloading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+              >
+                {downloading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Downloading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    <span>Download PDF Report</span>
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Generate an AI analysis first to download the professional PDF report.
+              </p>
+              <p className="text-sm text-gray-500">
+                Your kundli data has been generated and saved. You can access it through your calculation history.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
