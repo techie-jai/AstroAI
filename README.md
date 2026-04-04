@@ -61,9 +61,10 @@ AstroAI is built on top of **PyJHora**, a comprehensive Python package implement
 ### 🤖 AI Integration
 - **Gemini-Powered Chat**: Ask questions about your kundli and get AI-powered astrological insights
 - **Dashboard Insights**: AI-generated insights with Important Aspects, Good Times, Challenges, and Interesting Facts
-- **Context-Aware Responses**: Chat includes complete kundli data for accurate analysis
+- **Context-Aware Responses**: Chat includes complete kundli data (1000+ data points) for accurate analysis
 - **Intelligent Analysis**: Pattern recognition across multiple charts
 - **Persistent Learning**: Chat history stored for reference
+- **Firebase-Backed Data**: Complete kundli data fetched from Firebase for each chat query
 
 ### 💻 User Interfaces
 - **Web Dashboard** (NEW): Modern React-based dashboard with sidebar navigation
@@ -287,12 +288,14 @@ kundli = api.get_kundli()
 - Quick action buttons
 - Refresh insights on demand
 
-**Chat Page**:
-- Gemini-style interface
-- Left panel: Kundli information
+**Chat Page** (NEW - v14):
+- Gemini-style interface with real-time responses
+- Left panel: Kundli information (name, birth date, place)
 - Right panel: Chat messages with timestamps
-- Quick question suggestions
-- Context-aware AI responses
+- Quick question suggestions for common queries
+- Context-aware AI responses based on complete kundli data
+- Fallback UI to select kundli if none provided
+- Full kundli JSON context sent to Gemini for accurate analysis
 
 **Kundli Page**:
 - View all generated kundlis
@@ -484,7 +487,46 @@ The kundli consolidates 1000+ astrological data points:
 - Strength analysis
 - Compatibility scores
 
-### 6. AI Analysis (Future Enhancement)
+### 6. AI Chat Integration (NEW - v14)
+
+The chat feature enables real-time astrological consultation:
+
+**Chat Workflow:**
+1. User navigates to `/chat/{kundliId}` with a selected kundli
+2. Backend fetches complete kundli data from Firebase using `FirebaseService.get_kundli()`
+3. Extracts birth_data and horoscope_info (1000+ data points)
+4. Builds comprehensive context prompt with all kundli information
+5. User sends question about their kundli
+6. Backend sends complete kundli data + question to Gemini API
+7. Gemini analyzes the kundli and provides accurate astrological insights
+8. Response returned to frontend with timestamp
+
+**Data Flow:**
+```
+User Question
+    ↓
+Firebase Fetch (kundli_id)
+    ↓
+Extract: birth_data + horoscope_info
+    ↓
+Build Context: "You are an astrology advisor with this kundli: [complete data]"
+    ↓
+Gemini API: context + question
+    ↓
+AI Response (based on actual kundli data)
+    ↓
+Frontend Display with timestamp
+```
+
+**Key Features:**
+- Complete kundli data (1000+ data points) sent with each query
+- Birth information included in context
+- Horoscope information for accurate analysis
+- Timestamp tracking for each response
+- Fallback UI for kundli selection if none provided
+- Error handling for missing kundli data
+
+### 7. AI Analysis (Future Enhancement)
 
 The generated data feeds into AI models for:
 - Pattern recognition across charts
@@ -660,6 +702,100 @@ Compare D1 (Personality) + D9 (Marriage) + D7 (Children):
 - **Phase 3**: Aspect relationship analysis
 - **Phase 4**: Dasha-chart integration
 - **Phase 5**: AI-powered predictions
+
+---
+
+## Chat Feature Implementation (v14)
+
+### Backend Changes
+
+#### New Chat Endpoint: `/api/chat/message`
+
+**Endpoint Details:**
+```
+POST /api/chat/message
+Authentication: Required (Firebase token)
+```
+
+**Request Body:**
+```json
+{
+  "kundli_id": "cb6bd644915d",
+  "user_message": "What are my key planetary positions?",
+  "chat_history": [
+    {"role": "user", "content": "Tell me about my kundli"},
+    {"role": "assistant", "content": "Based on your kundli..."}
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "kundli_id": "cb6bd644915d",
+  "user_message": "What are my key planetary positions?",
+  "response": "Based on your kundli data, here are your key planetary positions...",
+  "timestamp": "2026-04-04T22:01:30.123456"
+}
+```
+
+**Implementation Details:**
+
+1. **Firebase Data Fetch:**
+   - Uses `FirebaseService.get_kundli(uid, kundli_id)` to fetch complete kundli from Firebase
+   - Retrieves both `birth_data` and `horoscope_info` (1000+ data points)
+   - Same method used by `/api/kundli/{kundli_id}` endpoint
+
+2. **Context Building:**
+   - Extracts birth information (name, date, time, place, coordinates)
+   - Extracts horoscope information (planetary positions, doshas, yogas, etc.)
+   - Builds comprehensive prompt with all kundli data
+   - Includes chat history (last 5 messages) for context
+
+3. **Gemini Integration:**
+   - Sends complete kundli data + user question to Gemini API
+   - Gemini analyzes the actual kundli data
+   - Returns accurate astrological insights based on the data
+
+4. **Response Handling:**
+   - Returns response with proper JSON serialization
+   - Includes timestamp using `datetime.now().isoformat()`
+   - Proper error handling for missing kundli data
+
+**Files Modified:**
+- `backend/main.py`:
+  - Added `from datetime import datetime` import
+  - Implemented `/api/chat/message` endpoint (lines 1117-1224)
+  - Uses `FirebaseService.get_kundli()` for data fetch
+  - Builds context with birth_data and horoscope_info
+  - Sends to Gemini with complete kundli context
+
+### Frontend Changes
+
+#### ChatPage Component Updates
+
+**New Features:**
+- Fallback UI when no kundli ID provided
+- Displays list of available kundlis for selection
+- Inline styles for guaranteed rendering
+- Loading state with spinner
+- Error handling with navigation options
+
+**File Modified:**
+- `frontend/src/pages/ChatPage.tsx`:
+  - Simplified rendering logic with inline CSS
+  - Added kundli selection screen
+  - Loading and error states
+  - Chat interface with kundli info panel
+  - Quick question suggestions
+
+### API Endpoints Summary
+
+| Endpoint | Method | Purpose | Auth |
+|----------|--------|---------|------|
+| `/api/chat/message` | POST | Send chat message with kundli context | ✅ |
+| `/api/kundli/{kundli_id}` | GET | Fetch complete kundli data | ✅ |
+| `/api/user/calculations` | GET | List user's kundlis | ✅ |
 
 ---
 
