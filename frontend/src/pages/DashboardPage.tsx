@@ -22,6 +22,11 @@ interface DashboardInsights {
   interesting_facts: string
 }
 
+interface AnalysisStatus {
+  hasAnalysis: boolean
+  isGenerating: boolean
+}
+
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const [calculations, setCalculations] = useState<Calculation[]>([])
@@ -56,6 +61,9 @@ export default function DashboardPage() {
       setLoadingInsights(true)
       const response = await api.getDashboardInsights(kundliId, forceRefresh)
       setInsights(response.data)
+      if (forceRefresh) {
+        toast.success('Insights refreshed successfully')
+      }
     } catch (error) {
       console.error('Failed to fetch insights:', error)
       if (forceRefresh) {
@@ -192,13 +200,28 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="bg-white rounded-lg shadow p-8 text-center">
-                    <p className="text-gray-600 mb-4">No insights generated yet</p>
-                    <button
-                      onClick={handleRefreshInsights}
-                      className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition"
-                    >
-                      Generate Insights
-                    </button>
+                    <AlertCircle className="mx-auto mb-4 text-orange-500" size={48} />
+                    <p className="text-gray-600 mb-6">
+                      {latestKundli?.has_analysis 
+                        ? 'No insights generated yet. Generate insights from your analysis.' 
+                        : 'Generate an analysis first to get insights about your kundli.'}
+                    </p>
+                    {latestKundli?.has_analysis ? (
+                      <button
+                        onClick={handleRefreshInsights}
+                        disabled={loadingInsights}
+                        className="inline-block bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg transition"
+                      >
+                        {loadingInsights ? 'Generating...' : 'Generate Insights'}
+                      </button>
+                    ) : (
+                      <Link
+                        to="/analysis"
+                        className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition"
+                      >
+                        Go to Analysis
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>

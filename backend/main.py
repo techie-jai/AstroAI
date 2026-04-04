@@ -21,6 +21,7 @@ from auth import verify_token, get_current_user
 from file_manager import FileManager
 from pdf_generator import PDFGenerator
 from analysis_formatter import AnalysisFormatter
+from insights_extractor import InsightsExtractor
 from fastapi.responses import FileResponse
 
 load_dotenv()
@@ -999,6 +1000,37 @@ async def generate_analysis(
         print(f"[ANALYSIS] Formatting analysis text...")
         formatted_analysis_text = AnalysisFormatter.format_analysis(analysis_text)
         
+        # Extract insights from analysis
+        print(f"[ANALYSIS] Extracting insights...")
+        extracted_insights = InsightsExtractor.extract_insights(analysis_text)
+        insights_data = None
+        
+        if extracted_insights:
+            insights_data = InsightsExtractor.format_insights_for_firebase(extracted_insights)
+            print(f"[ANALYSIS] Extracted {insights_data.get('total_insights', 0)} insights")
+            
+            # Store insights in Firebase
+            try:
+                print(f"[ANALYSIS] Storing insights in Firebase...")
+                db = firestore.client()
+                db.collection('user_insights').document(request.kundli_id).set({
+                    'user_id': current_user['uid'],
+                    'kundli_id': request.kundli_id,
+                    'health_insights': insights_data.get('health_insights', []),
+                    'career_insights': insights_data.get('career_insights', []),
+                    'relationship_insights': insights_data.get('relationship_insights', []),
+                    'money_insights': insights_data.get('money_insights', []),
+                    'all_insights': insights_data.get('all_insights', []),
+                    'total_insights': insights_data.get('total_insights', 0),
+                    'created_at': datetime.utcnow(),
+                    'user_name': user_name
+                })
+                print(f"[ANALYSIS] Insights stored in Firebase successfully")
+            except Exception as e:
+                print(f"[ANALYSIS] Warning: Could not store insights in Firebase: {str(e)}")
+        else:
+            print(f"[ANALYSIS] No insights section found in analysis")
+        
         # Save analysis text locally
         print(f"[ANALYSIS] Saving analysis locally...")
         analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, formatted_analysis_text)
@@ -1028,7 +1060,8 @@ async def generate_analysis(
             "message": "Analysis generated successfully",
             "analysis_text": formatted_analysis_text,
             "analysis_text_path": analysis_text_path,
-            "analysis_pdf_path": analysis_pdf_path
+            "analysis_pdf_path": analysis_pdf_path,
+            "insights": insights_data
         }
     
     except HTTPException:
@@ -1480,6 +1513,143 @@ async def search_cities(query: str = "") -> List[Dict]:
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error searching cities: {str(e)}")
+
+
+@app.get("/api/insights/{kundli_id}")
+async def get_user_insights(
+    kundli_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Fetch user insights for a specific kundli
+    
+    Args:
+        kundli_id: Kundli ID to fetch insights for
+        
+    Returns:
+        User insights data
+    """
+    try:
+        print(f"[INSIGHTS] Fetching insights for kundli_id: {kundli_id}, user: {current_user.get('uid')}")
+        
+        db = firestore.client()
+        insights_doc = db.collection('user_insights').document(kundli_id).get()
+        
+        if not insights_doc.exists:
+            print(f"[INSIGHTS] No insights found for kundli_id: {kundli_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Insights not found"
+            )
+        
+        insights_data = insights_doc.to_dict()
+        
+        # Verify user owns this kundli
+        if insights_data.get('user_id') != current_user['uid']:
+            print(f"[INSIGHTS] Unauthorized access attempt for kundli_id: {kundli_id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unauthorized"
+            )
+        
+        print(f"[INSIGHTS] Successfully fetched insights for kundli_id: {kundli_id}")
+        return insights_data
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[INSIGHTS] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/api/dashboard/insights")
+async def get_dashboard_insights(
+    kundli_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Fetch dashboard insights for the latest or specified kundli
+    
+    Args:
+        kundli_id: Optional specific kundli ID, otherwise uses latest
+        
+    Returns:
+        Dashboard insights summary
+    """
+    try:
+        print(f"[DASHBOARD] Fetching dashboard insights for user: {current_user.get('uid')}")
+        
+        # If no kundli_id provided, get the latest one
+        if not kundli_id:
+            calculations = FirebaseService.get_user_calculations(current_user['uid'])
+            if not calculations:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No kundlis found"
+                )
+            kundli_id = calculations[0].get('result_summary', {}).get('kundli_id')
+        
+        db = firestore.client()
+        insights_doc = db.collection('user_insights').document(kundli_id).get()
+        
+        if not insights_doc.exists:
+            print(f"[DASHBOARD] No insights found for kundli_id: {kundli_id}")
+            return {
+                "important_aspects": "No insights generated yet",
+                "good_times": "No insights generated yet",
+                "challenges": "No insights generated yet",
+                "interesting_facts": "No insights generated yet"
+            }
+        
+        insights_data = insights_doc.to_dict()
+        
+        # Verify user owns this kundli
+        if insights_data.get('user_id') != current_user['uid']:
+            print(f"[DASHBOARD] Unauthorized access attempt for kundli_id: {kundli_id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unauthorized"
+            )
+        
+        # Format insights for dashboard display
+        summary = {
+            "important_aspects": "",
+            "good_times": "",
+            "challenges": "",
+            "interesting_facts": ""
+        }
+        
+        # Get first insight from each category
+        career_insights = insights_data.get('career_insights', [])
+        if career_insights:
+            summary['important_aspects'] = career_insights[0]
+        
+        money_insights = insights_data.get('money_insights', [])
+        if money_insights:
+            summary['good_times'] = money_insights[0]
+        
+        health_insights = insights_data.get('health_insights', [])
+        if health_insights:
+            summary['challenges'] = health_insights[0]
+        
+        relationship_insights = insights_data.get('relationship_insights', [])
+        if relationship_insights:
+            summary['interesting_facts'] = relationship_insights[0]
+        
+        print(f"[DASHBOARD] Successfully fetched dashboard insights for kundli_id: {kundli_id}")
+        return summary
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[DASHBOARD] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
 @app.exception_handler(HTTPException)

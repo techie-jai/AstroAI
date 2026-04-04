@@ -157,9 +157,11 @@ export const api = {
   downloadAnalysis: (kundliId: string) =>
     apiClient.get(`/analysis/download/${kundliId}`, { responseType: 'arraybuffer' }),
 
-  // Dashboard
-  getDashboardInsights: (kundliId: string, forceRefresh?: boolean) =>
-    apiClient.get(`/dashboard/insights/${kundliId}`, { params: { force_refresh: forceRefresh } }),
+  // Dashboard & Insights
+  getDashboardInsights: (kundliId?: string, forceRefresh?: boolean) =>
+    apiClient.get('/dashboard/insights', { params: { kundli_id: kundliId, force_refresh: forceRefresh } }),
+  getUserInsights: (kundliId: string) =>
+    apiClient.get(`/insights/${kundliId}`),
 
   // Chat
   sendChatMessage: (kundliId: string, message: string, chatHistory?: any[]) =>

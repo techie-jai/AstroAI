@@ -136,6 +136,14 @@ Please provide:
 5. Challenges and remedies
 6. Life predictions and guidance
 
-Format the response in a clear, readable manner with proper sections and headings. Be specific and insightful based on the actual kundli data provided."""
+Format the response in a clear, readable manner with proper sections and headings. Be specific and insightful based on the actual kundli data provided.
+
+IMPORTANT: At the end of your analysis, add a section titled "KEY INSIGHTS" with 5-10 specific, actionable insights covering:
+- Health outlook for next 3 months (what to be careful about)
+- 2 career-related insights
+- Marriage, relationships, and family insights
+- Money, wealth, and business insights
+
+Each insight should be 1-2 sentences, specific to the kundli data, and actionable."""
         
         return prompt
