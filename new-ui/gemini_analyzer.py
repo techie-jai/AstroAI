@@ -19,7 +19,7 @@ from datetime import datetime
 try:
     from local_values import GEMINI_API_KEY
 except ImportError:
-    GEMINI_API_KEY = None
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 
 class GeminiAnalyzerWorker(QObject):
@@ -29,10 +29,10 @@ class GeminiAnalyzerWorker(QObject):
     error = pyqtSignal(str)  # (error_message)
     progress = pyqtSignal(str)  # (status_message)
     
-    def __init__(self, kundli_json_path: str, api_key: str):
+    def __init__(self, kundli_json_path: str):
         super().__init__()
         self.kundli_json_path = kundli_json_path
-        self.api_key = api_key
+        self.api_key = GEMINI_API_KEY
         self.kundli_data = None
     
     def run(self):
@@ -280,14 +280,12 @@ Format your response in a clear, readable manner."""
 class GeminiAnalyzer:
     """Main class for Gemini analysis"""
     
-    def __init__(self, api_key: str):
+    def __init__(self):
         """
         Initialize Gemini Analyzer
-        
-        Args:
-            api_key: AIzaSyA35okxwCp8oGyfScvbbprSpFJRkVnT0oE
+        Loads API key from environment variables or local_values.py
         """
-        self.api_key = api_key
+        self.api_key = GEMINI_API_KEY
         self.worker = None
         self.worker_thread = None
     
@@ -301,6 +299,10 @@ class GeminiAnalyzer:
             on_error: Callback function for errors (receives error_message)
             on_progress: Callback function for progress updates (receives status_message)
         """
+        if not self.api_key:
+            on_error("Gemini API key not found. Please set GEMINI_API_KEY in environment or local_values.py")
+            return
+        
         # Create worker
         self.worker = GeminiAnalyzerWorker(kundli_json_path, self.api_key)
         self.worker_thread = QThread()

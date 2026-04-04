@@ -193,14 +193,14 @@ class AstroAIApplication:
         """Handle errors during generation"""
         print(f"Error: {error_message}")
     
-    def start_analysis(self, kundli_json_path: str, api_key: str):
+    def start_analysis(self, kundli_json_path: str):
         """Start kundli analysis with Gemini API"""
         try:
             self.window.update_progress(0, "Initializing AI analysis...")
             self.window.enable_analyze_button(False)
             
             # Create analyzer
-            self.analyzer = GeminiAnalyzer(api_key)
+            self.analyzer = GeminiAnalyzer()
             
             # Start analysis
             self.analyzer.analyze_kundli(

@@ -35,7 +35,7 @@ class AstroAIMainWindow(QWidget):
     """Main window for AstroAI chart generation"""
     
     generate_requested = pyqtSignal(dict)
-    analyze_requested = pyqtSignal(str, str)  # (kundli_json_path, api_key)
+    analyze_requested = pyqtSignal(str)  # (kundli_json_path)
     
     def __init__(self):
         super().__init__()
@@ -360,15 +360,9 @@ class AstroAIMainWindow(QWidget):
     
     def _on_analyze_clicked(self):
         """Handle analyze button click"""
-        # Use API key from local_values.py
-        if not GEMINI_API_KEY:
-            QMessageBox.critical(self, "Missing API Key", 
-                               "Gemini API key not found in local_values.py.\n"
-                               "Please add your API key to the local_values.py file.")
-            return
-        
-        # Emit signal with kundli path and API key
-        self.analyze_requested.emit(self.kundli_json_path, GEMINI_API_KEY)
+        # Emit signal with kundli path
+        # API key is loaded from environment/local_values.py by GeminiAnalyzer
+        self.analyze_requested.emit(self.kundli_json_path)
     
     def set_kundli_path(self, kundli_path: str):
         """Set the path to the kundli JSON file"""
