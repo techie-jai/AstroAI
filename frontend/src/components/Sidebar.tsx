@@ -32,7 +32,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/kundli', label: 'Kundli', icon: BookOpen },
     { path: '/analysis', label: 'Analysis', icon: Sparkles },
-    { path: '/chat', label: 'Chat', icon: MessageCircle },
+    { path: '/livechat', label: 'Chat', icon: MessageCircle },
     { path: '/settings', label: 'Settings', icon: Settings },
   ]
 

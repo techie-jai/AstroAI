@@ -170,6 +170,22 @@ export const api = {
     }),
   getChatHistory: (kundliId: string) =>
     apiClient.get(`/chat/history/${kundliId}`),
+
+  // LiveChat
+  generateLivechatKundli: (birthData: Record<string, any>) =>
+    apiClient.post('/livechat/generate-kundli', {
+      birth_data: birthData,
+    }),
+  sendLivechatMessage: (kundliData: Record<string, any>, message: string, chatHistory?: any[]) =>
+    apiClient.post('/livechat/message', {
+      kundli_data: kundliData,
+      user_message: message,
+      chat_history: chatHistory || [],
+    }),
+
+  // Cities
+  searchCities: (query: string) =>
+    apiClient.get('/cities/search', { params: { query } }),
 }
 
 export default apiClient

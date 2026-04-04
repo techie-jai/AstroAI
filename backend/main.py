@@ -1280,6 +1280,158 @@ async def get_chat_history(
         )
 
 
+@app.post("/api/livechat/generate-kundli")
+async def generate_livechat_kundli(
+    request_body: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generate kundli for livechat without storing in Firebase
+    
+    Args:
+        birth_data: Birth information (name, date, time, place, coordinates, timezone)
+        
+    Returns:
+        Kundli data for chat context
+    """
+    try:
+        birth_data = request_body.get('birth_data', {})
+        
+        if not birth_data or not birth_data.get('name'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="birth_data with name is required"
+            )
+        
+        print(f"[LIVECHAT] Generating kundli for: {birth_data.get('name')}")
+        
+        # Generate kundli using astrology service
+        kundli_result = astrology_service.generate_kundli(birth_data)
+        
+        if not kundli_result.get('success'):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to generate kundli: {kundli_result.get('error')}"
+            )
+        
+        kundli_data = kundli_result.get('data', {})
+        kundli_id = kundli_result.get('kundli_id')
+        
+        print(f"[LIVECHAT] Kundli generated successfully with {len(kundli_data)} data points")
+        
+        return {
+            'success': True,
+            'kundli_id': kundli_id,
+            'birth_data': birth_data,
+            'horoscope_info': kundli_data,
+            'generated_at': datetime.now().isoformat()
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[LIVECHAT] ERROR generating kundli: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.post("/api/livechat/message")
+async def send_livechat_message(
+    request_body: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Send a chat message in livechat with kundli context
+    
+    Args:
+        kundli_data: Kundli data (horoscope_info and birth_data)
+        user_message: User's message
+        chat_history: Previous chat messages
+        
+    Returns:
+        AI response based on kundli context
+    """
+    try:
+        kundli_data = request_body.get('kundli_data', {})
+        user_message = request_body.get('user_message')
+        chat_history = request_body.get('chat_history', [])
+        
+        if not kundli_data or not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="kundli_data and user_message are required"
+            )
+        
+        print(f"[LIVECHAT_MSG] Processing message for user: {current_user.get('uid')}")
+        
+        if not gemini_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Gemini service not available"
+            )
+        
+        birth_data = kundli_data.get('birth_data', {})
+        horoscope_info = kundli_data.get('horoscope_info', {})
+        horoscope_text = json.dumps(horoscope_info, indent=2)[:3000]
+        
+        chat_context = f"""You are an expert Vedic astrology advisor. You have access to the following kundli (birth chart) data for {birth_data.get('name', 'the person')}:
+
+Birth Information:
+- Name: {birth_data.get('name')}
+- Date: {birth_data.get('year')}-{birth_data.get('month')}-{birth_data.get('day')}
+- Time: {birth_data.get('hour')}:{birth_data.get('minute')}
+- Place: {birth_data.get('place')}
+- Latitude: {birth_data.get('latitude')}
+- Longitude: {birth_data.get('longitude')}
+
+Kundli Data (Key Astrological Information):
+{horoscope_text}
+
+Please answer the user's question about their kundli with accurate astrological insights. Keep your response concise and under 200 words. Be specific and reference the actual data from their chart when possible."""
+        
+        history_text = ""
+        if chat_history:
+            for msg in chat_history[-5:]:
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                history_text += f"{role.upper()}: {content}\n"
+        
+        full_prompt = f"""{chat_context}
+
+Previous conversation:
+{history_text}
+
+User: {user_message}
+
+Please provide a helpful and accurate response based on the kundli data provided. Keep it under 200 words."""
+        
+        print(f"[LIVECHAT_MSG] Calling Gemini service...")
+        try:
+            response_text = gemini_service.generate_response(full_prompt)
+            print(f"[LIVECHAT_MSG] Response generated successfully: {response_text[:100]}...")
+        except Exception as e:
+            print(f"[LIVECHAT_MSG] ERROR generating response: {str(e)}")
+            raise
+        
+        print(f"[LIVECHAT_MSG] Returning response to client")
+        return {
+            'user_message': user_message,
+            'response': response_text,
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[LIVECHAT_MSG] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
 @app.get("/api/cities/search")
 async def search_cities(query: str = "") -> List[Dict]:
     """Search for cities by name or partial match"""

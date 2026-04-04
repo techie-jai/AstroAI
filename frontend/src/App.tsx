@@ -11,6 +11,7 @@ import SettingsPage from './pages/SettingsPage'
 import KundliPage from './pages/KundliPage'
 import AnalysisPage from './pages/AnalysisPage'
 import ChatPage from './pages/ChatPage'
+import LiveChatPage from './pages/LiveChatPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -95,6 +96,14 @@ function App() {
               <Layout>
                 <ChatPage />
               </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/livechat"
+          element={
+            <ProtectedRoute>
+              <LiveChatPage />
             </ProtectedRoute>
           }
         />

@@ -262,6 +262,12 @@ export default function DashboardPage() {
                 >
                   Generate Kundli
                 </Link>
+                <Link
+                  to="/livechat"
+                  className="block w-full text-center bg-indigo-700 hover:bg-indigo-800 font-semibold py-2 px-4 rounded-lg transition"
+                >
+                  Live Chat
+                </Link>
                 {latestKundli && (
                   <>
                     <Link
