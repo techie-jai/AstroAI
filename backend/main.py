@@ -1,5 +1,6 @@
 import os
 import csv
+import json
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -661,6 +662,244 @@ async def get_planets_in_house(
         )
 
 
+@app.get("/api/user/calculations")
+async def get_user_calculations(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get user's calculation history with metadata
+    
+    Returns:
+        List of user's past kundli generations
+    """
+    try:
+        print(f"[USER_CALCS] Fetching calculations for user: {current_user.get('uid')}")
+        calculations = FirebaseService.get_user_calculations(current_user['uid'], limit=50)
+        
+        formatted_calcs = []
+        for calc in calculations:
+            result_summary = calc.get('result_summary', {})
+            birth_data = calc.get('birth_data', {})
+            formatted_calcs.append({
+                'calculation_id': calc.get('calculation_id'),
+                'kundli_id': result_summary.get('kundli_id'),
+                'name': birth_data.get('name', 'Unknown'),
+                'birth_date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
+                'birth_time': f"{birth_data.get('hour', '')}:{birth_data.get('minute', '')}",
+                'place': birth_data.get('place_name', 'Unknown'),
+                'generation_date': calc.get('created_at'),
+                'has_analysis': False,
+                'has_insights': False
+            })
+        
+        print(f"[USER_CALCS] Returning {len(formatted_calcs)} calculations")
+        return {
+            'total': len(formatted_calcs),
+            'calculations': formatted_calcs
+        }
+    
+    except Exception as e:
+        print(f"[USER_CALCS] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/api/user/load-session")
+async def load_user_session(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Load user session data on login
+    
+    Returns:
+        User profile, recent calculations, and latest kundli metadata
+    """
+    try:
+        print(f"[SESSION] Loading session for user: {current_user.get('uid')}")
+        
+        user_profile = FirebaseService.get_user_profile(current_user['uid'])
+        calculations = FirebaseService.get_user_calculations(current_user['uid'], limit=5)
+        
+        latest_kundli = None
+        if calculations:
+            latest_calc = calculations[0]
+            result_summary = latest_calc.get('result_summary', {})
+            birth_data = latest_calc.get('birth_data', {})
+            latest_kundli = {
+                'kundli_id': result_summary.get('kundli_id'),
+                'name': birth_data.get('name', 'Unknown'),
+                'birth_date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
+                'place': birth_data.get('place_name', 'Unknown'),
+                'generation_date': latest_calc.get('created_at')
+            }
+        
+        recent_calculations = []
+        for calc in calculations:
+            result_summary = calc.get('result_summary', {})
+            birth_data = calc.get('birth_data', {})
+            recent_calculations.append({
+                'calculation_id': calc.get('calculation_id'),
+                'kundli_id': result_summary.get('kundli_id'),
+                'name': birth_data.get('name', 'Unknown'),
+                'birth_date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
+                'generation_date': calc.get('created_at')
+            })
+        
+        print(f"[SESSION] Session loaded successfully")
+        return {
+            'user_profile': user_profile,
+            'latest_kundli': latest_kundli,
+            'recent_calculations': recent_calculations,
+            'total_calculations': len(calculations)
+        }
+    
+    except Exception as e:
+        print(f"[SESSION] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/api/dashboard/insights/{kundli_id}")
+async def get_dashboard_insights(
+    kundli_id: str,
+    force_refresh: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get or generate dashboard insights for a kundli
+    
+    Args:
+        kundli_id: Kundli ID
+        force_refresh: Force regenerate insights
+        
+    Returns:
+        Dashboard insights with cards data
+    """
+    try:
+        print(f"[INSIGHTS] Fetching insights for kundli_id: {kundli_id}, force_refresh: {force_refresh}")
+        
+        db = FirebaseConfig.get_db()
+        
+        if not force_refresh:
+            try:
+                insights_doc = db.collection('calculations').where('result_summary.kundli_id', '==', kundli_id).stream()
+                for doc in insights_doc:
+                    calc_data = doc.to_dict()
+                    if calc_data.get('dashboard_insights'):
+                        print(f"[INSIGHTS] Found cached insights")
+                        return calc_data.get('dashboard_insights')
+            except Exception as e:
+                print(f"[INSIGHTS] Could not retrieve cached insights: {str(e)}")
+        
+        print(f"[INSIGHTS] Generating new insights for kundli_id: {kundli_id}")
+        
+        calculations = FirebaseService.get_user_calculations(current_user['uid'])
+        kundli_data = None
+        user_folder = None
+        birth_data = None
+        
+        for calc in calculations:
+            result_summary = calc.get('result_summary', {})
+            if result_summary.get('kundli_id') == kundli_id:
+                user_folder = result_summary.get('user_folder')
+                birth_data = calc.get('birth_data', {})
+                break
+        
+        if not user_folder:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Kundli {kundli_id} not found"
+            )
+        
+        kundli_json_path = os.path.join(user_folder, f"{birth_data.get('name', 'User')}_Kundli.json")
+        if os.path.exists(kundli_json_path):
+            with open(kundli_json_path, 'r') as f:
+                kundli_data = json.load(f)
+        
+        if not kundli_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Kundli data not found"
+            )
+        
+        if not gemini_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Gemini service not available"
+            )
+        
+        horoscope_info = kundli_data.get('horoscope_info', {})
+        horoscope_text = json.dumps(horoscope_info, indent=2)[:3000]
+        
+        prompt = f"""Based on this Vedic astrology kundli data for {birth_data.get('name', 'the person')}, 
+generate a JSON response with the following structure (return ONLY valid JSON):
+{{
+  "important_aspects": "2-3 sentences about key planetary positions and their significance",
+  "good_times": "2-3 sentences about upcoming favorable periods based on planetary transits",
+  "challenges": "2-3 sentences about potential challenges or cautions",
+  "interesting_facts": "2-3 interesting astrological facts about this person's chart"
+}}
+
+Kundli Data:
+{horoscope_text}
+
+Birth Data: Name: {birth_data.get('name')}, Date: {birth_data.get('year')}-{birth_data.get('month')}-{birth_data.get('day')} {birth_data.get('hour')}:{birth_data.get('minute')}, Place: {birth_data.get('place_name')}"""
+        
+        response_text = gemini_service.generate_response(prompt)
+        
+        try:
+            insights_json = json.loads(response_text)
+        except json.JSONDecodeError:
+            json_match = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            if json_match >= 0 and json_end > json_match:
+                insights_json = json.loads(response_text[json_match:json_end])
+            else:
+                insights_json = {
+                    "important_aspects": "Unable to generate insights at this time",
+                    "good_times": "Please try again later",
+                    "challenges": "Please try again later",
+                    "interesting_facts": "Please try again later"
+                }
+        
+        insights_data = {
+            'kundli_id': kundli_id,
+            'generated_at': firestore.SERVER_TIMESTAMP,
+            'important_aspects': insights_json.get('important_aspects', ''),
+            'good_times': insights_json.get('good_times', ''),
+            'challenges': insights_json.get('challenges', ''),
+            'interesting_facts': insights_json.get('interesting_facts', '')
+        }
+        
+        try:
+            calculations = FirebaseService.get_user_calculations(current_user['uid'])
+            for calc in calculations:
+                result_summary = calc.get('result_summary', {})
+                if result_summary.get('kundli_id') == kundli_id:
+                    db.collection('calculations').document(calc.get('calculation_id')).update({
+                        'dashboard_insights': insights_data
+                    })
+                    break
+        except Exception as e:
+            print(f"[INSIGHTS] Could not save insights to Firebase: {str(e)}")
+        
+        print(f"[INSIGHTS] Insights generated successfully")
+        return insights_data
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[INSIGHTS] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
 @app.post("/api/analysis/generate")
 async def generate_analysis(
     request: GenerateAnalysisRequest,
@@ -872,29 +1111,169 @@ async def download_analysis_pdf(
         )
 
 
-@app.get("/api/charts/available")
-async def get_available_charts():
+@app.post("/api/chat/message")
+async def send_chat_message(
+    kundli_id: str,
+    user_message: str,
+    chat_history: List[Dict] = None,
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Get list of available divisional charts
+    Send a chat message and get AI response about kundli
     
+    Args:
+        kundli_id: Kundli ID to chat about
+        user_message: User's message
+        chat_history: Previous chat messages
+        
     Returns:
-        List of available chart types
+        AI response
     """
-    from astro_chart_api import AstroChartAPI
+    try:
+        print(f"[CHAT] Processing message for kundli_id: {kundli_id}, user: {current_user.get('uid')}")
+        
+        if not gemini_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Gemini service not available"
+            )
+        
+        calculations = FirebaseService.get_user_calculations(current_user['uid'])
+        kundli_data = None
+        user_folder = None
+        birth_data = None
+        
+        for calc in calculations:
+            result_summary = calc.get('result_summary', {})
+            if result_summary.get('kundli_id') == kundli_id:
+                user_folder = result_summary.get('user_folder')
+                birth_data = calc.get('birth_data', {})
+                break
+        
+        if not user_folder:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Kundli {kundli_id} not found"
+            )
+        
+        kundli_json_path = os.path.join(user_folder, f"{birth_data.get('name', 'User')}_Kundli.json")
+        if os.path.exists(kundli_json_path):
+            with open(kundli_json_path, 'r') as f:
+                kundli_data = json.load(f)
+        
+        if not kundli_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Kundli data not found"
+            )
+        
+        horoscope_info = kundli_data.get('horoscope_info', {})
+        horoscope_text = json.dumps(horoscope_info, indent=2)[:2000]
+        
+        chat_context = f"""You are an expert Vedic astrology advisor. You have access to the following kundli (birth chart) data for {birth_data.get('name', 'the person')}:
+
+Birth Information:
+- Name: {birth_data.get('name')}
+- Date: {birth_data.get('year')}-{birth_data.get('month')}-{birth_data.get('day')}
+- Time: {birth_data.get('hour')}:{birth_data.get('minute')}
+- Place: {birth_data.get('place_name')}
+- Latitude: {birth_data.get('latitude')}
+- Longitude: {birth_data.get('longitude')}
+
+Kundli Data (Key Astrological Information):
+{horoscope_text}
+
+Please answer the user's question about their kundli with accurate astrological insights. Be specific, helpful, and reference the actual data from their chart when possible."""
+        
+        history_text = ""
+        if chat_history:
+            for msg in chat_history[-5:]:
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                history_text += f"{role.upper()}: {content}\n"
+        
+        full_prompt = f"""{chat_context}
+
+Previous conversation:
+{history_text}
+
+User: {user_message}
+
+Please provide a helpful and accurate response based on the kundli data provided."""
+        
+        response_text = gemini_service.generate_response(full_prompt)
+        
+        print(f"[CHAT] Response generated successfully")
+        return {
+            'kundli_id': kundli_id,
+            'user_message': user_message,
+            'response': response_text,
+            'timestamp': firestore.SERVER_TIMESTAMP
+        }
     
-    charts = []
-    for chart_type, (factor, name, signification) in AstroChartAPI.CHART_TYPES.items():
-        charts.append({
-            "type": chart_type,
-            "factor": factor,
-            "name": name,
-            "signification": signification
-        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[CHAT] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/api/chat/history/{kundli_id}")
+async def get_chat_history(
+    kundli_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get chat history for a kundli
     
-    return {
-        "total": len(charts),
-        "charts": charts
-    }
+    Args:
+        kundli_id: Kundli ID
+        
+    Returns:
+        Chat history messages
+    """
+    try:
+        print(f"[CHAT_HISTORY] Fetching history for kundli_id: {kundli_id}, user: {current_user.get('uid')}")
+        
+        db = FirebaseConfig.get_db()
+        
+        try:
+            history_docs = db.collection('chat_history')\
+                .where('kundli_id', '==', kundli_id)\
+                .where('user_id', '==', current_user['uid'])\
+                .order_by('timestamp')\
+                .stream()
+            
+            messages = []
+            for doc in history_docs:
+                msg = doc.to_dict()
+                messages.append({
+                    'role': msg.get('role'),
+                    'content': msg.get('content'),
+                    'timestamp': msg.get('timestamp')
+                })
+            
+            print(f"[CHAT_HISTORY] Found {len(messages)} messages")
+            return {
+                'kundli_id': kundli_id,
+                'messages': messages
+            }
+        except Exception as e:
+            print(f"[CHAT_HISTORY] Could not retrieve from Firestore: {str(e)}")
+            return {
+                'kundli_id': kundli_id,
+                'messages': []
+            }
+    
+    except Exception as e:
+        print(f"[CHAT_HISTORY] ERROR: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
 @app.get("/api/cities/search")

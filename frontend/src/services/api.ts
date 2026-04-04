@@ -114,6 +114,10 @@ export const api = {
   getUserProfile: () => apiClient.get('/user/profile'),
   updateUserProfile: (data: Record<string, any>) =>
     apiClient.put('/user/profile', data),
+  getUserCalculations: () =>
+    apiClient.get('/user/calculations'),
+  loadUserSession: () =>
+    apiClient.get('/user/load-session'),
 
   // Kundli
   generateKundli: (birthData: Record<string, any>, chartTypes?: string[]) =>
@@ -150,6 +154,22 @@ export const api = {
       kundli_id: kundliId,
       analysis_type: analysisType || 'comprehensive',
     }),
+  downloadAnalysis: (kundliId: string) =>
+    apiClient.get(`/analysis/download/${kundliId}`, { responseType: 'arraybuffer' }),
+
+  // Dashboard
+  getDashboardInsights: (kundliId: string, forceRefresh?: boolean) =>
+    apiClient.get(`/dashboard/insights/${kundliId}`, { params: { force_refresh: forceRefresh } }),
+
+  // Chat
+  sendChatMessage: (kundliId: string, message: string, chatHistory?: any[]) =>
+    apiClient.post('/chat/message', {
+      kundli_id: kundliId,
+      user_message: message,
+      chat_history: chatHistory || [],
+    }),
+  getChatHistory: (kundliId: string) =>
+    apiClient.get(`/chat/history/${kundliId}`),
 }
 
 export default apiClient

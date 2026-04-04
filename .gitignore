@@ -56,3 +56,6 @@ frontend/test_flow.md
 .env
 .env.local
 .env.*.local
+
+# Local Netlify folder
+.netlify
