@@ -66,9 +66,14 @@ class AstrologyService:
             
             # Extract horoscope_info from jyotishganit_json
             horoscope_info = {}
+            print(f"[ASTROLOGY] kundli_data type: {type(kundli_data)}")
+            print(f"[ASTROLOGY] kundli_data keys: {list(kundli_data.keys()) if isinstance(kundli_data, dict) else 'Not a dict'}")
+            
             if isinstance(kundli_data, dict):
                 # Get the jyotishganit_json which contains all the astrological data
                 jyotishganit_json = kundli_data.get('jyotishganit_json', {})
+                print(f"[ASTROLOGY] jyotishganit_json type: {type(jyotishganit_json)}")
+                print(f"[ASTROLOGY] jyotishganit_json keys: {list(jyotishganit_json.keys()) if isinstance(jyotishganit_json, dict) else 'Not a dict'}")
                 
                 # Extract key astrological information from jyotishganit_json
                 if isinstance(jyotishganit_json, dict):

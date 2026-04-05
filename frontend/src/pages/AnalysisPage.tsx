@@ -4,14 +4,25 @@ import { FileText, Download } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
+interface BirthData {
+  name: string
+  place_name: string
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+}
+
 interface Calculation {
   calculation_id: string
   kundli_id: string
-  name: string
-  birth_date: string
-  place: string
-  generation_date: any
-  has_analysis: boolean
+  birth_data?: BirthData
+  result_summary?: {
+    kundli_id: string
+    generated_at: string
+  }
+  created_at?: string
 }
 
 export default function AnalysisPage() {
@@ -95,47 +106,56 @@ export default function AnalysisPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {calculations.map((calc) => (
-              <div key={calc.calculation_id} className="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <FileText className="text-indigo-600" size={24} />
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">{calc.name}</h3>
-                        <p className="text-sm text-gray-500">
-                          {calc.birth_date} • {calc.place}
-                        </p>
+            {calculations.map((calc) => {
+              const birthData = calc.birth_data
+              const kundliId = calc.result_summary?.kundli_id || calc.kundli_id
+              const generatedAt = calc.result_summary?.generated_at || calc.created_at
+              const name = birthData?.name || 'Kundli'
+              const birthDate = birthData ? `${birthData.year}-${String(birthData.month).padStart(2, '0')}-${String(birthData.day).padStart(2, '0')}` : 'N/A'
+              const place = birthData?.place_name || 'N/A'
+              
+              return (
+                <div key={calc.calculation_id} className="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <FileText className="text-indigo-600" size={24} />
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">{name}</h3>
+                          <p className="text-sm text-gray-500">
+                            {birthDate} • {place}
+                          </p>
+                        </div>
                       </div>
+                      <p className="text-xs text-gray-400 ml-9">
+                        Generated: {formatDate(generatedAt)}
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-400 ml-9">
-                      Generated: {formatDate(calc.generation_date)}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <Link
-                      to={`/results/${calc.kundli_id}`}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded transition"
-                    >
-                      View
-                    </Link>
-                    <button
-                      onClick={() => handleDownloadAnalysis(calc.kundli_id, calc.name)}
-                      disabled={downloading === calc.kundli_id}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded transition font-semibold ${
-                        downloading === calc.kundli_id
-                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      }`}
-                    >
-                      <Download size={18} />
-                      <span>{downloading === calc.kundli_id ? 'Downloading...' : 'Download'}</span>
-                    </button>
+                    
+                    <div className="flex items-center space-x-3">
+                      <Link
+                        to={`/results/${kundliId}`}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded transition"
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => handleDownloadAnalysis(kundliId, name)}
+                        disabled={downloading === kundliId}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded transition font-semibold ${
+                          downloading === kundliId
+                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                      >
+                        <Download size={18} />
+                        <span>{downloading === kundliId ? 'Downloading...' : 'Download'}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

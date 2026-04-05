@@ -252,8 +252,20 @@ class FirebaseService:
                 print(f"Failed to save kundli: Missing required fields (kundli_id or unique_id)")
                 return None
             
+            # Flatten horoscope_info to exclude large nested objects (ashtakavarga, dashas)
+            # to avoid exceeding Firestore document size limits
+            horoscope_info_raw = kundli_data.get('horoscope_info', {})
+            horoscope_info_flat = {}
+            for key, value in horoscope_info_raw.items():
+                # Only include simple types (strings, numbers, booleans)
+                # Exclude complex nested structures
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    horoscope_info_flat[key] = value
+            
+            print(f"[FIREBASE] Original horoscope_info keys: {len(horoscope_info_raw)}, Flattened keys: {len(horoscope_info_flat)}")
+            
             # Convert all dictionary keys to strings for Firestore compatibility
-            horoscope_info = FirebaseService._convert_keys_to_strings(kundli_data.get('horoscope_info', {}))
+            horoscope_info = FirebaseService._convert_keys_to_strings(horoscope_info_flat)
             charts = FirebaseService._convert_keys_to_strings(kundli_data.get('charts', {}))
             birth_data = FirebaseService._convert_keys_to_strings(kundli_data.get('birth_data', {}))
             
@@ -302,8 +314,11 @@ class FirebaseService:
             for doc in docs:
                 kundli = doc.to_dict()
                 kundli['firebase_id'] = doc.id
+                horoscope_info = kundli.get('horoscope_info', {})
+                print(f"[GET_KUNDLI] Retrieved horoscope_info with {len(horoscope_info)} keys: {list(horoscope_info.keys())[:10]}")
                 return kundli
             
+            print(f"[GET_KUNDLI] No kundli found for kundli_id: {kundli_id_str}")
             return None
         except Exception as e:
             print(f"Failed to get kundli: {str(e)}")
