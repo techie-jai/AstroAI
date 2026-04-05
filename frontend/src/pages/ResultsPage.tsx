@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { api } from '../services/api'
 import apiClient from '../services/api'
 import toast from 'react-hot-toast'
-import { Sparkles, Download, Loader } from 'lucide-react'
+import { Sparkles, Download, Loader, Zap } from 'lucide-react'
+import { getDisplayableItems, extractPanchanga, extractAyanamsa, extractPlanets, formatKey } from '../utils/jyotishganitHelper'
 
 interface KundliData {
   kundli_id: string
@@ -36,6 +37,10 @@ export default function ResultsPage() {
           return
         }
         const response = await api.getKundli(kundliId)
+        console.log('[RESULTS] API Response:', response.data)
+        console.log('[RESULTS] horoscope_info:', response.data.horoscope_info)
+        console.log('[RESULTS] horoscope_info keys:', Object.keys(response.data.horoscope_info || {}))
+        console.log('[RESULTS] horoscope_info entries:', Object.entries(response.data.horoscope_info || {}).slice(0, 5))
         setKundli(response.data)
       } catch (error) {
         toast.error('Failed to load kundli data')
@@ -157,14 +162,66 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Astrological Information */}
+        {/* Panchanga Section */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Astrological Information</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Panchanga (Astrological Calendar)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {(() => {
+              const panchanga = extractPanchanga(kundli.horoscope_info)
+              return Object.entries(panchanga).map(([key, value]) => (
+                <div key={key} className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+                  <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{formatKey(key)}</p>
+                  <p className="text-lg font-bold text-gray-900 mt-2">{value}</p>
+                </div>
+              ))
+            })()}
+          </div>
+        </div>
+
+        {/* Ayanamsa Section */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Ayanamsa (Precession Correction)</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Object.entries(kundli.horoscope_info).slice(0, 12).map(([key, value]) => (
+            {(() => {
+              const ayanamsa = extractAyanamsa(kundli.horoscope_info)
+              return Object.entries(ayanamsa).map(([key, value]) => (
+                <div key={key} className="border-l-4 border-purple-500 pl-4">
+                  <p className="text-sm font-medium text-gray-500">{formatKey(key)}</p>
+                  <p className="text-lg text-gray-900 font-semibold">{value}</p>
+                </div>
+              ))
+            })()}
+          </div>
+        </div>
+
+        {/* Houses and Planets Section */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Houses and Planetary Positions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {(() => {
+              const planets = extractPlanets(kundli.horoscope_info)
+              return planets.map((planet) => (
+                <div key={planet.name} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <p className="text-sm font-semibold text-blue-600">{planet.name}</p>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <p className="text-gray-700"><span className="font-medium">Sign:</span> {planet.sign}</p>
+                    <p className="text-gray-700"><span className="font-medium">House:</span> {planet.house}</p>
+                    <p className="text-gray-700"><span className="font-medium">Nakshatra:</span> {planet.nakshatra}</p>
+                  </div>
+                </div>
+              ))
+            })()}
+          </div>
+        </div>
+
+        {/* Additional Astrological Information */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Additional Astrological Data</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {getDisplayableItems(kundli.horoscope_info, 12).map(([key, value]) => (
               <div key={key} className="border-l-4 border-indigo-500 pl-4">
-                <p className="text-sm font-medium text-gray-500 capitalize">{key.replace(/_/g, ' ')}</p>
-                <p className="text-lg text-gray-900">{String(value)}</p>
+                <p className="text-sm font-medium text-gray-500">{formatKey(key)}</p>
+                <p className="text-lg text-gray-900">{value}</p>
               </div>
             ))}
           </div>

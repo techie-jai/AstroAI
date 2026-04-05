@@ -8,8 +8,12 @@ import GeneratorPage from './pages/GeneratorPage'
 import ResultsPage from './pages/ResultsPage'
 import HistoryPage from './pages/HistoryPage'
 import SettingsPage from './pages/SettingsPage'
+import KundliPage from './pages/KundliPage'
+import AnalysisPage from './pages/AnalysisPage'
+import ChatPage from './pages/ChatPage'
+import LiveChatPage from './pages/LiveChatPage'
 import ProtectedRoute from './components/ProtectedRoute'
-import Navbar from './components/Navbar'
+import Layout from './components/Layout'
 
 function App() {
   const { user, loading, initializeAuth } = useAuthStore()
@@ -32,14 +36,16 @@ function App() {
   return (
     <Router>
       <Toaster position="top-right" />
-      {user && <Navbar />}
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
+        
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <Layout>
+                <DashboardPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -47,7 +53,9 @@ function App() {
           path="/generate"
           element={
             <ProtectedRoute>
-              <GeneratorPage />
+              <Layout>
+                <GeneratorPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -55,7 +63,47 @@ function App() {
           path="/results/:kundliId"
           element={
             <ProtectedRoute>
-              <ResultsPage />
+              <Layout>
+                <ResultsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/kundli"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <KundliPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analysis"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AnalysisPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat/:kundliId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ChatPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/livechat"
+          element={
+            <ProtectedRoute>
+              <LiveChatPage />
             </ProtectedRoute>
           }
         />
@@ -63,7 +111,9 @@ function App() {
           path="/history"
           element={
             <ProtectedRoute>
-              <HistoryPage />
+              <Layout>
+                <HistoryPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -71,7 +121,9 @@ function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <SettingsPage />
+              <Layout>
+                <SettingsPage />
+              </Layout>
             </ProtectedRoute>
           }
         />

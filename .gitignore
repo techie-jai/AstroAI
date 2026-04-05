@@ -56,3 +56,5 @@ frontend/test_flow.md
 .env
 .env.local
 .env.*.local
+backend/.env
+backend/.env.local

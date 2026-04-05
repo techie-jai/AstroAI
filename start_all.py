@@ -94,17 +94,14 @@ def start_backend():
     print_info(f"Starting backend on port {BACKEND_PORT}...")
     
     try:
-        # Start backend in a subprocess
+        # Start backend in a subprocess without capturing output
         backend_process = subprocess.Popen(
             [sys.executable, "main.py"],
-            cwd=str(BACKEND_DIR),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            cwd=str(BACKEND_DIR)
         )
         
         # Wait for backend to be ready
-        if wait_for_service(f"{BACKEND_URL}/health", name="Backend"):
+        if wait_for_service(f"{BACKEND_URL}/health", name="Backend", timeout=60):
             print_success(f"Backend running at {BACKEND_URL}")
             return backend_process
         else:
@@ -130,20 +127,19 @@ def start_frontend():
         if not (FRONTEND_DIR / "node_modules").exists():
             print_warning("node_modules not found, running npm install...")
             subprocess.run(
-                ["npm", "install"],
+                "npm install",
                 cwd=str(FRONTEND_DIR),
                 check=True,
-                capture_output=True
+                capture_output=True,
+                shell=True
             )
             print_success("npm install completed")
         
-        # Start frontend in a subprocess
+        # Start frontend in a subprocess without capturing output
         frontend_process = subprocess.Popen(
-            ["npm", "run", "dev"],
+            "npm run dev",
             cwd=str(FRONTEND_DIR),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            shell=True
         )
         
         # Wait for frontend to be ready
