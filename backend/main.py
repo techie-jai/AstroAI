@@ -2251,11 +2251,13 @@ async def livechat_generate_kundli(
 
             "birth_data": birth_data_dict,
 
+            "horoscope_info": kundli_data.get('horoscope_info', {}),
+
+            "charts": charts_dict,
+
             "generated_at": result['generated_at'],
 
-            "firebase_kundli_id": kundli_firebase_id,
-
-            "horoscope_info_keys": list(kundli_data.get('horoscope_info', {}).keys())[:10]
+            "firebase_kundli_id": kundli_firebase_id
 
         }
 
