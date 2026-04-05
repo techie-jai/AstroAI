@@ -308,10 +308,13 @@ async def generate_kundli(
         
         # Save complete kundli data to Firebase for LLM access
         print(f"[KUNDLI] Saving complete kundli data to Firebase...")
+        horoscope_info_to_save = kundli_data.get('horoscope_info', {})
+        print(f"[KUNDLI] horoscope_info to save - type: {type(horoscope_info_to_save)}, keys: {list(horoscope_info_to_save.keys()) if isinstance(horoscope_info_to_save, dict) else 'N/A'}")
+        
         kundli_firebase_data = {
             'kundli_id': kundli_id,
             'birth_data': birth_data_dict,
-            'horoscope_info': kundli_data.get('horoscope_info', {}),
+            'horoscope_info': horoscope_info_to_save,
             'chart_types': request.chart_types or ['D1', 'D7', 'D9', 'D10'],
             'charts': charts_dict,
             'generated_at': result['generated_at'],
@@ -395,7 +398,7 @@ async def generate_charts(
         Generated charts data
     """
     try:
-        birth_data_dict = request.birth_data.dict()
+        birth_data_dict = request.birth_data.model_dump()
         chart_types = request.chart_types or ['D1', 'D7', 'D9', 'D10']
         
         result = astrology_service.generate_charts(birth_data_dict, chart_types)
@@ -441,7 +444,34 @@ async def get_kundli(
         
         if kundli_data:
             print(f"[GET_KUNDLI] Kundli data loaded from Firebase")
-            return kundli_data
+            print(f"[GET_KUNDLI] Firebase kundli_data keys: {list(kundli_data.keys())}")
+            
+            horoscope_info = kundli_data.get('horoscope_info', {})
+            print(f"[GET_KUNDLI] horoscope_info type: {type(horoscope_info)}")
+            print(f"[GET_KUNDLI] horoscope_info keys: {list(horoscope_info.keys()) if isinstance(horoscope_info, dict) else 'Not a dict'}")
+            print(f"[GET_KUNDLI] horoscope_info size: {len(horoscope_info) if isinstance(horoscope_info, dict) else 'N/A'}")
+            
+            # Format birth_data for UI compatibility
+            birth_data = kundli_data.get('birth_data', {})
+            formatted_birth_data = {
+                'name': birth_data.get('name', ''),
+                'place': birth_data.get('place_name', ''),
+                'date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
+                'time': f"{birth_data.get('hour', '')}:{birth_data.get('minute', '')}",
+                'latitude': birth_data.get('latitude', 0),
+                'longitude': birth_data.get('longitude', 0),
+                'timezone_offset': birth_data.get('timezone_offset', 0)
+            }
+            
+            response_data = {
+                'kundli_id': kundli_data.get('kundli_id', kundli_id),
+                'birth_data': formatted_birth_data,
+                'horoscope_info': horoscope_info,
+                'charts': kundli_data.get('charts', {}),
+                'generated_at': kundli_data.get('generated_at')
+            }
+            print(f"[GET_KUNDLI] Response horoscope_info keys: {list(response_data['horoscope_info'].keys())}")
+            return response_data
         
         # Fallback: Get from local files if not in Firebase
         print(f"[GET_KUNDLI] Kundli not found in Firebase, trying local files...")
@@ -490,9 +520,20 @@ async def get_kundli(
         
         print(f"[GET_KUNDLI] Kundli data loaded from file: {kundli_json_path}")
         
+        # Format birth_data for UI compatibility
+        formatted_birth_data = {
+            'name': birth_data.get('name', ''),
+            'place': birth_data.get('place_name', ''),
+            'date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
+            'time': f"{birth_data.get('hour', '')}:{birth_data.get('minute', '')}",
+            'latitude': birth_data.get('latitude', 0),
+            'longitude': birth_data.get('longitude', 0),
+            'timezone_offset': birth_data.get('timezone_offset', 0)
+        }
+        
         return {
             "kundli_id": kundli_id,
-            "birth_data": birth_data,
+            "birth_data": formatted_birth_data,
             "horoscope_info": kundli_file_data.get('horoscope_info', {}),
             "generated_at": kundli_file_data.get('generated_at'),
             "kundli_json_path": kundli_json_path
@@ -517,6 +558,35 @@ async def get_calculation_history(
 ):
     """
     Get user's calculation history
+    
+    Args:
+        limit: Maximum number of records to return
+        
+    Returns:
+        List of calculations
+    """
+    try:
+        calculations = FirebaseService.get_user_calculations(current_user['uid'], limit)
+        
+        return {
+            "total": len(calculations),
+            "calculations": calculations
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/api/user/calculations")
+async def get_user_calculations(
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get user's calculation history (alias for /api/calculations/history)
     
     Args:
         limit: Maximum number of records to return
@@ -591,7 +661,7 @@ async def get_planet_position(
     """
     try:
         result = astrology_service.get_planet_position(
-            birth_data.dict(),
+            birth_data.model_dump(),
             chart_type,
             planet_name
         )
@@ -637,7 +707,7 @@ async def get_planets_in_house(
             )
         
         result = astrology_service.get_planets_in_house(
-            birth_data.dict(),
+            birth_data.model_dump(),
             chart_type,
             house_number
         )

@@ -114,6 +114,10 @@ export const api = {
   getUserProfile: () => apiClient.get('/user/profile'),
   updateUserProfile: (data: Record<string, any>) =>
     apiClient.put('/user/profile', data),
+  getUserCalculations: () =>
+    apiClient.get('/user/calculations'),
+  loadUserSession: () =>
+    apiClient.get('/user/load-session'),
 
   // Kundli
   generateKundli: (birthData: Record<string, any>, chartTypes?: string[]) =>
@@ -150,6 +154,40 @@ export const api = {
       kundli_id: kundliId,
       analysis_type: analysisType || 'comprehensive',
     }),
+  downloadAnalysis: (kundliId: string) =>
+    apiClient.get(`/analysis/download/${kundliId}`, { responseType: 'arraybuffer' }),
+
+  // Dashboard & Insights
+  getDashboardInsights: (kundliId?: string, forceRefresh?: boolean) =>
+    apiClient.get('/dashboard/insights', { params: { kundli_id: kundliId, force_refresh: forceRefresh } }),
+  getUserInsights: (kundliId: string) =>
+    apiClient.get(`/insights/${kundliId}`),
+
+  // Chat
+  sendChatMessage: (kundliId: string, message: string, chatHistory?: any[]) =>
+    apiClient.post('/chat/message', {
+      kundli_id: kundliId,
+      user_message: message,
+      chat_history: chatHistory || [],
+    }),
+  getChatHistory: (kundliId: string) =>
+    apiClient.get(`/chat/history/${kundliId}`),
+
+  // LiveChat
+  generateLivechatKundli: (birthData: Record<string, any>) =>
+    apiClient.post('/livechat/generate-kundli', {
+      birth_data: birthData,
+    }),
+  sendLivechatMessage: (kundliData: Record<string, any>, message: string, chatHistory?: any[]) =>
+    apiClient.post('/livechat/message', {
+      kundli_data: kundliData,
+      user_message: message,
+      chat_history: chatHistory || [],
+    }),
+
+  // Cities
+  searchCities: (query: string) =>
+    apiClient.get('/cities/search', { params: { query } }),
 }
 
 export default apiClient

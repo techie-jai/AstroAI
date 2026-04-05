@@ -64,13 +64,79 @@ class AstrologyService:
             # Make kundli data JSON serializable
             kundli_data = self._make_serializable(kundli_data)
             
+            # Extract horoscope_info from jyotishganit_json
+            horoscope_info = {}
+            if isinstance(kundli_data, dict):
+                # Get the jyotishganit_json which contains all the astrological data
+                jyotishganit_json = kundli_data.get('jyotishganit_json', {})
+                
+                # Extract key astrological information from jyotishganit_json
+                if isinstance(jyotishganit_json, dict):
+                    # Extract panchanga (tithi, nakshatra, yoga, karana, vaara)
+                    if 'panchanga' in jyotishganit_json:
+                        panchanga = jyotishganit_json['panchanga']
+                        horoscope_info['tithi'] = panchanga.get('tithi', '')
+                        horoscope_info['nakshatra'] = panchanga.get('nakshatra', '')
+                        horoscope_info['yoga'] = panchanga.get('yoga', '')
+                        horoscope_info['karana'] = panchanga.get('karana', '')
+                        horoscope_info['vaara'] = panchanga.get('vaara', '')
+                    
+                    # Extract ayanamsa
+                    if 'ayanamsa' in jyotishganit_json:
+                        ayanamsa = jyotishganit_json['ayanamsa']
+                        horoscope_info['ayanamsa_name'] = ayanamsa.get('name', '')
+                        horoscope_info['ayanamsa_value'] = ayanamsa.get('value', 0)
+                    
+                    # Extract D1 Chart data (houses and planets)
+                    if 'd1Chart' in jyotishganit_json:
+                        d1_chart = jyotishganit_json['d1Chart']
+                        
+                        # Extract houses and planets from occupants
+                        if 'houses' in d1_chart:
+                            houses = d1_chart['houses']
+                            for i, house in enumerate(houses[:12]):
+                                house_num = house.get('number', i + 1)
+                                horoscope_info[f'house_{house_num}_sign'] = house.get('sign', '')
+                                horoscope_info[f'house_{house_num}_lord'] = house.get('lord', '')
+                                
+                                # Extract planets from occupants
+                                occupants = house.get('occupants', [])
+                                for occupant in occupants:
+                                    planet_name = occupant.get('celestialBody', '').lower().replace(' ', '_')
+                                    if planet_name:
+                                        horoscope_info[f'{planet_name}_sign'] = occupant.get('sign', '')
+                                        horoscope_info[f'{planet_name}_house'] = occupant.get('house', '')
+                                        horoscope_info[f'{planet_name}_nakshatra'] = occupant.get('nakshatra', '')
+                
+                # Also include top-level data if available
+                if 'ashtakavarga' in kundli_data:
+                    horoscope_info['ashtakavarga'] = kundli_data['ashtakavarga']
+                if 'dashas' in kundli_data:
+                    horoscope_info['dashas'] = kundli_data['dashas']
+            
+            # Create the final kundli data structure
+            final_kundli_data = {
+                'horoscope_info': horoscope_info,
+                'birth_details': kundli_data.get('birth_details', {}),
+                'metadata': kundli_data.get('metadata', {}),
+                'jyotishganit_json': kundli_data.get('jyotishganit_json', {})
+            }
+            
+            # Debug: Log the structure of horoscope_info
+            print(f"[ASTROLOGY] Kundli data keys: {list(final_kundli_data.keys())}")
+            print(f"[ASTROLOGY] horoscope_info keys: {list(horoscope_info.keys())}")
+            print(f"[ASTROLOGY] horoscope_info data points: {sum(len(v) if isinstance(v, (list, dict)) else 1 for v in horoscope_info.values())}")
+            
             return {
                 'success': True,
                 'kundli_id': self._generate_kundli_id(birth_data),
-                'data': kundli_data,
+                'data': final_kundli_data,
                 'generated_at': datetime.now().isoformat()
             }
         except Exception as e:
+            print(f"[ASTROLOGY] Error in generate_kundli: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'error': str(e)
