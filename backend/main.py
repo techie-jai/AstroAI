@@ -26,6 +26,8 @@ from models import (
 
 )
 
+from insights_extractor import InsightsExtractor
+
 from firebase_config import FirebaseConfig, FirebaseService
 
 from astrology_service import AstrologyService
@@ -1633,7 +1635,18 @@ async def generate_analysis(
         formatted_analysis_text = AnalysisFormatter.format_analysis(analysis_text)
 
         
-
+        # Extract insights from analysis
+        print(f"[ANALYSIS] Extracting insights from analysis...")
+        extracted_insights = InsightsExtractor.extract_insights(analysis_text)
+        
+        if extracted_insights:
+            print(f"[ANALYSIS] Insights extracted successfully")
+            formatted_insights = InsightsExtractor.format_insights_for_firebase(extracted_insights)
+            insights_id = FirebaseService.save_insights(current_user['uid'], request.kundli_id, formatted_insights)
+            print(f"[ANALYSIS] Insights saved to Firebase: {insights_id}")
+        else:
+            print(f"[ANALYSIS] No insights found in analysis text")
+        
         # Save analysis text locally
 
         print(f"[ANALYSIS] Saving analysis locally...")
@@ -1643,7 +1656,6 @@ async def generate_analysis(
         print(f"[ANALYSIS] Analysis saved: {analysis_text_path}")
 
         
-
         # Generate PDF report
 
         print(f"[ANALYSIS] Generating PDF report...")
@@ -1677,7 +1689,6 @@ async def generate_analysis(
             analysis_pdf_path = None
 
         
-
         return {
 
             "analysis_id": request.kundli_id,
@@ -1866,6 +1877,111 @@ async def download_analysis_pdf(
 
 
 
+@app.get("/api/dashboard/insights")
+
+async def get_dashboard_insights(
+
+    force_refresh: bool = False,
+
+    current_user: dict = Depends(get_current_user)
+
+):
+
+    """
+
+    Get latest insights for dashboard display
+
+    
+
+    Args:
+
+        force_refresh: Force refresh from Firebase
+
+        current_user: Current authenticated user
+
+        
+
+    Returns:
+
+        Latest insights for the user
+
+    """
+
+    try:
+
+        print(f"[INSIGHTS] Fetching insights for user: {current_user.get('uid')}, email: {current_user.get('email')}")
+
+        
+
+        # Get latest insights for this user
+
+        insights = FirebaseService.get_user_insights(current_user['uid'], limit=1)
+
+        
+
+        if insights:
+
+            print(f"[INSIGHTS] Found {len(insights)} insights")
+
+            latest_insight = insights[0]
+
+            return {
+
+                "status": "success",
+
+                "insights": latest_insight,
+
+                "total_insights": latest_insight.get('total_insights', 0),
+
+                "health_insights": latest_insight.get('health_insights', []),
+
+                "career_insights": latest_insight.get('career_insights', []),
+
+                "relationship_insights": latest_insight.get('relationship_insights', []),
+
+                "money_insights": latest_insight.get('money_insights', []),
+
+                "all_insights": latest_insight.get('all_insights', []),
+
+                "created_at": latest_insight.get('created_at')
+
+            }
+
+        
+
+        print(f"[INSIGHTS] No insights found for user {current_user.get('uid')}")
+
+        return {
+
+            "status": "no_insights",
+
+            "message": "No insights found. Please generate an analysis first.",
+
+            "insights": None
+
+        }
+
+    
+
+    except Exception as e:
+
+        print(f"[INSIGHTS] ERROR: {type(e).__name__}: {str(e)}")
+
+        import traceback
+
+        traceback.print_exc()
+
+        raise HTTPException(
+
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+
+            detail=str(e)
+
+        )
+
+
+
+
 @app.get("/api/charts/available")
 
 async def get_available_charts():
@@ -1914,6 +2030,380 @@ async def get_available_charts():
 
 
 
+
+
+@app.post("/api/livechat/generate-kundli")
+
+async def livechat_generate_kundli(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generate kundli for live chat (same as /api/kundli/generate)
+    
+    Args:
+        request_data: Request containing birth_data
+        
+    Returns:
+        Generated kundli data with file paths
+    """
+    try:
+        print(f"[LIVECHAT] Starting generation for user: {current_user.get('uid')}")
+        print(f"[LIVECHAT] Request data: {request_data}")
+
+        # Extract birth_data from request
+        birth_data_dict = request_data.get('birth_data', {})
+        if not birth_data_dict:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="birth_data is required"
+            )
+
+        user_name = birth_data_dict.get('name', 'User')
+        
+        # Create user folder
+        print(f"[LIVECHAT] Creating user folder...")
+
+        user_folder, unique_id = file_manager.create_user_folder(user_name)
+
+        
+        # Save user info
+        print(f"[LIVECHAT] Saving user info...")
+
+        user_info = birth_data_dict.copy()
+
+        user_info['uid'] = current_user['uid']
+
+        user_info['unique_id'] = unique_id
+
+        file_manager.save_user_info(user_folder, user_info)
+
+        
+        # Generate kundli
+        print(f"[LIVECHAT] Generating kundli data...")
+
+        result = astrology_service.generate_kundli(birth_data_dict)
+
+        
+        if not result.get('success'):
+
+            error_msg = result.get('error', 'Failed to generate kundli')
+
+            print(f"[LIVECHAT] Generation failed: {error_msg}")
+
+            raise HTTPException(
+
+                status_code=status.HTTP_400_BAD_REQUEST,
+
+                detail=error_msg
+
+            )
+
+        
+        kundli_id = result['kundli_id']
+
+        kundli_data = result['data']
+
+        print(f"[LIVECHAT] Generated kundli_id: {kundli_id}")
+
+        
+        # Format kundli text
+        print(f"[LIVECHAT] Formatting kundli text...")
+
+        kundli_text = format_kundli_text(kundli_data, birth_data_dict)
+
+        
+        # Save kundli files locally
+        print(f"[LIVECHAT] Saving kundli files locally...")
+
+        kundli_json_path = file_manager.save_kundli_json(user_folder, user_name, kundli_data)
+
+        kundli_text_path = file_manager.save_kundli_text(user_folder, user_name, kundli_text)
+
+        print(f"[LIVECHAT] Kundli saved: {kundli_json_path}")
+
+        
+        # Generate charts
+        print(f"[LIVECHAT] Generating divisional charts...")
+
+        chart_types = request_data.get('chart_types') or ['D1', 'D7', 'D9', 'D10']
+
+        charts_result = astrology_service.generate_charts(birth_data_dict, chart_types)
+
+        
+        charts_dict = {}
+
+        if charts_result.get('success'):
+
+            charts_dict = charts_result.get('charts', {})
+
+            print(f"[LIVECHAT] Generated {len(charts_dict)} charts")
+
+            for chart_type, chart_data in charts_dict.items():
+
+                # Format chart text
+                chart_text_result = astrology_service.format_chart_text(birth_data_dict, chart_type)
+
+                chart_text = chart_text_result.get('text', '') if chart_text_result.get('success') else ''
+
+                
+                # Save chart JSON and text
+                file_manager.save_chart_json(user_folder, chart_type, chart_data)
+
+                file_manager.save_chart_text(user_folder, chart_type, chart_text)
+
+                print(f"[LIVECHAT] Saved chart: {chart_type}")
+
+        else:
+
+            print(f"[LIVECHAT] Chart generation failed: {charts_result.get('error', 'Unknown error')}")
+
+        # Save complete kundli data to Firebase for LLM access
+        print(f"[LIVECHAT] Saving complete kundli data to Firebase...")
+        horoscope_info = kundli_data.get('horoscope_info', {})
+        print(f"[LIVECHAT] horoscope_info keys: {list(horoscope_info.keys())}")
+        print(f"[LIVECHAT] horoscope_info size: {len(horoscope_info)}")
+        
+        kundli_firebase_data = {
+            'kundli_id': kundli_id,
+            'birth_data': birth_data_dict,
+            'horoscope_info': horoscope_info,
+            'chart_types': chart_types,
+            'charts': charts_dict,
+            'generated_at': result['generated_at'],
+            'user_folder': user_folder,
+            'unique_id': unique_id
+        }
+        kundli_firebase_id = FirebaseService.save_kundli(current_user['uid'], kundli_firebase_data)
+        print(f"[LIVECHAT] Kundli data saved to Firebase: {kundli_firebase_id}")
+        
+        # Save to Firebase for auth/tracking only
+        print(f"[LIVECHAT] Saving calculation metadata to Firebase...")
+
+        calculation_data = {
+
+            'birth_data': birth_data_dict,
+
+            'chart_types': chart_types,
+
+            'result_summary': {
+
+                'kundli_id': kundli_id,
+
+                'user_folder': user_folder,
+
+                'unique_id': unique_id,
+
+                'generated_at': result['generated_at']
+
+            }
+
+        }
+
+        saved_id = FirebaseService.save_calculation(current_user['uid'], calculation_data)
+
+        print(f"[LIVECHAT] Calculation metadata saved: {saved_id}")
+
+        
+        # Ensure user profile exists
+        print(f"[LIVECHAT] Ensuring user profile exists...")
+
+        user_profile = FirebaseService.get_user_profile(current_user['uid'])
+
+        if not user_profile:
+
+            print(f"[LIVECHAT] Creating user profile...")
+
+            FirebaseService.create_user_profile(
+
+                current_user['uid'],
+
+                current_user.get('email', ''),
+
+                current_user.get('display_name')
+
+            )
+
+        
+        # Update user profile
+        print(f"[LIVECHAT] Updating user profile...")
+
+        FirebaseService.update_user_profile(
+
+            current_user['uid'],
+
+            {'total_calculations': Increment(1)}
+
+        )
+
+        
+        response_data = {
+
+            "kundli_id": kundli_id,
+
+            "unique_id": unique_id,
+
+            "user_folder": user_folder,
+
+            "kundli_json_path": kundli_json_path,
+
+            "kundli_text_path": kundli_text_path,
+
+            "birth_data": birth_data_dict,
+
+            "generated_at": result['generated_at'],
+
+            "firebase_kundli_id": kundli_firebase_id,
+
+            "horoscope_info_keys": list(kundli_data.get('horoscope_info', {}).keys())[:10]
+
+        }
+
+        print(f"[LIVECHAT] Returning response: {response_data}")
+
+        return response_data
+
+    
+    except HTTPException:
+
+        raise
+
+    except Exception as e:
+
+        print(f"[LIVECHAT] ERROR: {type(e).__name__}: {str(e)}")
+
+        import traceback
+
+        traceback.print_exc()
+
+        raise HTTPException(
+
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+
+            detail=str(e)
+
+        )
+
+
+@app.post("/api/livechat/message")
+
+async def livechat_message(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Send a message in live chat and get AI response based on kundli
+    
+    Args:
+        request_data: Contains kundli_data, user_message, and chat_history
+        
+    Returns:
+        AI response based on kundli analysis
+    """
+    try:
+        print(f"[LIVECHAT_MSG] Processing message for user: {current_user.get('uid')}")
+        
+        kundli_data = request_data.get('kundli_data', {})
+        user_message = request_data.get('user_message', '')
+        chat_history = request_data.get('chat_history', [])
+        
+        if not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_message is required"
+            )
+        
+        if not kundli_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="kundli_data is required"
+            )
+        
+        print(f"[LIVECHAT_MSG] User message: {user_message[:100]}...")
+        print(f"[LIVECHAT_MSG] Chat history length: {len(chat_history)}")
+        
+        # Check if Gemini service is available
+        if not gemini_service:
+            print(f"[LIVECHAT_MSG] ERROR: Gemini service not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gemini API key not configured. Please set GEMINI_API_KEY in environment variables."
+            )
+        
+        # Extract horoscope info from kundli data
+        horoscope_info = kundli_data.get('horoscope_info', {})
+        birth_data = kundli_data.get('birth_data', {})
+        
+        print(f"[LIVECHAT_MSG] Horoscope info keys: {list(horoscope_info.keys())[:10]}...")
+        print(f"[LIVECHAT_MSG] Birth data: {birth_data.get('name', 'Unknown')}")
+        
+        # Generate response using Gemini API with kundli context
+        print(f"[LIVECHAT_MSG] Generating response with Gemini API...")
+        
+        try:
+            import json
+            
+            # Convert horoscope_info to formatted JSON
+            horoscope_json = json.dumps(horoscope_info, indent=2)
+            
+            # Build chat history for context
+            chat_context = ""
+            if chat_history:
+                chat_context = "\nPrevious conversation:\n"
+                for msg in chat_history[-5:]:  # Last 5 messages for context
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')
+                    chat_context += f"{role}: {content}\n"
+            
+            # Create the prompt for Gemini with complete JSON data
+            prompt = f"""You are an expert Vedic astrology guide. Analyze the user's birth chart data provided below and answer their question.
+
+KUNDLI DATA (JSON):
+{horoscope_json}
+
+USER INFO:
+Name: {birth_data.get('name', 'Unknown')}
+Date: {birth_data.get('year', 'Unknown')}-{birth_data.get('month', 'Unknown')}-{birth_data.get('day', 'Unknown')}
+Time: {birth_data.get('hour', 'Unknown')}:{birth_data.get('minute', 'Unknown')}
+Place: {birth_data.get('place_name', 'Unknown')}
+
+{chat_context}
+
+User's question: {user_message}
+
+Provide a personalized astrological response based on the kundli JSON data above."""
+            
+            # Call Gemini API
+            response = gemini_service.model.generate_content(prompt)
+            ai_response = response.text
+            
+            print(f"[LIVECHAT_MSG] Response generated successfully")
+            print(f"[LIVECHAT_MSG] Response length: {len(ai_response)}")
+            
+            return {
+                "status": "success",
+                "response": ai_response,
+                "user_message": user_message
+            }
+            
+        except Exception as e:
+            print(f"[LIVECHAT_MSG] ERROR generating response: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to generate response: {str(e)}"
+            )
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(f"[LIVECHAT_MSG] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
 @app.get("/api/cities/search")

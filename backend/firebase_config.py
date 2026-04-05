@@ -382,6 +382,119 @@ class FirebaseService:
             return None
     
     @staticmethod
+    def save_insights(uid: str, kundli_id: str, insights_data: dict) -> Optional[str]:
+        """
+        Save insights to Firestore
+        
+        Args:
+            uid: User ID
+            kundli_id: Kundli ID
+            insights_data: Insights data dictionary
+            
+        Returns:
+            Insights ID or None if failed
+        """
+        try:
+            db = FirebaseConfig.get_db()
+            doc_ref = db.collection('insights').document()
+            doc_ref.set({
+                'user_id': uid,
+                'kundli_id': kundli_id,
+                'health_insights': insights_data.get('health_insights', []),
+                'career_insights': insights_data.get('career_insights', []),
+                'relationship_insights': insights_data.get('relationship_insights', []),
+                'money_insights': insights_data.get('money_insights', []),
+                'all_insights': insights_data.get('all_insights', []),
+                'total_insights': insights_data.get('total_insights', 0),
+                'created_at': firestore.SERVER_TIMESTAMP
+            })
+            return doc_ref.id
+        except Exception as e:
+            print(f"Failed to save insights: {str(e)}")
+            return None
+    
+    @staticmethod
+    def get_insights_by_email(email: str) -> Optional[dict]:
+        """
+        Get latest insights for a user by email
+        
+        Args:
+            email: User email address
+            
+        Returns:
+            Latest insights document or None if not found
+        """
+        try:
+            db = FirebaseConfig.get_db()
+            # First, find user by email
+            user_docs = db.collection('users')\
+                .where('email', '==', email)\
+                .limit(1)\
+                .stream()
+            
+            user_uid = None
+            for doc in user_docs:
+                user_uid = doc.id
+                break
+            
+            if not user_uid:
+                print(f"[INSIGHTS] User not found for email: {email}")
+                return None
+            
+            # Get latest insights for this user
+            docs = db.collection('insights')\
+                .where('user_id', '==', user_uid)\
+                .order_by('created_at', direction=firestore.Query.DESCENDING)\
+                .limit(1)\
+                .stream()
+            
+            for doc in docs:
+                insights = doc.to_dict()
+                insights['insights_id'] = doc.id
+                print(f"[INSIGHTS] Found insights for user {email}")
+                return insights
+            
+            print(f"[INSIGHTS] No insights found for user {email}")
+            return None
+        except Exception as e:
+            print(f"Failed to get insights: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    @staticmethod
+    def get_user_insights(uid: str, limit: int = 10) -> list:
+        """
+        Get all insights for a user
+        
+        Args:
+            uid: User ID
+            limit: Maximum number of insights to return
+            
+        Returns:
+            List of insights documents
+        """
+        try:
+            db = FirebaseConfig.get_db()
+            docs = db.collection('insights')\
+                .where('user_id', '==', uid)\
+                .stream()
+            
+            insights_list = []
+            for doc in docs:
+                insights = doc.to_dict()
+                insights['insights_id'] = doc.id
+                insights_list.append(insights)
+            
+            # Sort by created_at in memory (descending)
+            insights_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            return insights_list[:limit]
+        except Exception as e:
+            print(f"Failed to get user insights: {str(e)}")
+            return []
+
+    @staticmethod
     def upload_file(uid: str, file_path: str, destination_path: str) -> Optional[str]:
         """
         Upload file to Firebase Storage
