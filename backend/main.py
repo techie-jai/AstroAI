@@ -245,7 +245,7 @@ async def generate_kundli(
     """
     try:
         print(f"[KUNDLI] Starting generation for user: {current_user.get('uid')}")
-        birth_data_dict = request.birth_data.dict()
+        birth_data_dict = request.birth_data.model_dump()
         user_name = birth_data_dict.get('name', 'User')
         
         # Create user folder
@@ -880,10 +880,10 @@ async def get_available_charts():
     Returns:
         List of available chart types
     """
-    from astro_chart_api import AstroChartAPI
+    from jyotishganit_chart_api import JyotishganitChartAPI
     
     charts = []
-    for chart_type, (factor, name, signification) in AstroChartAPI.CHART_TYPES.items():
+    for chart_type, (factor, name, signification) in JyotishganitChartAPI.CHART_TYPES.items():
         charts.append({
             "type": chart_type,
             "factor": factor,

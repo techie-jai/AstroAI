@@ -1,24 +1,43 @@
 import sys
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 import hashlib
+import json
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from astro_chart_api import AstroChartAPI
+from jyotishganit_chart_api import JyotishganitChartAPI
 
 
 class AstrologyService:
-    """Service for astrology calculations using PyJHora"""
+    """Service for astrology calculations using Jyotishganit"""
     
     def __init__(self):
-        """Initialize astrology service with PyJHora"""
-        self.api = AstroChartAPI()
+        """Initialize astrology service with Jyotishganit"""
+        self.api = JyotishganitChartAPI()
+    
+    @staticmethod
+    def _make_serializable(obj: Any) -> Any:
+        """Convert non-JSON-serializable objects to serializable format"""
+        if isinstance(obj, dict):
+            return {k: AstrologyService._make_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [AstrologyService._make_serializable(item) for item in obj]
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif hasattr(obj, '__dict__'):
+            # Convert custom objects to dictionaries
+            try:
+                return str(obj)
+            except:
+                return repr(obj)
+        else:
+            return obj
     
     def generate_kundli(self, birth_data: Dict) -> Dict:
         """
-        Generate kundli from birth data using PyJHora
+        Generate kundli from birth data using Jyotishganit
         
         Args:
             birth_data: Dictionary with birth information
@@ -42,6 +61,8 @@ class AstrologyService:
             )
             
             kundli_data = self.api.get_kundli()
+            # Make kundli data JSON serializable
+            kundli_data = self._make_serializable(kundli_data)
             
             return {
                 'success': True,
@@ -84,7 +105,11 @@ class AstrologyService:
                 second=birth_data.get('second', 0)
             )
             
-            charts = self.api.get_multiple_charts(chart_types)
+            charts = {}
+            for chart_type in chart_types:
+                chart_data = self.api.get_chart(chart_type)
+                # Make chart data JSON serializable
+                charts[chart_type] = self._make_serializable(chart_data)
             
             return {
                 'success': True,
@@ -246,7 +271,8 @@ class AstrologyService:
                 second=birth_data.get('second', 0)
             )
             
-            text = self.api.format_chart_text(chart_type)
+            chart_data = self.api.get_chart(chart_type)
+            text = self.api.format_chart_text(chart_data)
             
             return {
                 'success': True,
