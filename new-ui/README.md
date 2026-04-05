@@ -25,12 +25,6 @@ cd new-ui
 pip install -r requirements.txt
 ```
 
-Or install from the parent PyJHora requirements:
-
-```bash
-pip install -r ../PyJHora/requirements.txt
-```
-
 ## Usage
 
 ### Running the Application
@@ -143,13 +137,12 @@ This UI uses the tested `astro_chart_api.py` which has:
 
 If you get import errors, make sure:
 1. You're running from the correct directory
-2. PyJHora is in the parent directory
-3. All dependencies are installed
+2. All dependencies are installed
+3. Jyotishganit is installed: `pip install jyotishganit`
 
 ### Place Autocomplete Not Working
 
-- Ensure PyJHora's world cities database is loaded
-- Check that geocoder/geopy are installed
+- Ensure geocoder/geopy are installed
 - Try manually entering coordinates
 
 ### Charts Not Generating
@@ -182,8 +175,8 @@ If you get import errors, make sure:
 
 ## Credits
 
-- Built on PyJHora by P.V.R Narasimha Rao
-- Uses AstroChartAPI wrapper
+- Built on Jyotishganit library with NASA JPL ephemeris
+- Uses JyotishganitChartAPI wrapper  
 - UI built with PyQt6
 
 ## License

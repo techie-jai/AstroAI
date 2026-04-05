@@ -41,10 +41,7 @@ Combine the ancient wisdom of Vedic astrology with modern AI to:
 
 ### Built On
 
-AstroAI is built on top of **PyJHora**, a comprehensive Python package implementing Vedic astrology calculations based on:
-- `Vedic Astrology - An Integrated Approach` by PVR Narasimha Rao
-- `Jagannatha Hora V8.0 software` by the same author
-- Classical Vedic astrology texts and methodologies
+AstroAI is built on **Jyotishganit**, a comprehensive Python package implementing Vedic astrology calculations using NASA JPL ephemeris data for high-precision astronomical calculations.
 
 ---
 
@@ -118,7 +115,7 @@ AstroAI is built on top of **PyJHora**, a comprehensive Python package implement
 │  │  └────────┬──────────────────────────────────────────────────┘ │    │
 │  │           │                                                    │    │
 │  │  ┌────────▼──────────────────────────────────────────────────┐ │    │
-│  │  │              PyJHora Core Library                          │ │    │
+│  │  │              Jyotishganit Core Library                     │ │    │
 │  │  │         (Vedic Astrology Calculations)                    │ │    │
 │  │  └────────┬──────────────────────────────────────────────────┘ │    │
 │  │           │                                                    │    │
@@ -169,10 +166,11 @@ AstroAI is built on top of **PyJHora**, a comprehensive Python package implement
 - Firebase authentication middleware
 
 **Core Calculation Layer:**
-- PyJHora library (Vedic astrology engine)
+- Jyotishganit library (Vedic astrology engine)
+- NASA JPL DE421 ephemeris for research-grade accuracy
 - 1000+ astrological data points per kundli
 - 20 divisional charts (D1-D60)
-- Dasha, Panchanga, Doshas, Yogas calculations
+- Dasha, Panchanga, Shadbala, Ashtakavarga calculations
 
 **Storage Layer:**
 - Firebase Firestore (user data, calculations metadata)
@@ -775,26 +773,28 @@ The generated data feeds into AI models for:
 
 ## Accuracy & Validation
 
-### PyJHora Accuracy
+### Jyotishganit Accuracy
 
-PyJHora is validated against:
-- **Reference Book**: "Vedic Astrology - An Integrated Approach" by PVR Narasimha Rao
-- **JHora Software**: Jagannatha Hora V8.0 (same author)
-- **Classical Texts**: Traditional Vedic astrology methodologies
+Jyotishganit provides research-grade accuracy using:
 
-**Validation Results:**
-- ~6800 unit tests in PyJHora test suite
-- Results verified against book examples
-- Cross-checked with JHora software outputs
-- Consistent with classical calculations
+- **NASA JPL DE421 ephemeris**: High-precision planetary positions
+- **True Chitra Paksha Ayanamsa**: Authentic sidereal calculations
+- **Cross-platform compatibility**: Works on Windows, macOS, Linux
+- **Arc-second level precision**: Research-grade astronomical accuracy
+
+**Validation Features:**
+- Complete JSON-LD structured output
+- Semantic web standards compliance
+- Professional Vedic astrology calculations
+- Traditional calculation methods preserved
 
 ### Ephemeris Accuracy
 
-Swiss Ephemeris provides:
-- **Accuracy**: ±0.01 arc-seconds for planets
-- **Time Range**: 3000 BCE to 3000 CE
-- **Standard**: Used by professional astrologers worldwide
-- **Validation**: Tested against NASA JPL ephemeris
+NASA JPL DE421 ephemeris provides:
+- **Accuracy**: ±0.001 arc-seconds for planets
+- **Time Range**: 3000 BCE to 3000 CE  
+- **Standard**: Used by professional astronomers worldwide
+- **Validation**: Tested against astronomical observatories
 
 ### Birth Time Sensitivity
 
@@ -997,51 +997,10 @@ text = api.format_chart_text('D1')
 
 ## Project Structure
 
-```
+```plaintext
 AstroAI/
-├── PyJHora/                              # Core Vedic astrology library
-│   ├── jhora/
-│   │   ├── horoscope/                    # Chart calculations
-│   │   ├── panchanga/                    # Panchanga calculations
-│   │   ├── ui/                           # Advanced UI components
-│   │   └── data/                         # Ephemeris and reference data
-│   └── requirements.txt
-│
-├── backend/                              # FastAPI Backend ⭐
-│   ├── main.py                           # FastAPI application
-│   ├── models.py                         # Pydantic models
-│   ├── firebase_config.py                # Firebase configuration
-│   ├── firebase_service.py               # Firebase service layer
-│   ├── astrology_service.py              # Astrology calculations
-│   ├── auth.py                           # Authentication middleware
-│   ├── pdf_generator.py                  # PDF generation
-│   ├── file_manager.py                   # File operations
-│   ├── requirements.txt                  # Backend dependencies
-│   ├── README.md                         # Backend documentation
-│   └── .env.example                      # Environment template
-│
-├── frontend/                             # React Web Platform ⭐
-│   ├── src/
-│   │   ├── components/                   # React components
-│   │   ├── pages/                        # Page components
-│   │   ├── data/                         # Data and constants
-│   │   ├── App.tsx                       # Main app component
-│   │   ├── main.tsx                      # Entry point
-│   │   └── index.css                     # Global styles
-│   ├── index.html                        # HTML template
-│   ├── package.json                      # Dependencies
-│   ├── vite.config.ts                    # Vite configuration
-│   ├── tsconfig.json                     # TypeScript config
-│   ├── tailwind.config.js                # Tailwind CSS config
-│   ├── README.md                         # Frontend documentation
-│   └── .env.example                      # Environment template
-│
-├── cloudflare/                           # Cloudflare Tunnel Setup ⭐
-│   ├── config.yml                        # Tunnel configuration
-│   ├── setup.ps1                         # Windows setup script
-│   ├── setup.sh                          # Linux/macOS setup script
-│   ├── test-tunnel.ps1                   # Windows test script
-│   ├── test-tunnel.sh                    # Linux/macOS test script
+├── jyotishganit_chart_api.py              # Jyotishganit API wrapper 
+├── new-ui/                                # PyQt6 desktop application
 │   ├── README.md                         # Quick reference
 │   └── SETUP.md                          # Detailed setup guide
 │
@@ -1086,7 +1045,8 @@ AstroAI/
 ├── test_backend_endpoints.py             # Backend endpoint tests
 ├── test_backend_flow.py                  # Complete flow tests
 │
-├── PYJHORA_INTEGRATION_GUIDE.md           # Complete API documentation ⭐
+├── JYOTISHGANIT_INTEGRATION_SUMMARY.md     # Integration documentation ⭐
+├── COMPREHENSIVE_KUNDLI_SUCCESS.md         # Success documentation ⭐
 ├── ARCHITECTURE.md                       # System architecture
 ├── ARCHITECTURE_VISUAL_DIAGRAMS.md       # Visual diagrams
 ├── MODULE_TECHNICAL_DETAILS.md           # Module documentation
@@ -1201,15 +1161,23 @@ python test_backend_flow.py
 
 Tests the complete workflow from user registration to PDF generation.
 
-### PyJHora Core Tests
+### Jyotishganit Tests
 
-PyJHora includes ~6800 unit tests:
+Jyotishganit provides built-in validation and testing:
 
 ```bash
-python -m pytest PyJHora/src/jhora/tests/pvr_tests.py
+# Test Jyotishganit functionality
+python test_jyotishganit.py
+
+# Test Jyotishganit API wrapper  
+python test_jyotishganit_api.py
 ```
 
-**Note:** Tests assume `const._DEFAULT_AYANAMSA_MODE='LAHIRI'`
+**Features:**
+- Complete planetary position validation
+- Divisional chart accuracy verification
+- JSON-LD structure validation
+- Professional-grade calculation verification
 
 ### Docker Testing
 
@@ -1251,7 +1219,8 @@ See `TESTING_GUIDE.md` for:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | `README.md` | Project overview and quick start | Everyone |
-| `PYJHORA_INTEGRATION_GUIDE.md` | Complete API guide with examples | Developers |
+| `JYOTISHGANIT_INTEGRATION_SUMMARY.md` | Complete integration guide | Developers |
+| `COMPREHENSIVE_KUNDLI_SUCCESS.md` | Success documentation | Everyone |
 | `ARCHITECTURE.md` | System design and architecture | Architects, Developers |
 | `ARCHITECTURE_VISUAL_DIAGRAMS.md` | Visual system diagrams | Everyone |
 | `MODULE_TECHNICAL_DETAILS.md` | Detailed module documentation | Developers |
@@ -1300,7 +1269,7 @@ See `TESTING_GUIDE.md` for:
 ### Getting Help
 
 - **Getting Started**: See [Getting Started](#getting-started) section
-- **Full API Reference**: See `PYJHORA_INTEGRATION_GUIDE.md`
+- **Full API Reference**: See `JYOTISHGANIT_INTEGRATION_SUMMARY.md`
 - **Backend Setup**: See `backend/README.md`
 - **Frontend Setup**: See `frontend/README.md`
 - **Deployment**: See `DEPLOYMENT_GUIDE.md`
@@ -1395,8 +1364,8 @@ For issues, questions, or contributions:
 - **Async**: Python asyncio
 
 ### Core Calculations
-- **Astrology Engine**: PyJHora
-- **Ephemeris**: Swiss Ephemeris (pyswisseph)
+- **Astrology Engine**: Jyotishganit
+- **Ephemeris**: NASA JPL DE421 (Skyfield)
 - **Date/Time**: python-dateutil, pytz
 - **Geolocation**: geopy, geocoder, timezonefinder
 

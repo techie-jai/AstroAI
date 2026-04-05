@@ -601,8 +601,8 @@ See `DEPLOYMENT_GUIDE.md` for comprehensive instructions.
 7. Infrastructure as code
 
 ### Challenges & Solutions
-1. **Challenge**: Integrating existing PyJHora code
-   **Solution**: Created astrology_service wrapper
+1. **Challenge**: Integrating Jyotishganit library
+   **Solution**: Created jyotishganit_chart_api wrapper
 
 2. **Challenge**: Managing Firebase credentials
    **Solution**: Environment variables & .gitignore

@@ -20,15 +20,7 @@ except ImportError:
     GEMINI_API_KEY = None
 
 # Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'PyJHora'))
-
-# Set up ephemeris path before importing jhora modules
-import swisseph as swe
-ephe_path = os.path.join(os.path.dirname(__file__), '..', 'PyJHora', 'jhora', 'data', 'ephe')
-ephe_path = os.path.abspath(ephe_path)
-swe.set_ephe_path(ephe_path)
-
-from jhora import utils, const
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 
 class AstroAIMainWindow(QWidget):
@@ -39,14 +31,7 @@ class AstroAIMainWindow(QWidget):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AstroAI - Chart Generator")
         self.setMinimumSize(800, 700)
-        
-        # Initialize language
-        utils.set_language('en')
-        
-        # Load world cities for autocomplete
-        self.world_cities = utils.world_cities_dict
         
         self._init_ui()
         self._connect_signals()
@@ -185,10 +170,22 @@ class AstroAIMainWindow(QWidget):
         
         # Place
         self.place_input = QLineEdit()
-        self.place_input.setPlaceholderText("Start typing city name...")
+        self.place_input.setPlaceholderText("Enter city name (e.g., Delhi, Mumbai, Chennai)...")
         
-        # Add autocomplete
-        completer = QCompleter(list(self.world_cities.keys()))
+        # Simple autocomplete with major cities
+        major_cities = [
+            "Delhi", "Mumbai", "Bangalore", "Chennai", "Kolkata", "Hyderabad", 
+            "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Kanpur", "Nagpur",
+            "Indore", "Thane", "Bhopal", "Visakhapatnam", "Pimpri-Chinchwad",
+            "Patna", "Vadodara", "Ghaziabad", "Ludhiana", "Agra", "Nashik",
+            "Faridabad", "Meerut", "Rajkot", "Kalyan-Dombivali", "Vasai-Virar",
+            "Varanasi", "Srinagar", "Dhanbad", "Jodhpur", "Amritsar", "Raipur",
+            "Allahabad", "Coimbatore", "Jabalpur", "Gwalior", "Vijayawada",
+            "Madurai", "Guwahati", "Chandigarh", "Hubli-Dharwad", "Mysore",
+            "Tiruchirappalli", "New York", "London", "Tokyo", "Paris", "Singapore"
+        ]
+        
+        completer = QCompleter(major_cities)
         completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         completer.setFilterMode(Qt.MatchFlag.MatchContains)
         self.place_input.setCompleter(completer)
@@ -259,31 +256,41 @@ class AstroAIMainWindow(QWidget):
         self.tz_input.textChanged.connect(self._validate_inputs)
     
     def _set_default_values(self):
-        """Set default values and try to get location from IP"""
-        try:
-            # Try to get location from IP
-            loc = utils.get_place_from_user_ip_address()
-            if len(loc) == 4:
-                self.place_input.setText(loc[0])
-                self.lat_input.setText(str(loc[1]))
-                self.long_input.setText(str(loc[2]))
-                self.tz_input.setText(str(loc[3]))
-        except:
-            # Set default to Chennai if IP lookup fails
-            self.place_input.setText("Chennai,IN")
-            self.lat_input.setText("13.0827")
-            self.long_input.setText("80.2707")
-            self.tz_input.setText("5.5")
+        """Set default values"""
+        # Set default to Delhi
+        self.place_input.setText("Delhi,IN")
+        self.lat_input.setText("28.6139")
+        self.long_input.setText("77.209")
+        self.tz_input.setText("5.5")
         
         self._validate_inputs()
     
     def _on_place_changed(self, text: str):
         """Handle place selection from autocomplete"""
-        if text in self.world_cities:
-            city_data = self.world_cities[text]
-            self.lat_input.setText(str(city_data[0]))
-            self.long_input.setText(str(city_data[1]))
-            self.tz_input.setText(str(city_data[2]))
+        # Simple city lookup for major cities
+        city_coordinates = {
+            "Delhi": (28.6139, 77.209, 5.5),
+            "Mumbai": (19.0760, 72.8777, 5.5),
+            "Bangalore": (12.9716, 77.5946, 5.5),
+            "Chennai": (13.0827, 80.2707, 5.5),
+            "Kolkata": (22.5726, 88.3639, 5.5),
+            "Hyderabad": (17.3850, 78.4867, 5.5),
+            "Pune": (18.5204, 73.8567, 5.5),
+            "Ahmedabad": (23.0225, 72.5714, 5.5),
+            "Jaipur": (26.9124, 75.7873, 5.5),
+            "Lucknow": (26.8467, 80.9462, 5.5),
+            "New York": (40.7128, -74.0060, -5.0),
+            "London": (51.5074, -0.1278, 0.0),
+            "Tokyo": (35.6762, 139.6503, 9.0),
+            "Paris": (48.8566, 2.3522, 1.0),
+            "Singapore": (1.3521, 103.8198, 8.0)
+        }
+        
+        if text in city_coordinates:
+            lat, lon, tz = city_coordinates[text]
+            self.lat_input.setText(str(lat))
+            self.long_input.setText(str(lon))
+            self.tz_input.setText(str(tz))
     
     def _validate_inputs(self) -> bool:
         """Validate all required inputs"""

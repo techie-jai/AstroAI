@@ -420,8 +420,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code (changes frequently)
 COPY backend/ ./backend/
-COPY astro_chart_api.py .
-COPY PyJHora/ ./PyJHora/
+COPY jyotishganit_chart_api.py .
+COPY test_jyotishganit*.py .
 ```
 
 ### 3. Image Size Reduction

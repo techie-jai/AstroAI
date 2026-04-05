@@ -12,16 +12,9 @@ from PyQt6.QtCore import QThread
 
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'PyJHora'))
-
-# Set up ephemeris path before importing anything else
-import swisseph as swe
-ephe_path = os.path.join(os.path.dirname(__file__), '..', 'PyJHora', 'jhora', 'data', 'ephe')
-ephe_path = os.path.abspath(ephe_path)
-swe.set_ephe_path(ephe_path)
 
 from ui_components import AstroAIMainWindow
-from chart_generator import ChartGeneratorWorker, ChartImageRenderer
+from chart_generator import ChartGeneratorWorker
 from file_manager import FileManager
 from gemini_analyzer import GeminiAnalyzer
 from api_client import AstroAIAPIClient
@@ -34,7 +27,6 @@ class AstroAIApplication:
         self.app = QApplication(sys.argv)
         self.window = AstroAIMainWindow()
         self.file_manager = FileManager(base_dir=os.path.join(os.path.dirname(__file__), '..', 'users'))
-        self.image_renderer = ChartImageRenderer(chart_style='south_indian')
         self.api_client = AstroAIAPIClient(base_url="http://localhost:8000")
         
         self.worker = None
@@ -54,9 +46,8 @@ class AstroAIApplication:
         # Set window icon if available
         try:
             from PyQt6.QtGui import QIcon
-            icon_path = os.path.join(os.path.dirname(__file__), '..', 'PyJHora', 'jhora', 'ui', 'images', 'lord_ganesha2.jpg')
-            if os.path.exists(icon_path):
-                self.window.setWindowIcon(QIcon(icon_path))
+            # Use a default icon or skip icon setting
+            pass
         except:
             pass
     
@@ -128,18 +119,9 @@ class AstroAIApplication:
     def on_chart_generated(self, chart_type: str, chart_data: dict, chart_text: str):
         """Handle individual chart generation"""
         try:
-            # Save JSON
-            self.file_manager.save_chart_json(self.current_folder, chart_type, chart_data)
-            
-            # Save text
-            self.file_manager.save_chart_text(self.current_folder, chart_type, chart_text)
-            
-            # Generate and save image
-            try:
-                pixmap = self.image_renderer.render_chart_simple(chart_data)
-                self.file_manager.save_chart_image(self.current_folder, chart_type, pixmap)
-            except Exception as e:
-                print(f"Warning: Could not generate image for {chart_type}: {e}")
+            # Only save text for D1 and main kundli
+            if chart_type == 'D1':
+                self.file_manager.save_chart_text(self.current_folder, chart_type, chart_text)
             
             # Track generated chart
             self.generated_charts.append({
