@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Star, Zap, Clock, TrendingUp, Sparkles, AlertCircle, Calendar, RefreshCw, Download, Zap as ZapIcon, MessageCircle } from 'lucide-react'
+import { Star, Zap, Clock, TrendingUp, Sparkles, AlertCircle, Calendar, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { api } from '../services/api'
 import InsightCard from '../components/InsightCard'
@@ -23,12 +23,6 @@ interface DashboardInsights {
   interesting_facts: string
 }
 
-interface GeneratedKundli {
-  kundli_id: string
-  name: string
-  has_analysis: boolean
-}
-
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
@@ -37,9 +31,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [loadingInsights, setLoadingInsights] = useState(false)
   
-  const [generatedKundli, setGeneratedKundli] = useState<GeneratedKundli | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [citySuggestions, setCitySuggestions] = useState<CityData[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -167,26 +159,8 @@ export default function DashboardPage() {
 
     try {
       const response = await api.generateKundli(formData)
-      const newKundli: GeneratedKundli = {
-        kundli_id: response.data.kundli_id,
-        name: formData.name,
-        has_analysis: false
-      }
-      setGeneratedKundli(newKundli)
       toast.success('Kundli generated successfully!')
-      
-      setFormData({
-        name: '',
-        place_name: '',
-        latitude: 0,
-        longitude: 0,
-        timezone_offset: 5.5,
-        year: new Date().getFullYear(),
-        month: 1,
-        day: 1,
-        hour: 12,
-        minute: 0,
-      })
+      navigate(`/results/${response.data.kundli_id}`)
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || error?.response?.data?.error || error?.message || 'Failed to generate kundli'
       toast.error(errorMessage)
@@ -196,61 +170,6 @@ export default function DashboardPage() {
     }
   }
 
-  const handleDownloadKundli = async () => {
-    if (!generatedKundli) return
-    try {
-      const response = await api.downloadKundliPDF(generatedKundli.kundli_id)
-      const url = window.URL.createObjectURL(new Blob([response.data]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', `${generatedKundli.name}_kundli.pdf`)
-      document.body.appendChild(link)
-      link.click()
-      link.parentNode?.removeChild(link)
-      toast.success('Kundli downloaded successfully!')
-    } catch (error: any) {
-      toast.error('Failed to download kundli')
-      console.error('Download error:', error)
-    }
-  }
-
-  const handleAnalyzeKundli = async () => {
-    if (!generatedKundli) return
-    setIsAnalyzing(true)
-    try {
-      await api.analyzeKundli(generatedKundli.kundli_id)
-      setGeneratedKundli(prev => prev ? { ...prev, has_analysis: true } : null)
-      toast.success('Analysis generated successfully!')
-    } catch (error: any) {
-      toast.error('Failed to generate analysis')
-      console.error('Analysis error:', error)
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  const handleDownloadAnalysisPDF = async () => {
-    if (!generatedKundli) return
-    try {
-      const response = await api.downloadAnalysisPDF(generatedKundli.kundli_id)
-      const url = window.URL.createObjectURL(new Blob([response.data]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', `${generatedKundli.name}_analysis.pdf`)
-      document.body.appendChild(link)
-      link.click()
-      link.parentNode?.removeChild(link)
-      toast.success('Analysis PDF downloaded successfully!')
-    } catch (error: any) {
-      toast.error('Failed to download analysis PDF')
-      console.error('Download error:', error)
-    }
-  }
-
-  const handleChatWithAI = () => {
-    if (!generatedKundli) return
-    navigate(`/chat/${generatedKundli.kundli_id}`)
-  }
 
   if (loading) {
     return (
@@ -321,8 +240,7 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Generate New Kundli</h2>
               
-              {!generatedKundli ? (
-                <form onSubmit={handleGenerateKundli} className="space-y-6">
+              <form onSubmit={handleGenerateKundli} className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
                     <input
@@ -497,54 +415,6 @@ export default function DashboardPage() {
                     )}
                   </button>
                 </form>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                    <p className="text-indigo-900 font-semibold">{generatedKundli.name}</p>
-                    <p className="text-indigo-700 text-sm mt-1">Kundli generated successfully!</p>
-                  </div>
-
-                  {!generatedKundli.has_analysis && (
-                    <button
-                      onClick={handleAnalyzeKundli}
-                      disabled={isAnalyzing}
-                      className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                    >
-                      {isAnalyzing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          <span>Analyzing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ZapIcon size={18} />
-                          <span>Analyze with AI</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                  {generatedKundli.has_analysis && (
-                    <>
-                      <button
-                        onClick={handleDownloadAnalysisPDF}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                      >
-                        <Download size={18} />
-                        <span>Download Analysis PDF</span>
-                      </button>
-
-                      <button
-                        onClick={handleChatWithAI}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                      >
-                        <MessageCircle size={18} />
-                        <span>Chat with AI</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Insights Section */}
