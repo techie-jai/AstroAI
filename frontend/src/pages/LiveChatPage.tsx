@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Send, Loader, MapPin, Calendar, Clock, Sparkles, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
@@ -32,6 +33,7 @@ interface CityOption {
 }
 
 export default function LiveChatPage() {
+  const [searchParams] = useSearchParams()
   const [step, setStep] = useState<'form' | 'chat'>('form')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -61,6 +63,69 @@ export default function LiveChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Check if kundli data is passed via sessionStorage or URL parameter
+  useEffect(() => {
+    const source = searchParams.get('source')
+    let kundliToLoad = null
+
+    // Try to get kundli from sessionStorage first (from Results page)
+    if (source === 'results') {
+      const storedKundli = sessionStorage.getItem('kundli_data')
+      if (storedKundli) {
+        try {
+          kundliToLoad = JSON.parse(storedKundli)
+          sessionStorage.removeItem('kundli_data') // Clean up after retrieval
+          console.log('[LiveChat] Kundli data retrieved from sessionStorage:', kundliToLoad)
+        } catch (error) {
+          console.error('[LiveChat] Failed to parse kundli from sessionStorage:', error)
+          toast.error('Failed to load kundli data')
+          return
+        }
+      }
+    } else {
+      // Try legacy URL parameter method for backward compatibility
+      const kundliParam = searchParams.get('kundli')
+      if (kundliParam) {
+        try {
+          kundliToLoad = JSON.parse(atob(kundliParam))
+          console.log('[LiveChat] Kundli data received from URL:', kundliToLoad)
+        } catch (error) {
+          console.error('[LiveChat] Failed to decode kundli from URL:', error)
+          toast.error('Failed to load kundli data from URL')
+          return
+        }
+      }
+    }
+
+    if (kundliToLoad) {
+      // Set kundli data and skip to chat
+      setKundliData(kundliToLoad)
+      setKundliGenerated(true)
+      setStep('chat')
+
+      // Extract birth data for display
+      if (kundliToLoad.birth_data) {
+        const bd = kundliToLoad.birth_data
+        setBirthData(prev => ({
+          ...prev,
+          name: bd.name || prev.name,
+          place: bd.place || prev.place,
+          latitude: bd.latitude || prev.latitude,
+          longitude: bd.longitude || prev.longitude,
+          timezone_offset: bd.timezone_offset || prev.timezone_offset,
+        }))
+      }
+
+      const welcomeMessage: Message = {
+        role: 'assistant',
+        content: `Namaste! 🙏 I've loaded your kundli data. I'm your personal Vedic astrology guide and I'm ready to answer any questions about your astrological profile. Ask me anything about your personality, career, relationships, or life path!`,
+        timestamp: new Date(),
+      }
+      setMessages([welcomeMessage])
+      toast.success('Kundli loaded successfully!')
+    }
+  }, [searchParams])
 
   const handleCitySearch = async (query: string) => {
     setBirthData(prev => ({ ...prev, place: query }))

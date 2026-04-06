@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api } from '../services/api'
 import apiClient from '../services/api'
 import toast from 'react-hot-toast'
-import { Sparkles, Download, Loader, Zap } from 'lucide-react'
+import { Sparkles, Download, Loader, Zap, MessageCircle } from 'lucide-react'
 import { getDisplayableItems, extractPanchanga, extractAyanamsa, extractPlanets, formatKey } from '../utils/jyotishganitHelper'
 
 interface KundliData {
@@ -99,6 +99,24 @@ export default function ResultsPage() {
       console.error(error)
     } finally {
       setDownloading(false)
+    }
+  }
+
+  const handleOpenChat = () => {
+    if (!kundli) {
+      toast.error('Kundli data not found')
+      return
+    }
+
+    try {
+      // Store kundli data in sessionStorage instead of URL to avoid header size limits
+      sessionStorage.setItem('kundli_data', JSON.stringify(kundli))
+      const chatUrl = `${window.location.origin}/livechat?source=results`
+      window.open(chatUrl, '_blank')
+      toast.success('Opening chat in new tab...')
+    } catch (error) {
+      console.error('Failed to open chat:', error)
+      toast.error('Failed to open chat')
     }
   }
 
@@ -305,43 +323,59 @@ export default function ResultsPage() {
           )}
         </div>
 
-        {/* Download Section */}
+        {/* Download & Chat Section */}
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex items-center mb-6">
             <Download className="w-6 h-6 text-indigo-600 mr-3" />
-            <h2 className="text-2xl font-bold text-gray-900">Download Results</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Download Results & Chat</h2>
           </div>
           {analysis ? (
             <div className="space-y-4">
               <p className="text-gray-600">
-                Your AI analysis has been generated. Download the professional PDF report below.
+                Your AI analysis has been generated. Download the professional PDF report or chat about your kundli.
               </p>
-              <button
-                onClick={handleDownloadPDF}
-                disabled={downloading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-              >
-                {downloading ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    <span>Downloading...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5" />
-                    <span>Download PDF Report</span>
-                  </>
-                )}
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+                >
+                  {downloading ? (
+                    <>
+                      <Loader className="w-5 h-5 animate-spin" />
+                      <span>Downloading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-5 h-5" />
+                      <span>Download PDF Report</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleOpenChat}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span>Chat About Kundli</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
               <p className="text-gray-600">
-                Generate an AI analysis first to download the professional PDF report.
+                Generate an AI analysis first to download the professional PDF report or chat about your kundli.
               </p>
               <p className="text-sm text-gray-500">
                 Your kundli data has been generated and saved. You can access it through your calculation history.
               </p>
+              <button
+                onClick={handleOpenChat}
+                className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2 w-full"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>Chat About Kundli</span>
+              </button>
             </div>
           )}
         </div>

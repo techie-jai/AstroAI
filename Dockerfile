@@ -28,6 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
+COPY world_cities_with_tz.csv .
+
+RUN find /app -name "*.py" -type f -exec sed -i 's/\r$//' {} \;
 COPY frontend/package*.json ./frontend/
 COPY frontend/src ./frontend/src
 COPY frontend/index.html ./frontend/
@@ -58,7 +61,7 @@ ENV VITE_FIREBASE_APP_ID=""
 
 EXPOSE 8000 3000
 
-COPY entrypoint.sh /app/
-RUN chmod +x /app/entrypoint.sh
+COPY entrypoint.sh /app/entrypoint.sh
+RUN dos2unix /app/entrypoint.sh || sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
-CMD ["/app/entrypoint.sh"]
+CMD ["/bin/bash", "/app/entrypoint.sh"]

@@ -156,6 +156,15 @@ export const api = {
     }),
   downloadAnalysis: (kundliId: string) =>
     apiClient.get(`/analysis/download/${kundliId}`, { responseType: 'arraybuffer' }),
+  analyzeKundli: (kundliId: string) =>
+    apiClient.post('/analysis/generate', {
+      kundli_id: kundliId,
+      analysis_type: 'comprehensive',
+    }),
+  downloadKundliPDF: (kundliId: string) =>
+    apiClient.get(`/kundli/download/${kundliId}`, { responseType: 'arraybuffer' }),
+  downloadAnalysisPDF: (kundliId: string) =>
+    apiClient.get(`/analysis/download/${kundliId}`, { responseType: 'arraybuffer' }),
 
   // Dashboard & Insights
   getDashboardInsights: (kundliId?: string, forceRefresh?: boolean) =>

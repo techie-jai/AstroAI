@@ -2413,30 +2413,20 @@ Provide a personalized astrological response based on the kundli JSON data above
 async def search_cities(query: str = "") -> List[Dict]:
 
     """Search for cities by name or partial match"""
-
     try:
-
         cities_file = os.path.join(
-
             os.path.dirname(__file__),
-
             "..",
-
-            "PyJHora",
-
-            "jhora",
-
-            "data",
-
             "world_cities_with_tz.csv"
-
         )
-
         
+        print(f"[CITIES] Backend dir: {os.path.dirname(__file__)}")
+        print(f"[CITIES] Looking for cities file at: {cities_file}")
+        print(f"[CITIES] File exists: {os.path.exists(cities_file)}")
 
         if not os.path.exists(cities_file):
-
-            raise HTTPException(status_code=404, detail="Cities database not found")
+            print(f"[CITIES] ERROR: Cities database not found at {cities_file}")
+            raise HTTPException(status_code=404, detail=f"Cities database not found at {cities_file}")
 
         
 
