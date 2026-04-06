@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
+COPY world_cities_with_tz.csv .
 
 RUN find /app -name "*.py" -type f -exec sed -i 's/\r$//' {} \;
 COPY frontend/package*.json ./frontend/

@@ -342,20 +342,49 @@ Modern, responsive web interface built with React and TypeScript.
 
 **Features:**
 - User authentication with Firebase
-- Dashboard with calculation history
+- Dashboard with inline kundli generation
 - Real-time progress tracking
 - PDF download functionality
 - Responsive design (mobile, tablet, desktop)
 - Tailwind CSS styling
 - Lucide React icons
+- City autocomplete with timezone lookup
+- Progressive action buttons (appear one by one)
 
 **Pages:**
 - **Login**: Firebase authentication
-- **Dashboard**: User profile and history
-- **Generator**: Birth data input and chart generation
+- **Dashboard**: User profile, stats, and inline kundli generator
+- **Generator**: Birth data input and chart generation (dedicated page)
 - **Results**: Chart visualization and analysis
-- **History**: Previous calculations
+- **Analysis**: AI-powered astrological analysis
+- **Chat**: Conversational AI with kundli context
 - **Settings**: User preferences
+
+#### Dashboard Features (Updated April 2026)
+
+**New Inline Kundli Generator Card:**
+- Clean form for entering birth details directly on dashboard
+- Name, place of birth, coordinates, timezone, and birth date/time fields
+- City autocomplete with real-time suggestions and automatic coordinate lookup
+- Generates kundli without leaving the dashboard
+
+**Progressive Action Flow:**
+After kundli generation, buttons appear sequentially:
+1. **Analyze with AI** - Triggers comprehensive astrological analysis
+2. **Download Analysis PDF** - Available after analysis completes
+3. **Chat with AI** - Conversational interface using generated kundli as context
+
+**Dashboard Stats:**
+- Total Kundlis generated
+- Latest Kundli name
+- Number of analyzed kundlis
+- Subscription status
+
+**Astrological Insights Section:**
+- Displays insights from latest kundli
+- Shows important aspects, good times, challenges, and interesting facts
+- Refresh button to regenerate insights
+- Integrated with AI analysis
 
 ### Setup Backend
 
@@ -768,6 +797,36 @@ The generated data feeds into AI models for:
 - Prediction generation
 - Compatibility analysis
 - Personalized insights
+
+---
+
+## Recent Updates (April 2026)
+
+### Dashboard Redesign
+
+**Removed Features:**
+- Recent Kundlis tab (replaced with inline generator)
+
+**New Features:**
+- **Inline Kundli Generator**: Generate new kundlis directly from dashboard without navigation
+- **City Autocomplete**: Real-time city search with automatic coordinate and timezone lookup
+- **Progressive Action Flow**: Buttons appear sequentially as kundli is processed
+  - Generate Kundli (form)
+  - Analyze with AI (after generation)
+  - Download Analysis PDF (after analysis)
+  - Chat with AI (after analysis)
+- **Improved UX**: Cleaner dashboard layout with focus on quick kundli generation
+
+**Backend Improvements:**
+- Fixed city search endpoint to use correct CSV file path
+- Added comprehensive logging for debugging
+- Improved error handling and validation
+
+**Frontend Improvements:**
+- City search now uses proper API base URL detection
+- Better error handling for city search failures
+- Responsive form layout with proper spacing
+- Loading states for all async operations
 
 ---
 
