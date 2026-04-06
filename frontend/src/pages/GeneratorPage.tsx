@@ -4,6 +4,43 @@ import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { searchCities, CityData } from '../data/cities'
 
+const generateRandomBirthData = () => {
+  const firstNames = ['Arjun', 'Priya', 'Rohan', 'Ananya', 'Vikram', 'Neha', 'Aditya', 'Pooja', 'Rahul', 'Divya', 'Sanjay', 'Kavya', 'Nikhil', 'Shreya', 'Akshay']
+  const lastNames = ['Sharma', 'Patel', 'Singh', 'Gupta', 'Kumar', 'Verma', 'Reddy', 'Iyer', 'Nair', 'Bhat', 'Desai', 'Rao', 'Chopra', 'Malhotra', 'Joshi']
+  const cities = [
+    { name: 'Mumbai', lat: 19.0760, lon: 72.8777, tz: 5.5 },
+    { name: 'Delhi', lat: 28.7041, lon: 77.1025, tz: 5.5 },
+    { name: 'Bangalore', lat: 12.9716, lon: 77.5946, tz: 5.5 },
+    { name: 'Hyderabad', lat: 17.3850, lon: 78.4867, tz: 5.5 },
+    { name: 'Chennai', lat: 13.0827, lon: 80.2707, tz: 5.5 },
+    { name: 'Kolkata', lat: 22.5726, lon: 88.3639, tz: 5.5 },
+    { name: 'Pune', lat: 18.5204, lon: 73.8567, tz: 5.5 },
+    { name: 'Ahmedabad', lat: 23.0225, lon: 72.5714, tz: 5.5 },
+  ]
+
+  const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)]
+  const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+  const randomCity = cities[Math.floor(Math.random() * cities.length)]
+  const randomYear = Math.floor(Math.random() * (2010 - 1960 + 1)) + 1960
+  const randomMonth = Math.floor(Math.random() * 12) + 1
+  const randomDay = Math.floor(Math.random() * 28) + 1
+  const randomHour = Math.floor(Math.random() * 24)
+  const randomMinute = Math.floor(Math.random() * 60)
+
+  return {
+    name: `${randomFirstName} ${randomLastName}`,
+    place_name: randomCity.name,
+    latitude: randomCity.lat,
+    longitude: randomCity.lon,
+    timezone_offset: randomCity.tz,
+    year: randomYear,
+    month: randomMonth,
+    day: randomDay,
+    hour: randomHour,
+    minute: randomMinute,
+  }
+}
+
 export default function GeneratorPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = React.useState(false)
@@ -12,18 +49,7 @@ export default function GeneratorPage() {
   const [searchLoading, setSearchLoading] = React.useState(false)
   const suggestionsRef = React.useRef<HTMLDivElement>(null)
   
-  const [formData, setFormData] = React.useState({
-    name: 'Jai',
-    place_name: 'Allahabad',
-    latitude: 25.4683,
-    longitude: 81.8546,
-    timezone_offset: 5.5,
-    year: 1995,
-    month: 12,
-    day: 28,
-    hour: 18,
-    minute: 50,
-  })
+  const [formData, setFormData] = React.useState(generateRandomBirthData())
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
