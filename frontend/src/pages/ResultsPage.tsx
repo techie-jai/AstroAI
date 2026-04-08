@@ -3,8 +3,9 @@ import { useParams } from 'react-router-dom'
 import { api } from '../services/api'
 import apiClient from '../services/api'
 import toast from 'react-hot-toast'
-import { Sparkles, Download, Loader, Zap, MessageCircle } from 'lucide-react'
+import { Sparkles, Download, Loader, Zap, MessageCircle, Send } from 'lucide-react'
 import { getDisplayableItems, extractPanchanga, extractAyanamsa, extractPlanets, formatKey } from '../utils/jyotishganitHelper'
+import BotShareModal from '../components/BotShareModal'
 
 interface KundliData {
   kundli_id: string
@@ -28,6 +29,7 @@ export default function ResultsPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [showBotShareModal, setShowBotShareModal] = useState(false)
 
   useEffect(() => {
     const fetchKundli = async () => {
@@ -334,7 +336,7 @@ export default function ResultsPage() {
               <p className="text-gray-600">
                 Your AI analysis has been generated. Download the professional PDF report or chat about your kundli.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
                   onClick={handleDownloadPDF}
                   disabled={downloading}
@@ -359,6 +361,13 @@ export default function ResultsPage() {
                   <MessageCircle className="w-5 h-5" />
                   <span>Chat About Kundli</span>
                 </button>
+                <button
+                  onClick={() => setShowBotShareModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+                >
+                  <Send className="w-5 h-5" />
+                  <span>Share to Bot</span>
+                </button>
               </div>
             </div>
           ) : (
@@ -369,16 +378,33 @@ export default function ResultsPage() {
               <p className="text-sm text-gray-500">
                 Your kundli data has been generated and saved. You can access it through your calculation history.
               </p>
-              <button
-                onClick={handleOpenChat}
-                className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2 w-full"
-              >
-                <MessageCircle className="w-5 h-5" />
-                <span>Chat About Kundli</span>
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <button
+                  onClick={handleOpenChat}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span>Chat About Kundli</span>
+                </button>
+                <button
+                  onClick={() => setShowBotShareModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+                >
+                  <Send className="w-5 h-5" />
+                  <span>Share to Bot</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
+
+        {/* Bot Share Modal */}
+        <BotShareModal
+          isOpen={showBotShareModal}
+          onClose={() => setShowBotShareModal(false)}
+          kundliData={kundli}
+          birthData={kundli?.birth_data}
+        />
       </div>
     </div>
   )

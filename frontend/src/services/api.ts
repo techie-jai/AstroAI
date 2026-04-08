@@ -197,6 +197,30 @@ export const api = {
   // Cities
   searchCities: (query: string) =>
     apiClient.get('/cities/search', { params: { query } }),
+
+  // Bot Services
+  sendKundliWhatsApp: (phoneNumber: string, kundliData: Record<string, any>, birthData: Record<string, any>) =>
+    apiClient.post('/bot/send-kundli-whatsapp', {
+      phone_number: phoneNumber,
+      kundli_data: kundliData,
+      birth_data: birthData,
+    }),
+  sendKundliTelegram: (chatId: string, kundliData: Record<string, any>, birthData: Record<string, any>) =>
+    apiClient.post('/bot/send-kundli-telegram', {
+      chat_id: chatId,
+      kundli_data: kundliData,
+      birth_data: birthData,
+    }),
+  getBotUser: (platform: string, phoneNumber: string) =>
+    apiClient.get(`/bot/user/${platform}/${phoneNumber}`),
+  getBotSession: (userId: string) =>
+    apiClient.get(`/bot/session/${userId}`),
+  deleteBotSession: (userId: string) =>
+    apiClient.delete(`/bot/session/${userId}`),
+  getBotUserKundlis: (platform: string, phoneNumber: string) =>
+    apiClient.get(`/bot/kundlis/${platform}/${phoneNumber}`),
+  getBotStats: (platform?: string) =>
+    apiClient.get('/bot/stats', { params: { platform } }),
 }
 
 export default apiClient

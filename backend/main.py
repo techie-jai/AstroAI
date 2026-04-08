@@ -2498,6 +2498,177 @@ async def search_cities(query: str = "") -> List[Dict]:
 
 
 
+@app.get("/api/webhooks/whatsapp")
+async def whatsapp_webhook_get(hub_mode: str = "", hub_challenge: str = "", hub_verify_token: str = ""):
+    """WhatsApp webhook verification"""
+    from whatsapp_service import WhatsAppService
+    
+    try:
+        whatsapp_service = WhatsAppService()
+        
+        if hub_mode == "subscribe" and whatsapp_service.verify_webhook(hub_verify_token):
+            print(f"[WHATSAPP] Webhook verified")
+            return int(hub_challenge)
+        else:
+            print(f"[WHATSAPP] Webhook verification failed")
+            raise HTTPException(status_code=403, detail="Verification failed")
+    except Exception as e:
+        print(f"[WHATSAPP] Error in webhook verification: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/webhooks/whatsapp")
+async def whatsapp_webhook_post(request_data: dict):
+    """WhatsApp webhook for incoming messages"""
+    from whatsapp_service import WhatsAppService
+    
+    try:
+        whatsapp_service = WhatsAppService()
+        result = whatsapp_service.handle_webhook(request_data)
+        return result
+    except Exception as e:
+        print(f"[WHATSAPP] Error handling webhook: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/webhooks/telegram")
+async def telegram_webhook_post(request_data: dict):
+    """Telegram webhook for incoming messages"""
+    from telegram_service import TelegramService
+    
+    try:
+        telegram_service = TelegramService()
+        result = telegram_service.handle_webhook(request_data)
+        return result
+    except Exception as e:
+        print(f"[TELEGRAM] Error handling webhook: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/bot/send-kundli-whatsapp")
+async def send_kundli_whatsapp(
+    phone_number: str,
+    kundli_data: dict,
+    birth_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Send kundli result to user via WhatsApp"""
+    from whatsapp_service import WhatsAppService
+    
+    try:
+        whatsapp_service = WhatsAppService()
+        success = whatsapp_service.send_kundli_result(phone_number, kundli_data, birth_data)
+        
+        if success:
+            return {"status": "success", "message": "Kundli sent via WhatsApp"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send WhatsApp message")
+    except Exception as e:
+        print(f"[WHATSAPP] Error sending kundli: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/bot/send-kundli-telegram")
+async def send_kundli_telegram(
+    chat_id: str,
+    kundli_data: dict,
+    birth_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Send kundli result to user via Telegram"""
+    from telegram_service import TelegramService
+    
+    try:
+        telegram_service = TelegramService()
+        success = telegram_service.send_kundli_result(chat_id, kundli_data, birth_data)
+        
+        if success:
+            return {"status": "success", "message": "Kundli sent via Telegram"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send Telegram message")
+    except Exception as e:
+        print(f"[TELEGRAM] Error sending kundli: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/bot/user/{platform}/{phone_number}")
+async def get_bot_user(platform: str, phone_number: str, current_user: dict = Depends(get_current_user)):
+    """Get bot user profile"""
+    from bot_firebase import BotFirebaseService
+    
+    try:
+        user_data = BotFirebaseService.get_bot_user(phone_number, platform)
+        if user_data:
+            return {"status": "success", "data": user_data}
+        else:
+            return {"status": "not_found", "message": "User not found"}
+    except Exception as e:
+        print(f"[BOT] Error getting user: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/bot/session/{user_id}")
+async def get_bot_session(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Get bot session"""
+    from bot_firebase import BotFirebaseService
+    
+    try:
+        session_data = BotFirebaseService.get_bot_session(user_id)
+        if session_data:
+            return {"status": "success", "data": session_data}
+        else:
+            return {"status": "not_found", "message": "Session not found"}
+    except Exception as e:
+        print(f"[BOT] Error getting session: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/bot/session/{user_id}")
+async def delete_bot_session(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete bot session (reset)"""
+    from bot_firebase import BotFirebaseService
+    
+    try:
+        success = BotFirebaseService.delete_bot_session(user_id)
+        if success:
+            return {"status": "success", "message": "Session deleted"}
+        else:
+            return {"status": "error", "message": "Failed to delete session"}
+    except Exception as e:
+        print(f"[BOT] Error deleting session: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/bot/kundlis/{platform}/{phone_number}")
+async def get_bot_user_kundlis(platform: str, phone_number: str, current_user: dict = Depends(get_current_user)):
+    """Get all kundlis generated by a bot user"""
+    from bot_firebase import BotFirebaseService
+    
+    try:
+        kundlis = BotFirebaseService.get_bot_user_kundlis(phone_number, platform)
+        return {"status": "success", "data": kundlis, "count": len(kundlis)}
+    except Exception as e:
+        print(f"[BOT] Error getting kundlis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/bot/stats")
+async def get_bot_stats(platform: str = None, current_user: dict = Depends(get_current_user)):
+    """Get bot usage statistics"""
+    from bot_firebase import BotFirebaseService
+    
+    try:
+        stats = BotFirebaseService.get_bot_stats(platform)
+        return {"status": "success", "data": stats}
+    except Exception as e:
+        print(f"[BOT] Error getting stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.exception_handler(HTTPException)
 
 async def http_exception_handler(request, exc):
