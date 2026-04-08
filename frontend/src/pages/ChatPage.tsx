@@ -13,6 +13,7 @@ interface Message {
 interface KundliInfo {
   name: string
   birth_date: string
+  birth_time: string
   place: string
 }
 
@@ -55,8 +56,9 @@ export default function ChatPage() {
           const birthData = response.data.birth_data || {}
           setKundliInfo({
             name: birthData.name || 'Unknown',
-            birth_date: `${birthData.year || 'N/A'}-${birthData.month || 'N/A'}-${birthData.day || 'N/A'}`,
-            place: birthData.place_name || birthData.place || 'Unknown',
+            birth_date: birthData.date || `${birthData.year || 'N/A'}-${birthData.month || 'N/A'}-${birthData.day || 'N/A'}`,
+            birth_time: birthData.time || `${birthData.hour || 'N/A'}:${birthData.minute || 'N/A'}`,
+            place: birthData.place || 'Unknown',
           })
         }
       } catch (err: any) {
@@ -207,6 +209,11 @@ export default function ChatPage() {
             <div>
               <p className="text-indigo-200 text-sm mb-1">Birth Date</p>
               <p className="text-lg font-semibold">{kundliInfo.birth_date}</p>
+            </div>
+            
+            <div>
+              <p className="text-indigo-200 text-sm mb-1">Birth Time</p>
+              <p className="text-lg font-semibold">{kundliInfo.birth_time}</p>
             </div>
             
             <div>
