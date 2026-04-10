@@ -158,37 +158,45 @@ class JyotishganitChartAPI:
         planets_list = []
         houses_dict = {i: [] for i in range(12)}
         ascendant_info = None
+        planet_id_counter = 0
         
-        # Process planets
-        planet_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]
-        
-        for i, planet in enumerate(self.current_chart.d1_chart.planets):
-            if i < len(planet_names):
-                planet_name = planet_names[i]
+        # Process planets from house occupants (not from a fixed planets array)
+        # Planets are stored in house.occupants, not in a separate planets array
+        for house in self.current_chart.d1_chart.houses:
+            occupants = getattr(house, 'occupants', [])
+            for occupant in occupants:
+                # Try to get planet name from celestialBody attribute
+                planet_name = getattr(occupant, 'celestialBody', None)
+                if planet_name is None:
+                    # If not found, try to get from dict-like access
+                    planet_name = occupant.get('celestialBody', 'Unknown') if hasattr(occupant, 'get') else 'Unknown'
+                if not planet_name:
+                    planet_name = 'Unknown'
                 
                 planet_info = {
-                    'id': str(i),  # 0-8 for planets
+                    'id': str(planet_id_counter),
                     'name': planet_name,
                     'short_name': planet_name[:3],
-                    'house': planet.house,
-                    'house_name': planet.sign,
-                    'longitude': planet.sign_degrees,
-                    'longitude_dms': self._degrees_to_dms(planet.sign_degrees),
-                    'nakshatra': planet.nakshatra,
-                    'nakshatra_lord': self._get_nakshatra_lord(getattr(planet, 'nakshatra', '')),
-                    'pada': getattr(planet, 'pada', 1),
-                    'shadbala': self._extract_shadbala(planet),
-                    'aspects': self._extract_aspects(planet),
-                    'dignities': getattr(planet, 'dignities', None),
-                    'motion_type': getattr(planet, 'motion_type', 'direct')
+                    'house': getattr(occupant, 'house', house.number),
+                    'house_name': getattr(occupant, 'sign', house.sign),
+                    'longitude': getattr(occupant, 'sign_degrees', 0),
+                    'longitude_dms': self._degrees_to_dms(getattr(occupant, 'sign_degrees', 0)),
+                    'nakshatra': getattr(occupant, 'nakshatra', ''),
+                    'nakshatra_lord': self._get_nakshatra_lord(getattr(occupant, 'nakshatra', '')),
+                    'pada': getattr(occupant, 'pada', 1),
+                    'shadbala': self._extract_shadbala(occupant),
+                    'aspects': self._extract_aspects(occupant),
+                    'dignities': getattr(occupant, 'dignities', None),
+                    'motion_type': getattr(occupant, 'motion_type', 'direct')
                 }
                 
                 planets_list.append(planet_info)
+                planet_id_counter += 1
                 
                 # Add to houses dictionary
-                house = planet.house
-                if 1 <= house <= 12:
-                    houses_dict[house - 1].append(planet_info)
+                house_num = getattr(occupant, 'house', house.number)
+                if 1 <= house_num <= 12:
+                    houses_dict[house_num - 1].append(planet_info)
         
         # Process houses
         for house in self.current_chart.d1_chart.houses:
@@ -251,44 +259,42 @@ class JyotishganitChartAPI:
         
         planets_list = []
         houses_dict = {i: [] for i in range(12)}
+        planet_id_counter = 0
         
-        # Process planets in divisional chart
-        planet_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]
-        
-        # Check if it's a RasiChart object or has planets attribute
-        if hasattr(divisional_chart, 'planets'):
-            planets_data = divisional_chart.planets
-        elif hasattr(divisional_chart, 'houses'):
-            # Extract planets from houses
-            planets_data = []
+        # Extract planets from houses (not from a fixed planets array)
+        if hasattr(divisional_chart, 'houses'):
             for house in divisional_chart.houses:
-                if hasattr(house, 'occupants') and house.occupants:
-                    planets_data.extend(house.occupants)
+                occupants = getattr(house, 'occupants', [])
+                for occupant in occupants:
+                    # Try to get planet name from celestialBody attribute
+                    planet_name = getattr(occupant, 'celestialBody', None)
+                    if planet_name is None:
+                        # If not found, try to get from dict-like access
+                        planet_name = occupant.get('celestialBody', 'Unknown') if hasattr(occupant, 'get') else 'Unknown'
+                    if not planet_name:
+                        planet_name = 'Unknown'
+                    
+                    planet_info = {
+                        'id': str(planet_id_counter),
+                        'name': planet_name,
+                        'short_name': planet_name[:3],
+                        'house': getattr(occupant, 'd1HousePlacement', getattr(occupant, 'house', 1)),
+                        'house_name': getattr(occupant, 'sign', 'Unknown'),
+                        'longitude': getattr(occupant, 'sign_degrees', 0),
+                        'longitude_dms': self._degrees_to_dms(getattr(occupant, 'sign_degrees', 0)),
+                        'nakshatra': getattr(occupant, 'nakshatra', ''),
+                        'pada': getattr(occupant, 'pada', 1)
+                    }
+                    
+                    planets_list.append(planet_info)
+                    planet_id_counter += 1
+                    
+                    # Add to houses dictionary
+                    house_num = planet_info['house']
+                    if 1 <= house_num <= 12:
+                        houses_dict[house_num - 1].append(planet_info)
         else:
             return {'error': f'Chart {chart_type} structure not recognized'}
-        
-        for i, planet in enumerate(planets_data):
-            if i < len(planet_names):
-                planet_name = planet_names[i]
-                
-                planet_info = {
-                    'id': str(i),
-                    'name': planet_name,
-                    'short_name': planet_name[:3],
-                    'house': getattr(planet, 'house', 1),
-                    'house_name': getattr(planet, 'sign', 'Unknown'),
-                    'longitude': getattr(planet, 'sign_degrees', 0),
-                    'longitude_dms': self._degrees_to_dms(getattr(planet, 'sign_degrees', 0)),
-                    'nakshatra': getattr(planet, 'nakshatra', ''),
-                    'pada': getattr(planet, 'pada', 1)
-                }
-                
-                planets_list.append(planet_info)
-                
-                # Add to houses dictionary
-                house = planet_info['house']
-                if 1 <= house <= 12:
-                    houses_dict[house - 1].append(planet_info)
         
         return {
             'chart_type': chart_type,
