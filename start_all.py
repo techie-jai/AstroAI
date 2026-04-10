@@ -17,10 +17,13 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
+ADMIN_PANEL_DIR = PROJECT_ROOT / "admin-panel"
 BACKEND_URL = "http://localhost:8000"
 FRONTEND_URL = "http://localhost:3000"
+ADMIN_PANEL_URL = "http://localhost:3001"
 BACKEND_PORT = 8000
 FRONTEND_PORT = 3000
+ADMIN_PANEL_PORT = 3001
 
 # Color codes for terminal output
 class Colors:
@@ -151,6 +154,45 @@ def start_frontend():
         print_error(f"Failed to start frontend: {str(e)}")
         return None
 
+def start_admin_panel():
+    """Start the Admin Panel"""
+    print_header("Starting Admin Panel (React/Vite)")
+    
+    if not check_port_available(ADMIN_PANEL_PORT):
+        print_error(f"Port {ADMIN_PANEL_PORT} is already in use")
+        return None
+    
+    print_info(f"Starting admin panel on port {ADMIN_PANEL_PORT}...")
+    
+    try:
+        # Check if node_modules exists
+        if not (ADMIN_PANEL_DIR / "node_modules").exists():
+            print_warning("Admin panel node_modules not found, running npm install...")
+            subprocess.run(
+                "npm install",
+                cwd=str(ADMIN_PANEL_DIR),
+                check=True,
+                capture_output=True,
+                shell=True
+            )
+            print_success("Admin panel npm install completed")
+        
+        # Start admin panel in a subprocess without capturing output
+        admin_process = subprocess.Popen(
+            "npm run dev",
+            cwd=str(ADMIN_PANEL_DIR),
+            shell=True
+        )
+        
+        # Wait for admin panel to be ready
+        time.sleep(5)  # Give Vite time to start
+        print_success(f"Admin Panel running at {ADMIN_PANEL_URL}")
+        return admin_process
+            
+    except Exception as e:
+        print_error(f"Failed to start admin panel: {str(e)}")
+        return None
+
 def run_backend_tests():
     """Run backend tests"""
     print_header("Running Backend Tests")
@@ -196,6 +238,7 @@ def test_api_endpoints():
     tests = [
         ("Health Check", f"{BACKEND_URL}/health", "GET"),
         ("Available Charts", f"{BACKEND_URL}/api/charts/available", "GET"),
+        ("Simplified Kundli Test", f"{BACKEND_URL}/api/livechat/health", "GET"),
     ]
     
     all_passed = True
@@ -232,13 +275,20 @@ def open_browser():
         print_info(f"Please open {FRONTEND_URL} manually in your browser")
         return False
 
-def print_summary(backend_process, frontend_process, tests_passed):
+def print_summary(backend_process, frontend_process, admin_process, tests_passed):
     """Print final summary"""
     print_header("Startup Summary")
     
     print(f"{Colors.BOLD}Services:{Colors.ENDC}")
-    print(f"  Backend:  {Colors.OKGREEN}Running{Colors.ENDC} ({BACKEND_URL})")
-    print(f"  Frontend: {Colors.OKGREEN}Running{Colors.ENDC} ({FRONTEND_URL})")
+    print(f"  Backend:    {Colors.OKGREEN}Running{Colors.ENDC} ({BACKEND_URL})")
+    print(f"  Frontend:   {Colors.OKGREEN}Running{Colors.ENDC} ({FRONTEND_URL})")
+    if admin_process:
+        print(f"  Admin Panel:{Colors.OKGREEN}Running{Colors.ENDC} ({ADMIN_PANEL_URL})")
+    
+    print(f"\n{Colors.BOLD}Features:{Colors.ENDC}")
+    print(f"  Simplified Kundli: {Colors.OKGREEN}Enabled{Colors.ENDC} (1,151 data points)")
+    print(f"  Divisional Charts: {Colors.OKGREEN}All D1-D60{Colors.ENDC}")
+    print(f"  AI Analysis:       {Colors.OKGREEN}Enhanced{Colors.ENDC}")
     
     print(f"\n{Colors.BOLD}Tests:{Colors.ENDC}")
     if tests_passed:
@@ -251,6 +301,13 @@ def print_summary(backend_process, frontend_process, tests_passed):
     print(f"  2. Login with your Firebase credentials")
     print(f"  3. Navigate to 'Generate Kundli'")
     print(f"  4. Enter birth details and generate")
+    print(f"  5. Try the AI chat with complete astrological data")
+    
+    print(f"\n{Colors.BOLD}Access Points:{Colors.ENDC}")
+    print(f"  Main App:     {FRONTEND_URL}")
+    if admin_process:
+        print(f"  Admin Panel:  {ADMIN_PANEL_URL}")
+    print(f"  API Docs:     {BACKEND_URL}/docs")
     
     print(f"\n{Colors.BOLD}To Stop Services:{Colors.ENDC}")
     print(f"  Press Ctrl+C to stop all services")
@@ -258,18 +315,22 @@ def print_summary(backend_process, frontend_process, tests_passed):
     print(f"\n{Colors.BOLD}Logs:{Colors.ENDC}")
     print(f"  Backend logs: Check terminal output above")
     print(f"  Frontend logs: Check the frontend terminal")
+    if admin_process:
+        print(f"  Admin logs:   Check the admin panel terminal")
 
 def main():
     """Main startup function"""
-    print_header("AstroAI Complete Startup")
+    print_header("AstroAI Complete Startup - Simplified Kundli Architecture")
     
     print_info(f"Project root: {PROJECT_ROOT}")
     print_info(f"Backend directory: {BACKEND_DIR}")
     print_info(f"Frontend directory: {FRONTEND_DIR}")
+    print_info(f"Admin Panel directory: {ADMIN_PANEL_DIR}")
     
     # Start services
     backend_process = None
     frontend_process = None
+    admin_process = None
     
     try:
         # Start backend
@@ -292,13 +353,23 @@ def main():
                 backend_process.terminate()
             return 1
         
+        # Start admin panel (optional)
+        admin_process = start_admin_panel()
+        if not admin_process:
+            print_warning("Admin panel failed to start, continuing with main app...")
+        
+        # Create users directory for simplified Kundli storage
+        users_dir = PROJECT_ROOT / "users"
+        users_dir.mkdir(exist_ok=True)
+        print_success(f"Created users directory for Kundli storage: {users_dir}")
+        
         # Open browser
         open_browser()
         
         # Print summary
-        print_summary(backend_process, frontend_process, tests_passed and api_tests_passed)
+        print_summary(backend_process, frontend_process, admin_process, tests_passed and api_tests_passed)
         
-        print_header("Services Running")
+        print_header("Services Running - Simplified Kundli Architecture")
         print_info("Press Ctrl+C to stop all services\n")
         
         # Keep services running
@@ -313,6 +384,9 @@ def main():
             if frontend_process and frontend_process.poll() is not None:
                 print_error("Frontend process terminated unexpectedly")
                 break
+            
+            if admin_process and admin_process.poll() is not None:
+                print_warning("Admin panel process terminated unexpectedly")
     
     except KeyboardInterrupt:
         print_header("Shutting Down")
@@ -326,6 +400,10 @@ def main():
             frontend_process.terminate()
             print_success("Frontend stopped")
         
+        if admin_process:
+            admin_process.terminate()
+            print_success("Admin Panel stopped")
+        
         print_success("All services stopped")
         return 0
     
@@ -337,6 +415,9 @@ def main():
         
         if frontend_process:
             frontend_process.terminate()
+        
+        if admin_process:
+            admin_process.terminate()
         
         return 1
 
