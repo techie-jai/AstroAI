@@ -30,10 +30,11 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
-  const [kundliInfo, setKundliInfo] = useState<KundliInfo | null>(null)
+  const [kundliInfo, setKundliInfo] = useState<any>(null)
+  const [calculations, setCalculations] = useState<any[]>([])
   const [loadingKundli, setLoadingKundli] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [calculations, setCalculations] = useState<Calculation[]>([])
+  const [kundliData, setKundliData] = useState<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Initialize - fetch calculations if no kundliId, or fetch kundli info if kundliId provided
@@ -53,7 +54,9 @@ export default function ChatPage() {
         } else {
           // Has kundliId - fetch kundli info
           const response = await api.getKundli(kundliId)
-          const birthData = response.data.birth_data || {}
+          const fullKundliData = response.data
+          setKundliData(fullKundliData) // Store full kundli data for chat
+          const birthData = fullKundliData.birth_data || {}
           setKundliInfo({
             name: birthData.name || 'Unknown',
             birth_date: birthData.date || `${birthData.year || 'N/A'}-${birthData.month || 'N/A'}-${birthData.day || 'N/A'}`,
@@ -80,8 +83,8 @@ export default function ChatPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!inputValue.trim() || !kundliId) {
-      console.log('[ChatPage] Cannot send message - inputValue or kundliId missing')
+    if (!inputValue.trim() || !kundliData) {
+      console.log('[ChatPage] Cannot send message - inputValue or kundliData missing')
       return
     }
 
@@ -97,8 +100,8 @@ export default function ChatPage() {
 
     try {
       console.log('[ChatPage] Sending message:', inputValue)
-      const response = await api.sendChatMessage(
-        kundliId,
+      const response = await api.sendLivechatMessage(
+        kundliData,
         inputValue,
         messages.map(m => ({ role: m.role, content: m.content }))
       )
