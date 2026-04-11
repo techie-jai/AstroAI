@@ -44,6 +44,8 @@ from analysis_formatter import AnalysisFormatter
 
 from fastapi.responses import FileResponse
 
+from admin_routes import router as admin_router
+
 
 
 load_dotenv()
@@ -86,7 +88,11 @@ origins = [
 
     "http://172.23.0.3:3000",  # Docker internal network
 
+    "http://172.23.0.3:3001",  # Docker internal network admin panel
+
     "http://172.23.0.2:3000",  # Docker internal network (alternative)
+
+    "http://172.23.0.2:3001",  # Docker internal network admin panel (alternative)
 
     "https://kendraa.ai",  # Production domain
 
@@ -113,6 +119,8 @@ app.add_middleware(
     allow_headers=["*"],
 
 )
+
+app.include_router(admin_router)
 
 
 
