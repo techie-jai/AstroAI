@@ -27,7 +27,7 @@ interface AuthStore {
   user: User | null
   loading: boolean
   error: string | null
-  initializeAuth: () => void
+  initializeAuth: () => (() => void) | undefined
   loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   refreshToken: () => Promise<string | null>
@@ -39,7 +39,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   error: null,
 
   initializeAuth: () => {
-    onAuthStateChanged(auth, async (firebaseUser) => {
+    console.log('[AUTH] Initializing auth...')
+    
+    // Check if token exists in localStorage (for new tabs/windows)
+    const existingToken = localStorage.getItem('firebaseToken')
+    if (existingToken) {
+      console.log('[AUTH] Found existing token in localStorage, marking as loaded')
+      set({ loading: false })
+    }
+    
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('[AUTH] Auth state changed, firebaseUser:', firebaseUser?.email || 'null')
       if (firebaseUser) {
         try {
           const token = await firebaseUser.getIdToken()
@@ -60,10 +70,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           set({ loading: false })
         }
       } else {
+        console.log('[AUTH] No user, clearing auth state')
         localStorage.removeItem('firebaseToken')
         set({ user: null, loading: false })
       }
     })
+    
+    // Return unsubscribe function for cleanup (though we keep it active for app lifetime)
+    return unsubscribe
   },
 
   loginWithGoogle: async () => {

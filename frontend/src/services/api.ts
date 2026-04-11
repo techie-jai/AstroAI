@@ -45,10 +45,14 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    // Cache-busting headers
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
   },
 })
 
-// Request interceptor to add Firebase token to every request
+// Request interceptor to add Firebase token and cache-busting to every request
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('firebaseToken')
   console.log('[API] Request to:', config.url)
@@ -59,6 +63,13 @@ apiClient.interceptors.request.use((config) => {
     console.log('[API] Authorization header set:', config.headers.Authorization ? 'YES' : 'NO')
   } else {
     console.error('[API] ERROR: No Firebase token in localStorage!')
+  }
+  
+  // Add cache-busting query parameter for GET requests
+  if (config.method === 'get') {
+    config.params = config.params || {}
+    config.params._t = Date.now() // Timestamp to bust cache
+    console.log('[API] Added cache-busting timestamp:', config.params._t)
   }
   
   return config
@@ -165,6 +176,8 @@ export const api = {
     apiClient.get(`/kundli/download/${kundliId}`, { responseType: 'arraybuffer' }),
   downloadAnalysisPDF: (kundliId: string) =>
     apiClient.get(`/analysis/download/${kundliId}`, { responseType: 'arraybuffer' }),
+  downloadKundliZip: (kundliId: string) =>
+    apiClient.get(`/kundli/download-zip/${kundliId}`, { responseType: 'arraybuffer' }),
 
   // Dashboard & Insights
   getDashboardInsights: (kundliId?: string, forceRefresh?: boolean) =>
@@ -176,6 +189,12 @@ export const api = {
   sendChatMessage: (kundliId: string, message: string, chatHistory?: any[]) =>
     apiClient.post('/chat/message', {
       kundli_id: kundliId,
+      user_message: message,
+      chat_history: chatHistory || [],
+    }),
+  sendKundliChatMessage: (kundliData: Record<string, any>, message: string, chatHistory?: any[]) =>
+    apiClient.post('/chat/message-with-kundli', {
+      kundli_data: kundliData,
       user_message: message,
       chat_history: chatHistory || [],
     }),

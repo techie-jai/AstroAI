@@ -6,6 +6,7 @@ Saves files to local PC, not Firebase
 import os
 import json
 import uuid
+import hashlib
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 import re
@@ -24,6 +25,9 @@ class FileManager:
         self.base_dir = base_dir
         if not os.path.exists(self.base_dir):
             os.makedirs(self.base_dir)
+        
+        self.index_file = os.path.join(self.base_dir, "kundli_index.json")
+        self._ensure_index_exists()
     
     def create_user_folder(self, user_name: str) -> Tuple[str, str]:
         """
@@ -80,7 +84,8 @@ class FileManager:
         
         return file_path
     
-    def save_kundli_json(self, folder_path: str, user_name: str, kundli_data: Dict) -> str:
+    def save_kundli_json(self, folder_path: str, user_name: str, kundli_data: Dict, 
+                        counter: int = None, hash_value: str = None) -> str:
         """
         Save kundli data as JSON
         
@@ -88,11 +93,20 @@ class FileManager:
             folder_path: Path to user's folder
             user_name: User's name for filename
             kundli_data: Kundli data dictionary
+            counter: Counter for this kundli (optional, for new naming scheme)
+            hash_value: Content hash (optional, for new naming scheme)
             
         Returns:
             Path to saved file
         """
-        filename = f"{user_name}_Kundli.json"
+        # Use new naming scheme if hash and counter provided
+        if hash_value and counter is not None:
+            safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '-')
+            filename = f"{safe_name}-Kundli-{counter}-{hash_value}.json"
+        else:
+            # Fallback to old naming for backward compatibility
+            filename = f"{user_name}_Kundli.json"
+        
         file_path = os.path.join(folder_path, "kundli", filename)
         
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -100,7 +114,8 @@ class FileManager:
         
         return file_path
     
-    def save_kundli_text(self, folder_path: str, user_name: str, kundli_text: str) -> str:
+    def save_kundli_text(self, folder_path: str, user_name: str, kundli_text: str,
+                        counter: int = None, hash_value: str = None) -> str:
         """
         Save kundli as formatted text
         
@@ -108,11 +123,20 @@ class FileManager:
             folder_path: Path to user's folder
             user_name: User's name for filename
             kundli_text: Formatted text representation
+            counter: Counter for this kundli (optional, for new naming scheme)
+            hash_value: Content hash (optional, for new naming scheme)
             
         Returns:
             Path to saved file
         """
-        filename = f"{user_name}_Kundli.txt"
+        # Use new naming scheme if hash and counter provided
+        if hash_value and counter is not None:
+            safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '-')
+            filename = f"{safe_name}-Kundli-{counter}-{hash_value}.txt"
+        else:
+            # Fallback to old naming for backward compatibility
+            filename = f"{user_name}_Kundli.txt"
+        
         file_path = os.path.join(folder_path, "kundli", filename)
         
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -272,3 +296,115 @@ class FileManager:
     def _get_timestamp(self) -> str:
         """Get current timestamp as ISO format string"""
         return datetime.now().isoformat()
+    
+    def _ensure_index_exists(self) -> None:
+        """Ensure kundli_index.json exists"""
+        if not os.path.exists(self.index_file):
+            with open(self.index_file, 'w', encoding='utf-8') as f:
+                json.dump({}, f, indent=2)
+    
+    def _read_index(self) -> Dict:
+        """Read kundli index from file"""
+        try:
+            with open(self.index_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return {}
+    
+    def _write_index(self, index: Dict) -> None:
+        """Write kundli index to file"""
+        with open(self.index_file, 'w', encoding='utf-8') as f:
+            json.dump(index, f, indent=2, ensure_ascii=False)
+    
+    def generate_kundli_hash(self, kundli_data: Dict) -> str:
+        """
+        Generate a unique hash from the entire kundli JSON
+        
+        Args:
+            kundli_data: Complete kundli data dictionary
+            
+        Returns:
+            8-character hex hash
+        """
+        # Convert to sorted JSON string for consistent hashing
+        json_str = json.dumps(kundli_data, sort_keys=True, ensure_ascii=False)
+        hash_obj = hashlib.sha256(json_str.encode('utf-8'))
+        return hash_obj.hexdigest()[:8]
+    
+    def get_next_kundli_counter(self, user_name: str) -> int:
+        """
+        Get the next counter for a user's kundli
+        
+        Args:
+            user_name: User's name
+            
+        Returns:
+            Next counter value (1-based)
+        """
+        index = self._read_index()
+        safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '-')
+        
+        # Count existing kundlis for this user
+        count = 0
+        for kundli_id in index.keys():
+            if kundli_id.startswith(safe_name + '-Kundli-'):
+                count += 1
+        
+        return count + 1
+    
+    def lookup_kundli(self, kundli_id: str) -> Optional[Dict]:
+        """
+        Lookup kundli metadata from index
+        
+        Args:
+            kundli_id: Kundli ID (e.g., 'Jai-Kundli-1-a3b4c5d6')
+            
+        Returns:
+            Kundli metadata dict or None if not found
+        """
+        index = self._read_index()
+        return index.get(kundli_id)
+    
+    def read_kundli_by_id(self, kundli_id: str) -> Optional[Dict]:
+        """
+        Read kundli data by ID
+        
+        Args:
+            kundli_id: Kundli ID
+            
+        Returns:
+            Kundli data dict or None if not found
+        """
+        metadata = self.lookup_kundli(kundli_id)
+        if not metadata:
+            return None
+        
+        file_path = metadata.get('file_path')
+        if not file_path or not os.path.exists(file_path):
+            return None
+        
+        return self.read_kundli_json(file_path)
+    
+    def add_to_index(self, kundli_id: str, file_path: str, birth_data: Dict, 
+                     generated_at: str, hash_value: str, counter: int) -> None:
+        """
+        Add kundli to index
+        
+        Args:
+            kundli_id: Kundli ID
+            file_path: Path to kundli JSON file
+            birth_data: Birth data dictionary
+            generated_at: ISO timestamp
+            hash_value: Content hash
+            counter: Counter value
+        """
+        index = self._read_index()
+        index[kundli_id] = {
+            'file_path': file_path,
+            'user_name': birth_data.get('name', 'User'),
+            'birth_data': birth_data,
+            'generated_at': generated_at,
+            'hash': hash_value,
+            'counter': counter
+        }
+        self._write_index(index)

@@ -2,6 +2,8 @@ import os
 
 import csv
 
+import json
+
 from fastapi import FastAPI, Depends, HTTPException, status
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +44,7 @@ from pdf_generator import PDFGenerator
 
 from analysis_formatter import AnalysisFormatter
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from admin_routes import router as admin_router
 
@@ -119,6 +121,15 @@ app.add_middleware(
     allow_headers=["*"],
 
 )
+
+# Add middleware to disable caching for all responses
+@app.middleware("http")
+async def add_no_cache_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 app.include_router(admin_router)
 
@@ -552,45 +563,62 @@ async def generate_kundli(
 
             )
 
-        
-
         kundli_id = result['kundli_id']
 
         kundli_data = result['data']
 
-        print(f"[KUNDLI] Generated kundli_id: {kundli_id}")
+        print(f"[KUNDLI] Step 1: Kundli data generated successfully")
 
-        
+        # Step 2: Generate hash from entire kundli JSON
+        print(f"[KUNDLI] Step 2: Generating content hash from kundli JSON...")
+        kundli_hash = file_manager.generate_kundli_hash(kundli_data)
+        print(f"[KUNDLI] Step 2: Generated hash: {kundli_hash}")
+
+        # Step 3: Get counter for this user
+        print(f"[KUNDLI] Step 3: Getting counter for user: {user_name}")
+        counter = file_manager.get_next_kundli_counter(user_name)
+        print(f"[KUNDLI] Step 3: Counter value: {counter}")
+
+        # Step 4: Build new kundli_id with counter and hash
+        safe_name = user_name.replace(' ', '-')
+        kundli_id = f"{safe_name}-Kundli-{counter}-{kundli_hash}"
+        print(f"[KUNDLI] Step 4: New kundli_id: {kundli_id}")
 
         # Format kundli text
 
-        print(f"[KUNDLI] Formatting kundli text...")
+        print(f"[KUNDLI] Step 5: Formatting kundli text...")
 
         kundli_text = format_kundli_text(kundli_data, birth_data_dict)
 
-        
+        # Step 6: Save kundli files locally with new naming
 
-        # Save kundli files locally
+        print(f"[KUNDLI] Step 6: Saving kundli files locally with hash-based naming...")
 
-        print(f"[KUNDLI] Saving kundli files locally...")
+        kundli_json_path = file_manager.save_kundli_json(user_folder, user_name, kundli_data, counter=counter, hash_value=kundli_hash)
 
-        kundli_json_path = file_manager.save_kundli_json(user_folder, user_name, kundli_data)
+        kundli_text_path = file_manager.save_kundli_text(user_folder, user_name, kundli_text, counter=counter, hash_value=kundli_hash)
 
-        kundli_text_path = file_manager.save_kundli_text(user_folder, user_name, kundli_text)
+        print(f"[KUNDLI] Step 6: Kundli saved: {kundli_json_path}")
 
-        print(f"[KUNDLI] Kundli saved: {kundli_json_path}")
-
-        
+        # Step 7: Add to local index
+        print(f"[KUNDLI] Step 7: Adding kundli to local index...")
+        file_manager.add_to_index(
+            kundli_id=kundli_id,
+            file_path=kundli_json_path,
+            birth_data=birth_data_dict,
+            generated_at=result['generated_at'],
+            hash_value=kundli_hash,
+            counter=counter
+        )
+        print(f"[KUNDLI] Step 7: Added to local index")
 
         # Generate charts
 
-        print(f"[KUNDLI] Generating divisional charts...")
+        print(f"[KUNDLI] Step 8: Generating divisional charts...")
 
         chart_types = request.chart_types or ['D1', 'D7', 'D9', 'D10']
 
         charts_result = astrology_service.generate_charts(birth_data_dict, chart_types)
-
-        
 
         charts_dict = {}
 
@@ -598,7 +626,7 @@ async def generate_kundli(
 
             charts_dict = charts_result.get('charts', {})
 
-            print(f"[KUNDLI] Generated {len(charts_dict)} charts")
+            print(f"[KUNDLI] Step 8: Generated {len(charts_dict)} charts")
 
             for chart_type, chart_data in charts_dict.items():
 
@@ -608,67 +636,17 @@ async def generate_kundli(
 
                 chart_text = chart_text_result.get('text', '') if chart_text_result.get('success') else ''
 
-                
-
                 # Save chart JSON and text
 
                 file_manager.save_chart_json(user_folder, chart_type, chart_data)
 
                 file_manager.save_chart_text(user_folder, chart_type, chart_text)
 
-                print(f"[KUNDLI] Saved chart: {chart_type}")
+                print(f"[KUNDLI] Step 8: Saved chart: {chart_type}")
 
         else:
 
-            print(f"[KUNDLI] Chart generation failed: {charts_result.get('error', 'Unknown error')}")
-
-        # Save complete kundli data to Firebase for LLM access
-        print(f"[KUNDLI] Saving complete kundli data to Firebase...")
-        horoscope_info = kundli_data.get('horoscope_info', {})
-        print(f"[KUNDLI] horoscope_info keys: {list(horoscope_info.keys())}")
-        print(f"[KUNDLI] horoscope_info size: {len(horoscope_info)}")
-        
-        kundli_firebase_data = {
-            'kundli_id': kundli_id,
-            'birth_data': birth_data_dict,
-            'horoscope_info': horoscope_info,
-            'chart_types': request.chart_types or ['D1', 'D7', 'D9', 'D10'],
-            'charts': charts_dict,
-            'generated_at': result['generated_at'],
-            'user_folder': user_folder,
-            'unique_id': unique_id
-        }
-        kundli_firebase_id = FirebaseService.save_kundli(current_user['uid'], kundli_firebase_data)
-        print(f"[KUNDLI] Kundli data saved to Firebase: {kundli_firebase_id}")
-        
-        # Save to Firebase for auth/tracking only
-        print(f"[KUNDLI] Saving calculation metadata to Firebase...")
-
-        calculation_data = {
-
-            'birth_data': birth_data_dict,
-
-            'chart_types': request.chart_types or ['D1', 'D7', 'D9', 'D10'],
-
-            'result_summary': {
-
-                'kundli_id': kundli_id,
-
-                'user_folder': user_folder,
-
-                'unique_id': unique_id,
-
-                'generated_at': result['generated_at']
-
-            }
-
-        }
-
-        saved_id = FirebaseService.save_calculation(current_user['uid'], calculation_data)
-
-        print(f"[KUNDLI] Calculation metadata saved: {saved_id}")
-
-        
+            print(f"[KUNDLI] Step 8: Chart generation failed: {charts_result.get('error', 'Unknown error')}")
 
         # Ensure user profile exists
 
@@ -721,8 +699,6 @@ async def generate_kundli(
             "birth_data": birth_data_dict,
 
             "generated_at": result['generated_at'],
-
-            "firebase_kundli_id": kundli_firebase_id,
 
             "horoscope_info_keys": list(kundli_data.get('horoscope_info', {}).keys())[:10]
 
@@ -865,210 +841,75 @@ async def get_kundli(
     """
 
     try:
-
         print(f"[GET_KUNDLI] Fetching kundli: {kundli_id} for user: {current_user.get('uid')}")
 
+        # Look up kundli in local index
+        print(f"[GET_KUNDLI] Looking up kundli_id in local index: {kundli_id}")
+        metadata = file_manager.lookup_kundli(kundli_id)
         
-
-        # Try to get kundli from Firebase first (for LLM access)
-
-        kundli_data = FirebaseService.get_kundli(current_user['uid'], kundli_id)
-
-        
-
-        if kundli_data:
-
-            print(f"[GET_KUNDLI] Kundli data loaded from Firebase")
-
-            print(f"[GET_KUNDLI] Firebase kundli_data keys: {list(kundli_data.keys())}")
-
-            
-
-            horoscope_info = kundli_data.get('horoscope_info', {})
-
-            print(f"[GET_KUNDLI] horoscope_info type: {type(horoscope_info)}")
-
-            print(f"[GET_KUNDLI] horoscope_info keys: {list(horoscope_info.keys()) if isinstance(horoscope_info, dict) else 'Not a dict'}")
-
-            print(f"[GET_KUNDLI] horoscope_info size: {len(horoscope_info) if isinstance(horoscope_info, dict) else 'N/A'}")
-
-            
-
-            # Format birth_data for UI compatibility
-
-            birth_data = kundli_data.get('birth_data', {})
-
-            formatted_birth_data = {
-
-                'name': birth_data.get('name', ''),
-
-                'place': birth_data.get('place_name', ''),
-
-                'date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
-
-                'time': f"{birth_data.get('hour', '')}:{birth_data.get('minute', '')}",
-
-                'latitude': birth_data.get('latitude', 0),
-
-                'longitude': birth_data.get('longitude', 0),
-
-                'timezone_offset': birth_data.get('timezone_offset', 0)
-
-            }
-
-            
-
-            response_data = {
-
-                'kundli_id': kundli_data.get('kundli_id', kundli_id),
-
-                'birth_data': formatted_birth_data,
-
-                'horoscope_info': horoscope_info,
-
-                'charts': kundli_data.get('charts', {}),
-
-                'generated_at': kundli_data.get('generated_at')
-
-            }
-
-            print(f"[GET_KUNDLI] Response horoscope_info keys: {list(response_data['horoscope_info'].keys())}")
-
-            return response_data
-
-        
-
-        # Fallback: Get from local files if not in Firebase
-
-        print(f"[GET_KUNDLI] Kundli not found in Firebase, trying local files...")
-
-        calculations = FirebaseService.get_user_calculations(current_user['uid'])
-
-        print(f"[GET_KUNDLI] Found {len(calculations)} calculations")
-
-        
-
-        user_folder = None
-
-        birth_data = None
-
-        
-
-        for calc in calculations:
-
-            result_summary = calc.get('result_summary', {})
-
-            calc_kundli_id = result_summary.get('kundli_id')
-
-            
-
-            if calc_kundli_id == kundli_id:
-
-                user_folder = result_summary.get('user_folder')
-
-                birth_data = calc.get('birth_data')
-
-                print(f"[GET_KUNDLI] Found matching calculation")
-
-                break
-
-        
-
-        if not user_folder or not birth_data:
-
-            print(f"[GET_KUNDLI] Kundli metadata not found for ID: {kundli_id}")
-
+        if not metadata:
+            print(f"[GET_KUNDLI] Kundli not found in local index: {kundli_id}")
             raise HTTPException(
-
                 status_code=status.HTTP_404_NOT_FOUND,
-
                 detail="Kundli not found"
-
             )
-
         
-
-        # Read kundli JSON from local file
-
-        user_name = birth_data.get('name', 'User')
-
-        kundli_json_path = file_manager.get_kundli_json_path(user_folder, user_name)
-
+        print(f"[GET_KUNDLI] Found metadata in index")
         
-
-        if not kundli_json_path:
-
-            print(f"[GET_KUNDLI] Kundli JSON file not found for user: {user_name}")
-
+        # Read kundli data from local file
+        file_path = metadata.get('file_path')
+        print(f"[GET_KUNDLI] Found file: {file_path}")
+        
+        if not file_path or not os.path.exists(file_path):
+            print(f"[GET_KUNDLI] Kundli file not found at path: {file_path}")
             raise HTTPException(
-
                 status_code=status.HTTP_404_NOT_FOUND,
-
                 detail="Kundli file not found"
-
             )
-
         
-
-        kundli_file_data = file_manager.read_kundli_json(kundli_json_path)
-
+        kundli_file_data = file_manager.read_kundli_json(file_path)
         
-
         if not kundli_file_data:
-
             print(f"[GET_KUNDLI] Failed to read kundli data from file")
-
             raise HTTPException(
-
                 status_code=status.HTTP_400_BAD_REQUEST,
-
                 detail="Failed to read kundli data"
-
             )
-
         
-
-        print(f"[GET_KUNDLI] Kundli data loaded from file: {kundli_json_path}")
-
+        print(f"[GET_KUNDLI] Loaded kundli from local file")
         
-
+        # Get birth data from metadata
+        birth_data = metadata.get('birth_data', {})
+        
         # Format birth_data for UI compatibility
-
         formatted_birth_data = {
-
             'name': birth_data.get('name', ''),
-
             'place': birth_data.get('place_name', ''),
-
             'date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
-
             'time': f"{birth_data.get('hour', '')}:{birth_data.get('minute', '')}",
-
             'latitude': birth_data.get('latitude', 0),
-
             'longitude': birth_data.get('longitude', 0),
-
             'timezone_offset': birth_data.get('timezone_offset', 0)
-
         }
-
         
-
-        return {
-
+        response_data = {
             "kundli_id": kundli_id,
-
             "birth_data": formatted_birth_data,
-
             "horoscope_info": kundli_file_data.get('horoscope_info', {}),
-
-            "generated_at": kundli_file_data.get('generated_at'),
-
-            "kundli_json_path": kundli_json_path
-
+            "generated_at": metadata.get('generated_at'),
+            "kundli_json_path": file_path
         }
-
-    
+        
+        # Return with cache-control headers to prevent caching
+        print(f"[GET_KUNDLI] Returning response with no-cache headers")
+        return JSONResponse(
+            content=response_data,
+            headers={
+                'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+            }
+        )
 
     except HTTPException:
 
@@ -1882,6 +1723,249 @@ async def download_analysis_pdf(
         )
 
 
+@app.get("/api/kundli/download-zip/{kundli_id}")
+
+async def download_kundli_zip(
+
+    kundli_id: str,
+
+    current_user: dict = Depends(get_current_user)
+
+):
+
+    """
+
+    Download complete kundli as ZIP file with all formats (JSON, charts, etc)
+
+    
+
+    Args:
+
+        kundli_id: Kundli ID to download
+
+        
+
+    Returns:
+
+        ZIP file containing all kundli data and charts
+
+    """
+
+    try:
+
+        import zipfile
+
+        import io
+
+        
+
+        print(f"[DOWNLOAD-ZIP] Starting ZIP download for kundli_id: {kundli_id}, user: {current_user.get('uid')}")
+
+        
+
+        # Look up kundli in local index
+
+        print(f"[DOWNLOAD-ZIP] Looking up kundli_id in local index: {kundli_id}")
+
+        metadata = file_manager.lookup_kundli(kundli_id)
+
+        
+
+        if not metadata:
+
+            print(f"[DOWNLOAD-ZIP] Kundli not found in local index: {kundli_id}")
+
+            raise HTTPException(
+
+                status_code=status.HTTP_404_NOT_FOUND,
+
+                detail="Kundli not found"
+
+            )
+
+        
+
+        print(f"[DOWNLOAD-ZIP] Found metadata in index")
+
+        
+
+        # Get file path and birth data from metadata
+
+        file_path = metadata.get('file_path')
+
+        birth_data = metadata.get('birth_data', {})
+
+        user_name = birth_data.get('name', 'User')
+
+        
+
+        if not file_path or not os.path.exists(file_path):
+
+            print(f"[DOWNLOAD-ZIP] Kundli file not found at path: {file_path}")
+
+            raise HTTPException(
+
+                status_code=status.HTTP_404_NOT_FOUND,
+
+                detail="Kundli file not found"
+
+            )
+
+        
+
+        # Get user folder from file path
+
+        user_folder = os.path.dirname(os.path.dirname(file_path))
+
+        print(f"[DOWNLOAD-ZIP] Found user folder: {user_folder}")
+
+        
+
+        # Create ZIP file in memory
+
+        zip_buffer = io.BytesIO()
+
+        
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+
+            
+
+            # Add kundli JSON
+
+            if os.path.exists(file_path):
+
+                print(f"[DOWNLOAD-ZIP] Adding kundli JSON: {file_path}")
+
+                zip_file.write(file_path, arcname=f"kundli/{os.path.basename(file_path)}")
+
+            
+
+            # Add kundli text (same name but .txt extension)
+
+            kundli_text_path = file_path.replace('.json', '.txt')
+
+            if os.path.exists(kundli_text_path):
+
+                print(f"[DOWNLOAD-ZIP] Adding kundli text: {kundli_text_path}")
+
+                zip_file.write(kundli_text_path, arcname=f"kundli/{os.path.basename(kundli_text_path)}")
+
+            
+
+            # Add charts (D1, D7, D9, D10)
+
+            chart_types = ['D1', 'D7', 'D9', 'D10']
+
+            for chart_type in chart_types:
+
+                # Add chart JSON
+
+                chart_json_path = os.path.join(user_folder, f"{chart_type}_Chart.json")
+
+                if os.path.exists(chart_json_path):
+
+                    print(f"[DOWNLOAD-ZIP] Adding chart JSON: {chart_json_path}")
+
+                    zip_file.write(chart_json_path, arcname=f"charts/{chart_type}_Chart.json")
+
+                
+
+                # Add chart text
+
+                chart_text_path = os.path.join(user_folder, f"{chart_type}_Chart.txt")
+
+                if os.path.exists(chart_text_path):
+
+                    print(f"[DOWNLOAD-ZIP] Adding chart text: {chart_text_path}")
+
+                    zip_file.write(chart_text_path, arcname=f"charts/{chart_type}_Chart.txt")
+
+            
+
+            # Add analysis PDF if it exists
+
+            analysis_pdf_path = os.path.join(user_folder, "analysis", f"{user_name}_AI_Analysis.pdf")
+
+            if os.path.exists(analysis_pdf_path):
+
+                print(f"[DOWNLOAD-ZIP] Adding analysis PDF: {analysis_pdf_path}")
+
+                zip_file.write(analysis_pdf_path, arcname=f"analysis/{user_name}_AI_Analysis.pdf")
+
+            
+
+            # Add birth data summary
+
+            summary_data = {
+
+                'name': user_name,
+
+                'date': f"{birth_data.get('year', '')}-{birth_data.get('month', '')}-{birth_data.get('day', '')}",
+
+                'time': f"{birth_data.get('hour', '')}:{birth_data.get('minute', '')}",
+
+                'place': birth_data.get('place_name', ''),
+
+                'latitude': birth_data.get('latitude', ''),
+
+                'longitude': birth_data.get('longitude', ''),
+
+                'timezone_offset': birth_data.get('timezone_offset', ''),
+
+                'generated_at': metadata.get('generated_at', '')
+
+            }
+
+            
+
+            summary_json = json.dumps(summary_data, indent=2, ensure_ascii=False)
+
+            zip_file.writestr('birth_data.json', summary_json)
+
+            print(f"[DOWNLOAD-ZIP] Added birth data summary")
+
+        
+
+        zip_buffer.seek(0)
+
+        
+
+        print(f"[DOWNLOAD-ZIP] ZIP file created successfully, size: {len(zip_buffer.getvalue())} bytes")
+
+        
+
+        return StreamingResponse(
+
+            iter([zip_buffer.getvalue()]),
+
+            media_type="application/zip",
+
+            headers={"Content-Disposition": f"attachment; filename={user_name}_Kundli_Complete.zip"}
+
+        )
+
+    
+
+    except HTTPException:
+
+        raise
+
+    except Exception as e:
+
+        print(f"[DOWNLOAD-ZIP] ERROR: {type(e).__name__}: {str(e)}")
+
+        import traceback
+
+        traceback.print_exc()
+
+        raise HTTPException(
+
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+
+            detail=str(e)
+
+        )
 
 
 
@@ -2108,31 +2192,60 @@ async def livechat_generate_kundli(
             )
 
         
-        kundli_id = result['kundli_id']
-
         kundli_data = result['data']
 
-        print(f"[LIVECHAT] Generated kundli_id: {kundli_id}")
+        print(f"[LIVECHAT] Step 1: Kundli data generated successfully")
+
+        
+        # Step 2: Generate hash from entire kundli JSON
+        print(f"[LIVECHAT] Step 2: Generating content hash from kundli JSON...")
+        kundli_hash = file_manager.generate_kundli_hash(kundli_data)
+        print(f"[LIVECHAT] Step 2: Generated hash: {kundli_hash}")
+
+        
+        # Step 3: Get counter for this user
+        print(f"[LIVECHAT] Step 3: Getting counter for user: {user_name}")
+        counter = file_manager.get_next_kundli_counter(user_name)
+        print(f"[LIVECHAT] Step 3: Counter value: {counter}")
+
+        
+        # Step 4: Build new kundli_id with counter and hash
+        safe_name = user_name.replace(' ', '-')
+        kundli_id = f"{safe_name}-Kundli-{counter}-{kundli_hash}"
+        print(f"[LIVECHAT] Step 4: New kundli_id: {kundli_id}")
 
         
         # Format kundli text
-        print(f"[LIVECHAT] Formatting kundli text...")
+        print(f"[LIVECHAT] Step 5: Formatting kundli text...")
 
         kundli_text = format_kundli_text(kundli_data, birth_data_dict)
 
         
-        # Save kundli files locally
-        print(f"[LIVECHAT] Saving kundli files locally...")
+        # Step 6: Save kundli files locally with new naming
+        print(f"[LIVECHAT] Step 6: Saving kundli files locally with hash-based naming...")
 
-        kundli_json_path = file_manager.save_kundli_json(user_folder, user_name, kundli_data)
+        kundli_json_path = file_manager.save_kundli_json(user_folder, user_name, kundli_data, counter=counter, hash_value=kundli_hash)
 
-        kundli_text_path = file_manager.save_kundli_text(user_folder, user_name, kundli_text)
+        kundli_text_path = file_manager.save_kundli_text(user_folder, user_name, kundli_text, counter=counter, hash_value=kundli_hash)
 
-        print(f"[LIVECHAT] Kundli saved: {kundli_json_path}")
+        print(f"[LIVECHAT] Step 6: Kundli saved: {kundli_json_path}")
+
+        
+        # Step 7: Add to local index
+        print(f"[LIVECHAT] Step 7: Adding kundli to local index...")
+        file_manager.add_to_index(
+            kundli_id=kundli_id,
+            file_path=kundli_json_path,
+            birth_data=birth_data_dict,
+            generated_at=result['generated_at'],
+            hash_value=kundli_hash,
+            counter=counter
+        )
+        print(f"[LIVECHAT] Step 7: Added to local index")
 
         
         # Generate charts
-        print(f"[LIVECHAT] Generating divisional charts...")
+        print(f"[LIVECHAT] Step 8: Generating divisional charts...")
 
         chart_types = request_data.get('chart_types') or ['D1', 'D7', 'D9', 'D10']
 
@@ -2145,7 +2258,7 @@ async def livechat_generate_kundli(
 
             charts_dict = charts_result.get('charts', {})
 
-            print(f"[LIVECHAT] Generated {len(charts_dict)} charts")
+            print(f"[LIVECHAT] Step 8: Generated {len(charts_dict)} charts")
 
             for chart_type, chart_data in charts_dict.items():
 
@@ -2160,57 +2273,11 @@ async def livechat_generate_kundli(
 
                 file_manager.save_chart_text(user_folder, chart_type, chart_text)
 
-                print(f"[LIVECHAT] Saved chart: {chart_type}")
+                print(f"[LIVECHAT] Step 8: Saved chart: {chart_type}")
 
         else:
 
-            print(f"[LIVECHAT] Chart generation failed: {charts_result.get('error', 'Unknown error')}")
-
-        # Save complete kundli data to Firebase for LLM access
-        print(f"[LIVECHAT] Saving complete kundli data to Firebase...")
-        horoscope_info = kundli_data.get('horoscope_info', {})
-        print(f"[LIVECHAT] horoscope_info keys: {list(horoscope_info.keys())}")
-        print(f"[LIVECHAT] horoscope_info size: {len(horoscope_info)}")
-        
-        kundli_firebase_data = {
-            'kundli_id': kundli_id,
-            'birth_data': birth_data_dict,
-            'horoscope_info': horoscope_info,
-            'chart_types': chart_types,
-            'charts': charts_dict,
-            'generated_at': result['generated_at'],
-            'user_folder': user_folder,
-            'unique_id': unique_id
-        }
-        kundli_firebase_id = FirebaseService.save_kundli(current_user['uid'], kundli_firebase_data)
-        print(f"[LIVECHAT] Kundli data saved to Firebase: {kundli_firebase_id}")
-        
-        # Save to Firebase for auth/tracking only
-        print(f"[LIVECHAT] Saving calculation metadata to Firebase...")
-
-        calculation_data = {
-
-            'birth_data': birth_data_dict,
-
-            'chart_types': chart_types,
-
-            'result_summary': {
-
-                'kundli_id': kundli_id,
-
-                'user_folder': user_folder,
-
-                'unique_id': unique_id,
-
-                'generated_at': result['generated_at']
-
-            }
-
-        }
-
-        saved_id = FirebaseService.save_calculation(current_user['uid'], calculation_data)
-
-        print(f"[LIVECHAT] Calculation metadata saved: {saved_id}")
+            print(f"[LIVECHAT] Step 8: Chart generation failed: {charts_result.get('error', 'Unknown error')}")
 
         
         # Ensure user profile exists
@@ -2263,9 +2330,7 @@ async def livechat_generate_kundli(
 
             "charts": charts_dict,
 
-            "generated_at": result['generated_at'],
-
-            "firebase_kundli_id": kundli_firebase_id
+            "generated_at": result['generated_at']
 
         }
 
@@ -2408,6 +2473,130 @@ Provide a personalized astrological response based on the kundli JSON data above
     
     except Exception as e:
         print(f"[LIVECHAT_MSG] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.post("/api/chat/message-with-kundli")
+
+async def chat_message_with_kundli(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Send a message in chat with kundli context and get AI response
+    
+    Args:
+        request_data: Contains kundli_data, user_message, and chat_history
+        
+    Returns:
+        AI response based on kundli analysis
+    """
+    try:
+        print(f"[CHAT_MSG] Processing message for user: {current_user.get('uid')}")
+        
+        kundli_data = request_data.get('kundli_data', {})
+        user_message = request_data.get('user_message', '')
+        chat_history = request_data.get('chat_history', [])
+        
+        if not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_message is required"
+            )
+        
+        if not kundli_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="kundli_data is required"
+            )
+        
+        print(f"[CHAT_MSG] User message: {user_message[:100]}...")
+        print(f"[CHAT_MSG] Chat history length: {len(chat_history)}")
+        print(f"[CHAT_MSG] Received kundli_id: {kundli_data.get('kundli_id', 'NOT PROVIDED')}")
+        print(f"[CHAT_MSG] Received birth_data name: {kundli_data.get('birth_data', {}).get('name', 'NOT PROVIDED')}")
+        print(f"[CHAT_MSG] Received horoscope_info keys count: {len(kundli_data.get('horoscope_info', {}))}")
+        
+        # Check if Gemini service is available
+        if not gemini_service:
+            print(f"[CHAT_MSG] ERROR: Gemini service not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gemini API key not configured. Please set GEMINI_API_KEY in environment variables."
+            )
+        
+        # Extract horoscope info from kundli data
+        horoscope_info = kundli_data.get('horoscope_info', {})
+        birth_data = kundli_data.get('birth_data', {})
+        
+        print(f"[CHAT_MSG] Horoscope info keys: {list(horoscope_info.keys())[:10]}...")
+        print(f"[CHAT_MSG] Birth data: {birth_data.get('name', 'Unknown')}")
+        
+        # Generate response using Gemini API with kundli context
+        print(f"[CHAT_MSG] Generating response with Gemini API...")
+        
+        try:
+            import json
+            
+            # Convert horoscope_info to formatted JSON
+            horoscope_json = json.dumps(horoscope_info, indent=2)
+            
+            # Build chat history for context
+            chat_context = ""
+            if chat_history:
+                chat_context = "\nPrevious conversation:\n"
+                for msg in chat_history[-5:]:  # Last 5 messages for context
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')
+                    chat_context += f"{role}: {content}\n"
+            
+            # Create the prompt for Gemini with complete JSON data
+            prompt = f"""You are an expert Vedic astrology guide. Analyze the user's birth chart data provided below and answer their question.
+
+KUNDLI DATA (JSON):
+{horoscope_json}
+
+USER INFO:
+Name: {birth_data.get('name', 'Unknown')}
+Date: {birth_data.get('year', 'Unknown')}-{birth_data.get('month', 'Unknown')}-{birth_data.get('day', 'Unknown')}
+Time: {birth_data.get('hour', 'Unknown')}:{birth_data.get('minute', 'Unknown')}
+Place: {birth_data.get('place_name', 'Unknown')}
+
+{chat_context}
+
+User's question: {user_message}
+
+Provide a personalized astrological response based on the kundli JSON data above."""
+            
+            # Call Gemini API
+            response = gemini_service.model.generate_content(prompt)
+            ai_response = response.text
+            
+            print(f"[CHAT_MSG] Response generated successfully")
+            print(f"[CHAT_MSG] Response length: {len(ai_response)}")
+            
+            return {
+                "status": "success",
+                "response": ai_response,
+                "user_message": user_message
+            }
+            
+        except Exception as e:
+            print(f"[CHAT_MSG] ERROR generating response: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to generate response: {str(e)}"
+            )
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(f"[CHAT_MSG] ERROR: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(

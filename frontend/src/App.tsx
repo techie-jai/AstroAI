@@ -12,6 +12,8 @@ import KundliPage from './pages/KundliPage'
 import AnalysisPage from './pages/AnalysisPage'
 import ChatPage from './pages/ChatPage'
 import LiveChatPage from './pages/LiveChatPage'
+import KundliCompletionPage from './pages/KundliCompletionPage'
+import ChatWithKundliPage from './pages/ChatWithKundliPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -70,6 +72,16 @@ function App() {
           }
         />
         <Route
+          path="/completion/:kundliId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <KundliCompletionPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/kundli"
           element={
             <ProtectedRoute>
@@ -93,9 +105,7 @@ function App() {
           path="/chat/:kundliId"
           element={
             <ProtectedRoute>
-              <Layout>
-                <ChatPage />
-              </Layout>
+              <ChatWithKundliPage />
             </ProtectedRoute>
           }
         />

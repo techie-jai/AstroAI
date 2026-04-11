@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Sparkles, Download, Loader, Zap, MessageCircle, Send } from 'lucide-react'
 import { getDisplayableItems, extractPanchanga, extractAyanamsa, extractPlanets, formatKey } from '../utils/jyotishganitHelper'
 import BotShareModal from '../components/BotShareModal'
+import CacheManager from '../utils/cacheManager'
 
 interface KundliData {
   kundli_id: string
@@ -38,15 +39,51 @@ export default function ResultsPage() {
           toast.error('Kundli ID not found')
           return
         }
+        
+        // Reset state IMMEDIATELY when kundliId changes
+        console.log('[RESULTS] ===== NEW KUNDLI FETCH =====')
+        console.log('[RESULTS] kundliId changed:', kundliId)
+        console.log('[RESULTS] Previous kundli state:', kundli?.birth_data?.name || 'null')
+        
+        setLoading(true)
+        setKundli(null)  // Clear immediately
+        setAnalysis(null)
+        
+        // Use CacheManager to clear all caches
+        console.log('[RESULTS] Clearing all caches...')
+        CacheManager.clearAllCaches()
+        
+        // Small delay to ensure state is cleared
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        console.log('[RESULTS] Fetching kundli with ID:', kundliId)
         const response = await api.getKundli(kundliId)
-        console.log('[RESULTS] API Response:', response.data)
-        console.log('[RESULTS] horoscope_info:', response.data.horoscope_info)
-        console.log('[RESULTS] horoscope_info keys:', Object.keys(response.data.horoscope_info || {}))
-        console.log('[RESULTS] horoscope_info entries:', Object.entries(response.data.horoscope_info || {}).slice(0, 5))
-        setKundli(response.data)
+        
+        console.log('[RESULTS] ===== API RESPONSE RECEIVED =====')
+        console.log('[RESULTS] Birth data name:', response.data.birth_data.name)
+        console.log('[RESULTS] Birth data place:', response.data.birth_data.place)
+        console.log('[RESULTS] Birth data date:', response.data.birth_data.date)
+        console.log('[RESULTS] Birth data time:', response.data.birth_data.time)
+        console.log('[RESULTS] Kundli ID from response:', response.data.kundli_id)
+        console.log('[RESULTS] horoscope_info keys count:', Object.keys(response.data.horoscope_info || {}).length)
+        
+        // Verify we got the right data
+        if (response.data.kundli_id !== kundliId) {
+          console.warn('[RESULTS] WARNING: Response kundli_id does not match requested kundli_id!')
+          console.warn('[RESULTS] Requested:', kundliId)
+          console.warn('[RESULTS] Received:', response.data.kundli_id)
+        }
+        
+        // Deep clone to ensure no reference issues
+        const freshData = JSON.parse(JSON.stringify(response.data))
+        console.log('[RESULTS] Deep cloned data, setting state...')
+        setKundli(freshData)
+        
+        console.log('[RESULTS] Kundli state updated successfully')
+        console.log('[RESULTS] ===== FETCH COMPLETE =====')
       } catch (error) {
         toast.error('Failed to load kundli data')
-        console.error(error)
+        console.error('[RESULTS] Error:', error)
       } finally {
         setLoading(false)
       }
@@ -146,7 +183,7 @@ export default function ResultsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
+    <div key={kundliId} className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Kundli Results</h1>
         <p className="text-gray-600 mb-8">Birth Chart Analysis for {kundli.birth_data.name}</p>

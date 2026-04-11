@@ -13,12 +13,15 @@ $BackendDir = Join-Path $ProjectRoot "backend"
 $FrontendDir = Join-Path $ProjectRoot "frontend"
 $AdminPanelDir = Join-Path $ProjectRoot "admin-panel"
 
-# Create users directory for simplified Kundli storage
+# Create users directory for local Kundli storage with hash-based naming
 $UsersDir = Join-Path $ProjectRoot "users"
 if (!(Test-Path $UsersDir)) {
     New-Item -ItemType Directory -Path $UsersDir -Force
-    Write-Host "Created users directory for Kundli storage: $UsersDir" -ForegroundColor Green
+    Write-Host "Created users directory for local Kundli storage: $UsersDir" -ForegroundColor Green
 }
+
+# The kundli_index.json will be auto-created by FileManager on first kundli generation
+Write-Host "Note: kundli_index.json will be auto-created in users/ on first kundli generation" -ForegroundColor Cyan
 
 Write-Host "Starting Backend..." -ForegroundColor Green
 Write-Host "Command: cd backend && python main.py" -ForegroundColor Yellow
@@ -32,6 +35,15 @@ Start-Sleep -Seconds 5
 
 Write-Host ""
 Write-Host "Starting Frontend..." -ForegroundColor Green
+
+# Check if node_modules exists and vite is installed
+$ViteBin = Join-Path $FrontendDir "node_modules\.bin\vite.cmd"
+if (!(Test-Path $ViteBin)) {
+    Write-Host "Frontend dependencies missing or incomplete, running npm install..." -ForegroundColor Yellow
+    Start-Process -NoNewWindow -Wait -FilePath "npm" -ArgumentList "install" -WorkingDirectory $FrontendDir
+    Write-Host "npm install completed for frontend" -ForegroundColor Green
+}
+
 Write-Host "Command: cd frontend && npm run dev" -ForegroundColor Yellow
 Write-Host ""
 
@@ -43,6 +55,15 @@ Start-Sleep -Seconds 3
 
 Write-Host ""
 Write-Host "Starting Admin Panel (Optional)..." -ForegroundColor Green
+
+# Check if node_modules exists and vite is installed
+$AdminViteBin = Join-Path $AdminPanelDir "node_modules\.bin\vite.cmd"
+if (!(Test-Path $AdminViteBin)) {
+    Write-Host "Admin panel dependencies missing or incomplete, running npm install..." -ForegroundColor Yellow
+    Start-Process -NoNewWindow -Wait -FilePath "npm" -ArgumentList "install" -WorkingDirectory $AdminPanelDir
+    Write-Host "npm install completed for admin panel" -ForegroundColor Green
+}
+
 Write-Host "Command: cd admin-panel && npm run dev" -ForegroundColor Yellow
 Write-Host ""
 
@@ -56,7 +77,8 @@ Write-Host "Frontend:    http://localhost:3000" -ForegroundColor Yellow
 Write-Host "Admin Panel: http://localhost:3001" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Features:" -ForegroundColor Green
-Write-Host "  Simplified Kundli: Enabled (1,151 data points)" -ForegroundColor Cyan
+Write-Host "  Local Kundli Storage: Enabled (hash-based naming, no Firebase)" -ForegroundColor Cyan
+Write-Host "  Content Hash: SHA256 (8-char) + Counter per user" -ForegroundColor Cyan
 Write-Host "  Divisional Charts: All D1-D60" -ForegroundColor Cyan
 Write-Host "  AI Analysis: Enhanced with complete data" -ForegroundColor Cyan
 Write-Host ""

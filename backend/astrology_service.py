@@ -15,7 +15,14 @@ class AstrologyService:
     
     def __init__(self):
         """Initialize astrology service with Jyotishganit"""
-        self.api = JyotishganitChartAPI()
+        # Don't initialize api here - create fresh instance for each request
+        # to avoid singleton state issues with JyotishganitChartAPI
+        self.api = None
+    
+    def _get_fresh_api(self):
+        """Get a fresh API instance to avoid state caching issues"""
+        print(f"[ASTROLOGY] Creating fresh JyotishganitChartAPI instance to avoid singleton state issues")
+        return JyotishganitChartAPI()
     
     @staticmethod
     def _make_serializable(obj: Any) -> Any:
@@ -46,7 +53,10 @@ class AstrologyService:
             Dictionary with kundli data
         """
         try:
-            self.api.set_birth_data(
+            # Create a fresh API instance for this request to avoid state caching
+            api = self._get_fresh_api()
+            
+            api.set_birth_data(
                 name=birth_data.get('name'),
                 place_name=birth_data.get('place_name'),
                 latitude=birth_data.get('latitude'),
@@ -60,7 +70,7 @@ class AstrologyService:
                 second=birth_data.get('second', 0)
             )
             
-            kundli_data = self.api.get_kundli()
+            kundli_data = api.get_kundli()
             # Make kundli data JSON serializable
             kundli_data = self._make_serializable(kundli_data)
             
@@ -162,7 +172,10 @@ class AstrologyService:
             chart_types = ['D1', 'D7', 'D9', 'D10']
         
         try:
-            self.api.set_birth_data(
+            # Create a fresh API instance for this request to avoid state caching
+            api = self._get_fresh_api()
+            
+            api.set_birth_data(
                 name=birth_data.get('name'),
                 place_name=birth_data.get('place_name'),
                 latitude=birth_data.get('latitude'),
@@ -178,7 +191,7 @@ class AstrologyService:
             
             charts = {}
             for chart_type in chart_types:
-                chart_data = self.api.get_chart(chart_type)
+                chart_data = api.get_chart(chart_type)
                 # Make chart data JSON serializable
                 charts[chart_type] = self._make_serializable(chart_data)
             
@@ -206,7 +219,10 @@ class AstrologyService:
             Dictionary with planet position
         """
         try:
-            self.api.set_birth_data(
+            # Create a fresh API instance for this request to avoid state caching
+            api = self._get_fresh_api()
+            
+            api.set_birth_data(
                 name=birth_data.get('name'),
                 place_name=birth_data.get('place_name'),
                 latitude=birth_data.get('latitude'),
@@ -220,7 +236,7 @@ class AstrologyService:
                 second=birth_data.get('second', 0)
             )
             
-            planet = self.api.get_planet_in_house(chart_type, planet_name)
+            planet = api.get_planet_in_house(chart_type, planet_name)
             
             if planet:
                 return {
@@ -251,7 +267,10 @@ class AstrologyService:
             Dictionary with planets in house
         """
         try:
-            self.api.set_birth_data(
+            # Create a fresh API instance for this request to avoid state caching
+            api = self._get_fresh_api()
+            
+            api.set_birth_data(
                 name=birth_data.get('name'),
                 place_name=birth_data.get('place_name'),
                 latitude=birth_data.get('latitude'),
@@ -265,7 +284,7 @@ class AstrologyService:
                 second=birth_data.get('second', 0)
             )
             
-            planets = self.api.get_planets_in_house(chart_type, house_number)
+            planets = api.get_planets_in_house(chart_type, house_number)
             
             return {
                 'success': True,
@@ -289,7 +308,10 @@ class AstrologyService:
             Dictionary with formatted text
         """
         try:
-            self.api.set_birth_data(
+            # Create a fresh API instance for this request to avoid state caching
+            api = self._get_fresh_api()
+            
+            api.set_birth_data(
                 name=birth_data.get('name'),
                 place_name=birth_data.get('place_name'),
                 latitude=birth_data.get('latitude'),
@@ -303,8 +325,8 @@ class AstrologyService:
                 second=birth_data.get('second', 0)
             )
             
-            self.api.get_kundli()
-            text = self.api.format_kundli_text()
+            api.get_kundli()
+            text = api.format_kundli_text()
             
             return {
                 'success': True,
@@ -328,7 +350,10 @@ class AstrologyService:
             Dictionary with formatted text
         """
         try:
-            self.api.set_birth_data(
+            # Create a fresh API instance for this request to avoid state caching
+            api = self._get_fresh_api()
+            
+            api.set_birth_data(
                 name=birth_data.get('name'),
                 place_name=birth_data.get('place_name'),
                 latitude=birth_data.get('latitude'),
@@ -342,8 +367,8 @@ class AstrologyService:
                 second=birth_data.get('second', 0)
             )
             
-            chart_data = self.api.get_chart(chart_type)
-            text = self.api.format_chart_text(chart_data)
+            chart_data = api.get_chart(chart_type)
+            text = api.format_chart_text(chart_data)
             
             return {
                 'success': True,

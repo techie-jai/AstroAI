@@ -126,9 +126,10 @@ def start_frontend():
     print_info(f"Starting frontend on port {FRONTEND_PORT}...")
     
     try:
-        # Check if node_modules exists
-        if not (FRONTEND_DIR / "node_modules").exists():
-            print_warning("node_modules not found, running npm install...")
+        # Check if node_modules exists and vite is installed
+        vite_bin = FRONTEND_DIR / "node_modules" / ".bin" / ("vite.cmd" if sys.platform == "win32" else "vite")
+        if not vite_bin.exists():
+            print_warning("Frontend dependencies missing or incomplete, running npm install...")
             subprocess.run(
                 "npm install",
                 cwd=str(FRONTEND_DIR),
@@ -165,9 +166,10 @@ def start_admin_panel():
     print_info(f"Starting admin panel on port {ADMIN_PANEL_PORT}...")
     
     try:
-        # Check if node_modules exists
-        if not (ADMIN_PANEL_DIR / "node_modules").exists():
-            print_warning("Admin panel node_modules not found, running npm install...")
+        # Check if node_modules exists and vite is installed
+        admin_vite_bin = ADMIN_PANEL_DIR / "node_modules" / ".bin" / ("vite.cmd" if sys.platform == "win32" else "vite")
+        if not admin_vite_bin.exists():
+            print_warning("Admin panel dependencies missing or incomplete, running npm install...")
             subprocess.run(
                 "npm install",
                 cwd=str(ADMIN_PANEL_DIR),
