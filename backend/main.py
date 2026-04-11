@@ -1328,50 +1328,15 @@ async def generate_analysis(
         print(f"[ANALYSIS] Generating analysis for kundli_id: {request.kundli_id}, user: {current_user.get('uid')}")
 
         
+        # Lookup kundli from local file index
+        print(f"[ANALYSIS] Looking up kundli from local index...")
 
-        # Get calculation metadata from Firebase to find user folder
-
-        print(f"[ANALYSIS] Fetching user calculations...")
-
-        calculations = FirebaseService.get_user_calculations(current_user['uid'])
-
-        print(f"[ANALYSIS] Found {len(calculations)} calculations")
+        kundli_metadata = file_manager.lookup_kundli(request.kundli_id)
 
         
-
-        user_folder = None
-
-        birth_data = None
-
-        
-
-        for calc in calculations:
-
-            result_summary = calc.get('result_summary', {})
-
-            calc_kundli_id = result_summary.get('kundli_id')
-
-            print(f"[ANALYSIS] Checking calculation with kundli_id: {calc_kundli_id}")
-
-            
-
-            if calc_kundli_id == request.kundli_id:
-
-                user_folder = result_summary.get('user_folder')
-
-                birth_data = calc.get('birth_data')
-
-                print(f"[ANALYSIS] Found matching calculation")
-
-                break
-
-        
-
-        if not user_folder or not birth_data:
+        if not kundli_metadata:
 
             print(f"[ANALYSIS] Kundli metadata not found for ID: {request.kundli_id}")
-
-            print(f"[ANALYSIS] Available kundli IDs: {[c.get('result_summary', {}).get('kundli_id') for c in calculations]}")
 
             raise HTTPException(
 
@@ -1382,37 +1347,42 @@ async def generate_analysis(
             )
 
         
+        user_folder = kundli_metadata.get('file_path', '').rsplit('\\', 2)[0] if '\\' in kundli_metadata.get('file_path', '') else kundli_metadata.get('file_path', '').rsplit('/', 2)[0]
 
-        print(f"[ANALYSIS] Found user folder: {user_folder}")
-
-        
-
-        # Read kundli JSON from local file
-
-        user_name = birth_data.get('name', 'User')
-
-        kundli_json_path = file_manager.get_kundli_json_path(user_folder, user_name)
+        birth_data = kundli_metadata.get('birth_data')
 
         
+        if not user_folder or not birth_data:
 
-        if not kundli_json_path:
-
-            print(f"[ANALYSIS] Kundli JSON file not found for user: {user_name}")
+            print(f"[ANALYSIS] Failed to extract user folder or birth data from kundli metadata")
 
             raise HTTPException(
 
                 status_code=status.HTTP_404_NOT_FOUND,
 
-                detail="Kundli file not found"
+                detail="Kundli metadata incomplete"
+            )
+        print(f"[ANALYSIS] Found user folder: {user_folder}")
 
+        user_name = birth_data.get('name', 'User')
+        
+        # Read kundli JSON from local file using the file path from metadata
+        kundli_json_path = kundli_metadata.get('file_path')
+
+        # Check if kundli JSON file path exists
+        if not kundli_json_path:
+
+            print(f"[ANALYSIS] Kundli JSON file path not found in metadata")
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Kundli file not found"
             )
 
-        
-
+        # Read kundli JSON from file
         kundli_data = file_manager.read_kundli_json(kundli_json_path)
 
-        
-
+        # Check if kundli data exists
         if not kundli_data:
 
             print(f"[ANALYSIS] Failed to read kundli data from file")
@@ -1615,40 +1585,15 @@ async def download_analysis_pdf(
         print(f"[DOWNLOAD] Downloading analysis PDF for kundli_id: {kundli_id}, user: {current_user.get('uid')}")
 
         
+        # Lookup kundli from local file index
+        print(f"[DOWNLOAD] Looking up kundli from local index...")
 
-        # Get calculation metadata from Firebase to find user folder
-
-        calculations = FirebaseService.get_user_calculations(current_user['uid'])
-
-        
-
-        user_folder = None
-
-        birth_data = None
+        kundli_metadata = file_manager.lookup_kundli(kundli_id)
 
         
+        if not kundli_metadata:
 
-        for calc in calculations:
-
-            result_summary = calc.get('result_summary', {})
-
-            calc_kundli_id = result_summary.get('kundli_id')
-
-            
-
-            if calc_kundli_id == kundli_id:
-
-                user_folder = result_summary.get('user_folder')
-
-                birth_data = calc.get('birth_data')
-
-                break
-
-        
-
-        if not user_folder or not birth_data:
-
-            print(f"[DOWNLOAD] Kundli not found for ID: {kundli_id}")
+            print(f"[DOWNLOAD] Kundli metadata not found for ID: {kundli_id}")
 
             raise HTTPException(
 
@@ -1659,7 +1604,24 @@ async def download_analysis_pdf(
             )
 
         
+        user_folder = kundli_metadata.get('file_path', '').rsplit('\\', 2)[0] if '\\' in kundli_metadata.get('file_path', '') else kundli_metadata.get('file_path', '').rsplit('/', 2)[0]
 
+        birth_data = kundli_metadata.get('birth_data')
+
+        
+        if not user_folder or not birth_data:
+
+            print(f"[DOWNLOAD] Failed to extract user folder or birth data from kundli metadata")
+
+            raise HTTPException(
+
+                status_code=status.HTTP_404_NOT_FOUND,
+
+                detail="Kundli metadata incomplete"
+
+            )
+
+        
         # Get PDF file path
 
         user_name = birth_data.get('name', 'User')

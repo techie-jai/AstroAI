@@ -3,9 +3,8 @@ import { useParams } from 'react-router-dom'
 import { api } from '../services/api'
 import apiClient from '../services/api'
 import toast from 'react-hot-toast'
-import { Sparkles, Download, Loader, Zap, MessageCircle, Send } from 'lucide-react'
+import { Sparkles, Download, Loader, MessageCircle } from 'lucide-react'
 import { getDisplayableItems, extractPanchanga, extractAyanamsa, extractPlanets, formatKey } from '../utils/jyotishganitHelper'
-import BotShareModal from '../components/BotShareModal'
 import CacheManager from '../utils/cacheManager'
 
 interface KundliData {
@@ -30,7 +29,6 @@ export default function ResultsPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
-  const [showBotShareModal, setShowBotShareModal] = useState(false)
 
   useEffect(() => {
     const fetchKundli = async () => {
@@ -93,14 +91,22 @@ export default function ResultsPage() {
   }, [kundliId])
 
   const handleAnalyze = async () => {
+    if (!kundliId) {
+      toast.error('Kundli ID not found')
+      console.error('[RESULTS] handleAnalyze: kundliId is missing')
+      return
+    }
+
     setAnalyzing(true)
     try {
-      const response = await api.generateAnalysis(kundliId || '', 'comprehensive')
+      console.log('[RESULTS] Generating analysis for kundliId:', kundliId)
+      const response = await api.generateAnalysis(kundliId, 'comprehensive')
+      console.log('[RESULTS] Analysis generated successfully')
       setAnalysis(response.data.analysis_text || 'Analysis generated successfully')
       toast.success('Analysis generated successfully')
     } catch (error) {
+      console.error('[RESULTS] Failed to generate analysis:', error)
       toast.error('Failed to generate analysis')
-      console.error(error)
     } finally {
       setAnalyzing(false)
     }
@@ -142,19 +148,27 @@ export default function ResultsPage() {
   }
 
   const handleOpenChat = () => {
+    if (!kundliId) {
+      toast.error('Kundli ID not found')
+      console.error('[RESULTS] handleOpenChat: kundliId is missing')
+      return
+    }
+
     if (!kundli) {
       toast.error('Kundli data not found')
+      console.error('[RESULTS] handleOpenChat: kundli data is missing')
       return
     }
 
     try {
-      // Store kundli data in sessionStorage instead of URL to avoid header size limits
-      sessionStorage.setItem('kundli_data', JSON.stringify(kundli))
-      const chatUrl = `${window.location.origin}/livechat?source=results`
+      console.log('[RESULTS] Opening chat for kundliId:', kundliId)
+      // Navigate to the chat page with the kundli ID
+      // The ChatWithKundliPage will fetch fresh data using the kundliId from URL
+      const chatUrl = `${window.location.origin}/chat/${kundliId}`
       window.open(chatUrl, '_blank')
       toast.success('Opening chat in new tab...')
     } catch (error) {
-      console.error('Failed to open chat:', error)
+      console.error('[RESULTS] Failed to open chat:', error)
       toast.error('Failed to open chat')
     }
   }
@@ -373,7 +387,7 @@ export default function ResultsPage() {
               <p className="text-gray-600">
                 Your AI analysis has been generated. Download the professional PDF report or chat about your kundli.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={handleDownloadPDF}
                   disabled={downloading}
@@ -398,13 +412,6 @@ export default function ResultsPage() {
                   <MessageCircle className="w-5 h-5" />
                   <span>Chat About Kundli</span>
                 </button>
-                <button
-                  onClick={() => setShowBotShareModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  <Send className="w-5 h-5" />
-                  <span>Share to Bot</span>
-                </button>
               </div>
             </div>
           ) : (
@@ -415,7 +422,7 @@ export default function ResultsPage() {
               <p className="text-sm text-gray-500">
                 Your kundli data has been generated and saved. You can access it through your calculation history.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 gap-4 mt-4">
                 <button
                   onClick={handleOpenChat}
                   className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
@@ -423,25 +430,10 @@ export default function ResultsPage() {
                   <MessageCircle className="w-5 h-5" />
                   <span>Chat About Kundli</span>
                 </button>
-                <button
-                  onClick={() => setShowBotShareModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  <Send className="w-5 h-5" />
-                  <span>Share to Bot</span>
-                </button>
               </div>
             </div>
           )}
         </div>
-
-        {/* Bot Share Modal */}
-        <BotShareModal
-          isOpen={showBotShareModal}
-          onClose={() => setShowBotShareModal(false)}
-          kundliData={kundli}
-          birthData={kundli?.birth_data}
-        />
       </div>
     </div>
   )
