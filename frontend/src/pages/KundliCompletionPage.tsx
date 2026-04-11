@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
-import { Download, MessageCircle, Loader, Sparkles } from 'lucide-react'
+import { Download, MessageCircle, Loader, Sparkles, Eye } from 'lucide-react'
 
 interface KundliData {
   kundli_id: string
@@ -77,6 +77,21 @@ export default function KundliCompletionPage() {
       toast.error('Failed to download kundli')
     } finally {
       setDownloading(false)
+    }
+  }
+
+  const handleViewResults = () => {
+    if (!kundliId) {
+      toast.error('Kundli ID not found')
+      return
+    }
+
+    try {
+      navigate(`/results/${kundliId}`)
+      toast.success('Loading results...')
+    } catch (error) {
+      console.error('[COMPLETION] Navigation error:', error)
+      toast.error('Failed to open results')
     }
   }
 
@@ -169,6 +184,14 @@ export default function KundliCompletionPage() {
                   <span>Download Kundli</span>
                 </>
               )}
+            </button>
+
+            <button
+              onClick={handleViewResults}
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-lg transition flex items-center justify-center gap-3 text-lg"
+            >
+              <Eye size={24} />
+              <span>View Results</span>
             </button>
 
             <button
