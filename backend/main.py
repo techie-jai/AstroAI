@@ -608,7 +608,8 @@ async def generate_kundli(
             birth_data=birth_data_dict,
             generated_at=result['generated_at'],
             hash_value=kundli_hash,
-            counter=counter
+            counter=counter,
+            uid=current_user['uid']
         )
         print(f"[KUNDLI] Step 7: Added to local index")
 
@@ -854,6 +855,14 @@ async def get_kundli(
                 detail="Kundli not found"
             )
         
+        # Verify that the kundli belongs to the current user
+        if metadata.get('uid') != current_user['uid']:
+            print(f"[GET_KUNDLI] Access denied: Kundli belongs to different user")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access this kundli"
+            )
+        
         print(f"[GET_KUNDLI] Found metadata in index")
         
         # Read kundli data from local file
@@ -973,17 +982,23 @@ async def get_calculation_history(
         # Read from local kundli index
         index = file_manager._read_index()
         
-        # Convert index to calculations list
+        # Convert index to calculations list, filtering by current user's UID
         calculations = []
         for kundli_id, metadata in index.items():
+            # Only include kundlis belonging to current user
+            if metadata.get('uid') != current_user['uid']:
+                continue
+            
             birth_data = metadata.get('birth_data', {})
-            calculations.append({
-                'calculation_id': kundli_id,
-                'kundli_id': kundli_id,
-                'birth_data': birth_data,
-                'generation_date': metadata.get('generated_at'),
-                'has_analysis': False  # TODO: Check if analysis file exists
-            })
+            # Only include if birth_data has required fields
+            if birth_data and birth_data.get('name'):
+                calculations.append({
+                    'calculation_id': kundli_id,
+                    'kundli_id': kundli_id,
+                    'birth_data': birth_data,
+                    'generation_date': metadata.get('generated_at'),
+                    'has_analysis': False  # TODO: Check if analysis file exists
+                })
         
         # Sort by generation date (newest first)
         calculations.sort(key=lambda x: x.get('generation_date', ''), reverse=True)
@@ -991,7 +1006,7 @@ async def get_calculation_history(
         # Apply limit
         calculations = calculations[:limit]
         
-        print(f"[CALCULATIONS] Found {len(calculations)} calculations")
+        print(f"[CALCULATIONS] Found {len(calculations)} calculations for user {current_user.get('uid')}")
 
         return {
 
@@ -1051,17 +1066,23 @@ async def get_user_calculations(
         # Read from local kundli index
         index = file_manager._read_index()
         
-        # Convert index to calculations list
+        # Convert index to calculations list, filtering by current user's UID
         calculations = []
         for kundli_id, metadata in index.items():
+            # Only include kundlis belonging to current user
+            if metadata.get('uid') != current_user['uid']:
+                continue
+            
             birth_data = metadata.get('birth_data', {})
-            calculations.append({
-                'calculation_id': kundli_id,
-                'kundli_id': kundli_id,
-                'birth_data': birth_data,
-                'generation_date': metadata.get('generated_at'),
-                'has_analysis': False  # TODO: Check if analysis file exists
-            })
+            # Only include if birth_data has required fields
+            if birth_data and birth_data.get('name'):
+                calculations.append({
+                    'calculation_id': kundli_id,
+                    'kundli_id': kundli_id,
+                    'birth_data': birth_data,
+                    'generation_date': metadata.get('generated_at'),
+                    'has_analysis': False  # TODO: Check if analysis file exists
+                })
         
         # Sort by generation date (newest first)
         calculations.sort(key=lambda x: x.get('generation_date', ''), reverse=True)
@@ -1069,7 +1090,7 @@ async def get_user_calculations(
         # Apply limit
         calculations = calculations[:limit]
         
-        print(f"[USER_CALCULATIONS] Found {len(calculations)} calculations")
+        print(f"[USER_CALCULATIONS] Found {len(calculations)} calculations for user {current_user.get('uid')}")
 
         return {
 
@@ -1132,6 +1153,10 @@ async def get_user_kundlis(
         
         kundlis = []
         for kundli_id, metadata in index.items():
+            # Only include kundlis belonging to current user
+            if metadata.get('uid') != current_user['uid']:
+                continue
+            
             birth_data = metadata.get('birth_data', {})
             file_path = metadata.get('file_path')
             
@@ -1153,7 +1178,7 @@ async def get_user_kundlis(
         # Apply limit
         kundlis = kundlis[:limit]
 
-        print(f"[GET_KUNDLIS] Found {len(kundlis)} kundlis")
+        print(f"[GET_KUNDLIS] Found {len(kundlis)} kundlis for user {current_user.get('uid')}")
 
         
         return {

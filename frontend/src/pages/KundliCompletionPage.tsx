@@ -40,18 +40,9 @@ export default function KundliCompletionPage() {
         const freshData = JSON.parse(JSON.stringify(response.data))
         setKundli(freshData)
         
-        // Store in localStorage for dashboard access
-        console.log('[COMPLETION] Storing kundli in localStorage')
-        const storedKundlis = JSON.parse(localStorage.getItem('kundlis') || '{}')
-        // Store with the formatted birth_data from the API response
-        storedKundlis[kundliId] = {
-          kundli_id: kundliId,
-          birth_data: freshData.birth_data,  // Already formatted with date/time as strings
-          horoscope_info: freshData.horoscope_info,
-          generated_at: freshData.generated_at,
-          charts: freshData.charts
-        }
-        localStorage.setItem('kundlis', JSON.stringify(storedKundlis))
+        // Note: Don't store in localStorage - rely on backend index instead
+        // The backend now serves data from the local file index
+        console.log('[COMPLETION] Kundli data available from backend API')
         
         console.log('[COMPLETION] Kundli loaded successfully')
       } catch (error) {

@@ -109,14 +109,16 @@ try {
             if ($procId -ne $currentProcId) {
                 Write-Host "Closing PowerShell window (PID: $procId)" -ForegroundColor Cyan
                 Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-                Write-Host "✓ Closed terminal window (PID: $procId)" -ForegroundColor Green
+                Write-Host "Closed terminal window (PID: $procId)" -ForegroundColor Green
             }
         }
-    } else {
-        Write-Host "⚠ No PowerShell windows found to close" -ForegroundColor Yellow
     }
-} catch {
-    Write-Host "✗ Error closing terminal windows: $_" -ForegroundColor Red
+    else {
+        Write-Host "No PowerShell windows found to close" -ForegroundColor Yellow
+    }
+}
+catch {
+    Write-Host "Error closing terminal windows: $_" -ForegroundColor Red
 }
 
 Write-Host ""

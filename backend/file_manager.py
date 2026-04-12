@@ -386,7 +386,7 @@ class FileManager:
         return self.read_kundli_json(file_path)
     
     def add_to_index(self, kundli_id: str, file_path: str, birth_data: Dict, 
-                     generated_at: str, hash_value: str, counter: int) -> None:
+                     generated_at: str, hash_value: str, counter: int, uid: str = None) -> None:
         """
         Add kundli to index
         
@@ -397,6 +397,7 @@ class FileManager:
             generated_at: ISO timestamp
             hash_value: Content hash
             counter: Counter value
+            uid: User ID (Firebase UID)
         """
         index = self._read_index()
         index[kundli_id] = {
@@ -405,6 +406,7 @@ class FileManager:
             'birth_data': birth_data,
             'generated_at': generated_at,
             'hash': hash_value,
-            'counter': counter
+            'counter': counter,
+            'uid': uid
         }
         self._write_index(index)

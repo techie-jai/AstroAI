@@ -74,34 +74,9 @@ export default function DashboardPage() {
             await fetchInsights(calcs[0].kundli_id)
           }
         } catch (backendError) {
-          console.warn('[DASHBOARD] Backend fetch failed, trying localStorage:', backendError)
-          
-          // Fallback to localStorage
-          const storedKundlis = JSON.parse(localStorage.getItem('kundlis') || '{}')
-          const calcs: Calculation[] = Object.entries(storedKundlis).map(([kundliId, data]: [string, any]) => {
-            const birthData = data.birth_data || {}
-            return {
-              calculation_id: kundliId,
-              kundli_id: kundliId,
-              name: birthData.name || 'Unknown',
-              birth_date: birthData.date || 'N/A',
-              generation_date: data.generated_at,
-              has_analysis: false
-            }
-          })
-          
-          // Sort by generation date (newest first)
-          calcs.sort((a, b) => {
-            const dateA = new Date(a.generation_date || 0).getTime()
-            const dateB = new Date(b.generation_date || 0).getTime()
-            return dateB - dateA
-          })
-          
-          setCalculations(calcs)
-          
-          if (calcs.length > 0) {
-            await fetchInsights(calcs[0].kundli_id)
-          }
+          console.error('[DASHBOARD] Backend fetch failed:', backendError)
+          setCalculations([])
+          toast.error('Failed to load kundlis from backend')
         }
       } catch (error) {
         console.error('Failed to fetch data:', error)

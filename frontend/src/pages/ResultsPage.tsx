@@ -78,18 +78,9 @@ export default function ResultsPage() {
         console.log('[RESULTS] Deep cloned data, setting state...')
         setKundli(freshData)
         
-        // Store in localStorage for dashboard access
-        console.log('[RESULTS] Storing kundli in localStorage')
-        const storedKundlis = JSON.parse(localStorage.getItem('kundlis') || '{}')
-        // Store with the formatted birth_data from the API response
-        storedKundlis[kundliId] = {
-          kundli_id: kundliId,
-          birth_data: freshData.birth_data,  // Already formatted with date/time as strings
-          horoscope_info: freshData.horoscope_info,
-          generated_at: freshData.generated_at,
-          charts: freshData.charts
-        }
-        localStorage.setItem('kundlis', JSON.stringify(storedKundlis))
+        // Note: Don't store in localStorage - rely on backend index instead
+        // The backend now serves data from the local file index
+        console.log('[RESULTS] Kundli data available from backend API')
         
         console.log('[RESULTS] Kundli state updated successfully')
         console.log('[RESULTS] ===== FETCH COMPLETE =====')
