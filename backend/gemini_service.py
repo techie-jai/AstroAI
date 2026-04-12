@@ -77,14 +77,17 @@ class GeminiService:
         try:
             prompt = self._build_analysis_prompt(kundli_data, user_name, analysis_type)
             
+            print(f"[GEMINI] Sending prompt to Gemini API (length: {len(prompt)} chars)...")
             response = self.model.generate_content(prompt)
             
             if response.text:
+                print(f"[GEMINI] Response received (length: {len(response.text)} chars)")
                 return response.text
             else:
                 return f"Unable to generate analysis. Please try again."
         
         except Exception as e:
+            print(f"[GEMINI] Exception during analysis: {type(e).__name__}: {str(e)}")
             raise Exception(f"Failed to generate analysis with Gemini: {str(e)}")
     
     def _build_analysis_prompt(self, kundli_data: Dict, user_name: str, analysis_type: str) -> str:

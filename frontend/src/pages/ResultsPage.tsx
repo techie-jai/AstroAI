@@ -99,18 +99,35 @@ export default function ResultsPage() {
     }
 
     setAnalyzing(true)
-    try {
-      console.log('[RESULTS] Generating analysis for kundliId:', kundliId)
-      const response = await api.generateAnalysis(kundliId, 'comprehensive')
-      console.log('[RESULTS] Analysis generated successfully')
-      setAnalysis(response.data.analysis_text || 'Analysis generated successfully')
-      toast.success('Analysis generated successfully')
-    } catch (error) {
-      console.error('[RESULTS] Failed to generate analysis:', error)
-      toast.error('Failed to generate analysis')
-    } finally {
-      setAnalyzing(false)
+    let retries = 0
+    const maxRetries = 2
+    
+    const attemptAnalysis = async (): Promise<void> => {
+      try {
+        console.log('[RESULTS] Generating analysis for kundliId:', kundliId, `(attempt ${retries + 1})`)
+        const response = await api.generateAnalysis(kundliId, 'comprehensive')
+        console.log('[RESULTS] Analysis generated successfully')
+        setAnalysis(response.data.analysis_text || 'Analysis generated successfully')
+        toast.success('Analysis generated successfully')
+      } catch (error: any) {
+        console.error('[RESULTS] Failed to generate analysis:', error)
+        
+        // Retry on timeout errors
+        if ((error.code === 'ECONNABORTED' || error.message?.includes('timeout')) && retries < maxRetries) {
+          retries++
+          console.log(`[RESULTS] Timeout detected, retrying (${retries}/${maxRetries})...`)
+          toast.loading(`Analysis is taking longer than expected. Retrying... (${retries}/${maxRetries})`)
+          await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds before retry
+          return attemptAnalysis()
+        }
+        
+        toast.error('Failed to generate analysis. Please try again.')
+      } finally {
+        setAnalyzing(false)
+      }
     }
+    
+    await attemptAnalysis()
   }
 
   const handleDownloadPDF = async () => {

@@ -43,7 +43,7 @@ console.log('[API] Final API_BASE_URL:', API_BASE_URL)
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 second timeout
+  timeout: 60000, // 60 second timeout for general requests
   headers: {
     'Content-Type': 'application/json',
     // Cache-busting headers
@@ -53,67 +53,85 @@ const apiClient = axios.create({
   },
 })
 
-// Request interceptor to add Firebase token and cache-busting to every request
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('firebaseToken')
-  console.log('[API] Request to:', config.url)
-  console.log('[API] Token from localStorage:', token ? `${token.substring(0, 50)}...` : 'NOT FOUND')
-  
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-    console.log('[API] Authorization header set:', config.headers.Authorization ? 'YES' : 'NO')
-  } else {
-    console.error('[API] ERROR: No Firebase token in localStorage!')
-  }
-  
-  // Add cache-busting query parameter for GET requests
-  if (config.method === 'get') {
-    config.params = config.params || {}
-    config.params._t = Date.now() // Timestamp to bust cache
-    console.log('[API] Added cache-busting timestamp:', config.params._t)
-  }
-  
-  return config
-}, (error) => {
-  console.error('[API] Request interceptor error:', error)
-  return Promise.reject(error)
+// Create a separate client for long-running analysis requests
+const analysisClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 300000, // 5 minute timeout for analysis (Gemini API can be slow)
+  headers: {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  },
 })
 
-// Response interceptor for error handling and token refresh
-apiClient.interceptors.response.use(
-  (response) => {
-    console.log('[API] Response:', response.status, response.statusText)
-    return response
-  },
-  async (error) => {
-    console.error('[API] Error Response:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    })
+// Setup interceptors for both clients
+const setupInterceptors = (client: typeof apiClient) => {
+  // Request interceptor to add Firebase token and cache-busting to every request
+  client.interceptors.request.use((config) => {
+    const token = localStorage.getItem('firebaseToken')
+    console.log('[API] Request to:', config.url)
+    console.log('[API] Token from localStorage:', token ? `${token.substring(0, 50)}...` : 'NOT FOUND')
     
-    // If 401, try to refresh token and retry
-    if (error.response?.status === 401) {
-      console.warn('[API] Got 401, attempting to refresh token...')
-      try {
-        const { useAuthStore } = await import('../store/authStore')
-        const refreshToken = useAuthStore.getState().refreshToken
-        const newToken = await refreshToken()
-        
-        if (newToken) {
-          console.log('[API] Token refreshed, retrying request...')
-          error.config.headers.Authorization = `Bearer ${newToken}`
-          return apiClient(error.config)
-        }
-      } catch (refreshError) {
-        console.error('[API] Token refresh failed:', refreshError)
-      }
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+      console.log('[API] Authorization header set:', config.headers.Authorization ? 'YES' : 'NO')
+    } else {
+      console.error('[API] ERROR: No Firebase token in localStorage!')
     }
     
+    // Add cache-busting query parameter for GET requests
+    if (config.method === 'get') {
+      config.params = config.params || {}
+      config.params._t = Date.now() // Timestamp to bust cache
+      console.log('[API] Added cache-busting timestamp:', config.params._t)
+    }
+    
+    return config
+  }, (error) => {
+    console.error('[API] Request interceptor error:', error)
     return Promise.reject(error)
-  }
-)
+  })
+
+  // Response interceptor for error handling and token refresh
+  client.interceptors.response.use(
+    (response) => {
+      console.log('[API] Response:', response.status, response.statusText)
+      return response
+    },
+    async (error) => {
+      console.error('[API] Error Response:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      })
+      
+      // If 401, try to refresh token and retry
+      if (error.response?.status === 401) {
+        console.warn('[API] Got 401, attempting to refresh token...')
+        try {
+          const { useAuthStore } = await import('../store/authStore')
+          const refreshToken = useAuthStore.getState().refreshToken
+          const newToken = await refreshToken()
+          
+          if (newToken) {
+            console.log('[API] Token refreshed, retrying request...')
+            error.config.headers.Authorization = `Bearer ${newToken}`
+            return client(error.config)
+          }
+        } catch (refreshError) {
+          console.error('[API] Token refresh failed:', refreshError)
+        }
+      }
+      
+      return Promise.reject(error)
+    }
+  )
+}
+
+setupInterceptors(apiClient)
+setupInterceptors(analysisClient)
 
 export const api = {
   // Auth
@@ -162,14 +180,14 @@ export const api = {
 
   // Analysis
   generateAnalysis: (kundliId: string, analysisType?: string) =>
-    apiClient.post('/analysis/generate', {
+    analysisClient.post('/analysis/generate', {
       kundli_id: kundliId,
       analysis_type: analysisType || 'comprehensive',
     }),
   downloadAnalysis: (kundliId: string) =>
     apiClient.get(`/analysis/download/${kundliId}`, { responseType: 'arraybuffer' }),
   analyzeKundli: (kundliId: string) =>
-    apiClient.post('/analysis/generate', {
+    analysisClient.post('/analysis/generate', {
       kundli_id: kundliId,
       analysis_type: 'comprehensive',
     }),

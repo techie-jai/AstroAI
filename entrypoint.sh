@@ -36,11 +36,42 @@ sleep 5
 
 echo ""
 echo "Starting Frontend..."
-echo "Command: python -m http.server 3000 (serving pre-built dist)"
+echo "Command: python spa_server.py 3000 /app/frontend/dist"
 echo ""
 
-cd /app/frontend/dist
-python -m http.server 3000 &
+# Create SPA server script for frontend
+cat > /app/spa_server_frontend.py << 'EOFILE'
+import http.server
+import socketserver
+import os
+import sys
+from pathlib import Path
+
+class SPAHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        path = Path(self.path.lstrip('/'))
+        full_path = Path('/app/frontend/dist') / path
+        
+        # If file exists, serve it
+        if full_path.is_file():
+            return super().do_GET()
+        
+        # Otherwise serve index.html for SPA routing
+        self.path = '/index.html'
+        return super().do_GET()
+    
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        super().end_headers()
+
+os.chdir('/app/frontend/dist')
+handler = SPAHandler
+httpd = socketserver.TCPServer(("", 3000), handler)
+print("Frontend SPA server running on port 3000")
+httpd.serve_forever()
+EOFILE
+
+python /app/spa_server_frontend.py &
 FRONTEND_PID=$!
 
 echo "Waiting 2 seconds for frontend to start..."
@@ -48,11 +79,42 @@ sleep 2
 
 echo ""
 echo "Starting Admin Panel..."
-echo "Command: python -m http.server 3001 (serving pre-built dist)"
+echo "Command: python spa_server.py 3001 /app/admin-panel/dist"
 echo ""
 
-cd /app/admin-panel/dist
-python -m http.server 3001 &
+# Create SPA server script for admin panel
+cat > /app/spa_server_admin.py << 'EOFILE'
+import http.server
+import socketserver
+import os
+import sys
+from pathlib import Path
+
+class SPAHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        path = Path(self.path.lstrip('/'))
+        full_path = Path('/app/admin-panel/dist') / path
+        
+        # If file exists, serve it
+        if full_path.is_file():
+            return super().do_GET()
+        
+        # Otherwise serve index.html for SPA routing
+        self.path = '/index.html'
+        return super().do_GET()
+    
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        super().end_headers()
+
+os.chdir('/app/admin-panel/dist')
+handler = SPAHandler
+httpd = socketserver.TCPServer(("", 3001), handler)
+print("Admin Panel SPA server running on port 3001")
+httpd.serve_forever()
+EOFILE
+
+python /app/spa_server_admin.py &
 ADMIN_PID=$!
 
 echo ""
