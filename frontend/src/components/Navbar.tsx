@@ -10,7 +10,7 @@ export default function Navbar() {
       <div className="flex-1 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center space-x-2">
           <div className="text-2xl">✨</div>
-          <span className="font-bold text-xl">AstroAI</span>
+          <span className="font-bold text-xl">KendraaAI</span>
         </Link>
 
         <div className="flex items-center space-x-4">

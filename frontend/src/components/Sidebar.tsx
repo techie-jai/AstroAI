@@ -46,7 +46,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-indigo-700">
-          {isOpen && <span className="font-bold text-xl">AstroAI</span>}
+          {isOpen && <span className="font-bold text-xl">KendraaAI</span>}
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="p-1 hover:bg-indigo-800 rounded-lg transition"
