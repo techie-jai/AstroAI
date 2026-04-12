@@ -87,69 +87,128 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 
 ## System Architecture
 
-### Complete Platform Architecture
+### Complete Platform Architecture (Updated April 2026)
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         AstroAI Platform (v2.0)                          │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │                    Client Layer                                  │    │
-│  ├─────────────────────────────────────────────────────────────────┤    │
-│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐  │    │
-│  │  │  New Simple UI   │  │   Advanced UI    │  │  Web Platform│  │    │
-│  │  │   (PyQt6)        │  │   (PyQt6 Tabs)   │  │  (React)     │  │    │
-│  │  └────────┬─────────┘  └────────┬─────────┘  └──────┬───────┘  │    │
-│  │           │                      │                   │          │    │
-│  └───────────┼──────────────────────┼───────────────────┼──────────┘    │
-│              │                      │                   │               │
-│  ┌───────────┼──────────────────────┼───────────────────┼──────────┐    │
-│  │           │                      │                   │          │    │
-│  │  ┌────────▼──────────────────────▼───────────────────▼────────┐ │    │
-│  │  │         AstroChartAPI (Local) + FastAPI Backend (Cloud)    │ │    │
-│  │  │         - Kundli Generation                                │ │    │
-│  │  │         - Chart Generation (D1-D60)                        │ │    │
-│  │  │         - PDF Analysis Generation                          │ │    │
-│  │  │         - Firebase Integration                             │ │    │
-│  │  └────────┬──────────────────────────────────────────────────┘ │    │
-│  │           │                                                    │    │
-│  │  ┌────────▼──────────────────────────────────────────────────┐ │    │
-│  │  │              Jyotishganit Core Library                     │ │    │
-│  │  │         (Vedic Astrology Calculations)                    │ │    │
-│  │  └────────┬──────────────────────────────────────────────────┘ │    │
-│  │           │                                                    │    │
-│  │  ┌────────┴──────────────────────────────────────────────────┐ │    │
-│  │  │    ┌──────────┐  ┌──────────┐  ┌──────────┐              │ │    │
-│  │  │    │ Charts   │  │Panchanga │  │ Doshas   │              │ │    │
-│  │  │    │Calc.     │  │& Dasha   │  │& Yogas   │              │ │    │
-│  │  │    └──────────┘  └──────────┘  └──────────┘              │ │    │
-│  │  └────────────────────────────────────────────────────────────┘ │    │
-│  │                                                                  │    │
-│  └──────────────────────────────────────────────────────────────────┘    │
-│                                                                            │
-│  ┌──────────────────────────────────────────────────────────────────┐    │
-│  │                   Storage & Services Layer                        │    │
-│  ├──────────────────────────────────────────────────────────────────┤    │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │    │
-│  │  │   Firebase   │  │   Firestore  │  │  Firebase Storage    │   │    │
-│  │  │   Auth       │  │  (User Data) │  │  (PDF Reports)       │   │    │
-│  │  └──────────────┘  └──────────────┘  └──────────────────────┘   │    │
-│  │  ┌──────────────────────────────────────────────────────────┐   │    │
-│  │  │      Swiss Ephemeris Data (Astronomical Calculations)    │   │    │
-│  │  └──────────────────────────────────────────────────────────┘   │    │
-│  └──────────────────────────────────────────────────────────────────┘    │
-│                                                                            │
-│  ┌──────────────────────────────────────────────────────────────────┐    │
-│  │                  Deployment & Infrastructure                      │    │
-│  ├──────────────────────────────────────────────────────────────────┤    │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     AstroAI Platform (v2.1 - April 2026)                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                         CLIENT LAYER                                 │   │
+│  ├──────────────────────────────────────────────────────────────────────┤   │
+│  │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │   │
+│  │  │  New Simple UI   │  │   Advanced UI    │  │  Web Platform    │  │   │
+│  │  │   (PyQt6)        │  │   (PyQt6 Tabs)   │  │  (React + TS)    │  │   │
+│  │  │  - Local Storage │  │  - Multi-tab     │  │  - Dashboard     │  │   │
+│  │  │  - Offline Mode  │  │  - PDF Export    │  │  - Generator     │  │   │
+│  │  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘  │   │
+│  │           │                      │                     │            │   │
+│  └───────────┼──────────────────────┼─────────────────────┼────────────┘   │
+│              │                      │                     │                 │
+│  ┌───────────┼──────────────────────┼─────────────────────┼────────────┐   │
+│  │           │                      │                     │            │   │
+│  │  ┌────────▼──────────────────────▼─────────────────────▼──────────┐ │   │
+│  │  │                    API & BACKEND LAYER                         │ │   │
+│  │  │  ┌──────────────────────────────────────────────────────────┐ │ │   │
+│  │  │  │ FastAPI Backend (Port 8000)                             │ │ │   │
+│  │  │  │ - 20+ REST Endpoints                                    │ │ │   │
+│  │  │  │ - Firebase Auth Middleware                              │ │ │   │
+│  │  │  │ - UID-based Data Isolation (Security Fix)               │ │ │   │
+│  │  │  │ - Fresh API Instances (State Isolation Fix)             │ │ │   │
+│  │  │  │ - Analysis File Checking (has_analysis Fix)             │ │ │   │
+│  │  │  └──────────────────────────────────────────────────────────┘ │ │   │
+│  │  │                                                                │ │   │
+│  │  │  ┌──────────────────────────────────────────────────────────┐ │ │   │
+│  │  │  │ AstrologyService                                        │ │ │   │
+│  │  │  │ - Fresh JyotishganitChartAPI per request                │ │ │   │
+│  │  │  │ - Prevents singleton state issues                       │ │ │   │
+│  │  │  │ - Kundli & Chart Generation                             │ │ │   │
+│  │  │  └──────────────────────────────────────────────────────────┘ │ │   │
+│  │  │                                                                │ │   │
+│  │  │  ┌──────────────────────────────────────────────────────────┐ │ │   │
+│  │  │  │ FileManager                                              │ │ │   │
+│  │  │  │ - Local file system storage (users/ directory)           │ │ │   │
+│  │  │  │ - kundli_index.json with UID tracking                    │ │ │   │
+│  │  │  │ - has_analysis() method for analysis detection           │ │ │   │
+│  │  │  │ - Organized folder structure per user                    │ │ │   │
+│  │  │  └──────────────────────────────────────────────────────────┘ │ │   │
+│  │  └────────┬──────────────────────────────────────────────────────┘ │   │
+│  │           │                                                        │   │
+│  │  ┌────────▼──────────────────────────────────────────────────────┐ │   │
+│  │  │           CORE CALCULATION LAYER                              │ │   │
+│  │  │  ┌──────────────────────────────────────────────────────────┐ │ │   │
+│  │  │  │ Jyotishganit Core Library (Vedic Astrology Engine)       │ │ │   │
+│  │  │  │ - 20 Divisional Charts (D1-D60)                          │ │ │   │
+│  │  │  │ - 9 Planets: Sun, Moon, Mars, Mercury, Jupiter, Venus,   │ │ │   │
+│  │  │  │   Saturn, Rahu, Ketu                                     │ │ │   │
+│  │  │  │ - 1000+ Astrological Data Points per Kundli              │ │ │   │
+│  │  │  └──────────────────────────────────────────────────────────┘ │ │   │
+│  │  │                                                                │ │   │
+│  │  │  ┌─────────────┬──────────────┬──────────────┬──────────────┐ │ │   │
+│  │  │  │ Charts      │ Panchanga    │ Doshas       │ Yogas        │ │ │   │
+│  │  │  │ Calc.       │ & Dasha      │ & Strength   │ (284+)       │ │ │   │
+│  │  │  │ (D1-D60)    │ Systems      │ Analysis     │ Recognition  │ │ │   │
+│  │  │  └─────────────┴──────────────┴──────────────┴──────────────┘ │ │   │
+│  │  │                                                                │ │   │
+│  │  │  ┌──────────────────────────────────────────────────────────┐ │ │   │
+│  │  │  │ Swiss Ephemeris Data (NASA JPL DE421)                    │ │ │   │
+│  │  │  │ - Research-grade accuracy (±0.001 arc-seconds)           │ │ │   │
+│  │  │  │ - Time range: 3000 BCE to 3000 CE                        │ │ │   │
+│  │  │  └──────────────────────────────────────────────────────────┘ │ │   │
+│  │  └────────┬──────────────────────────────────────────────────────┘ │   │
+│  │           │                                                        │   │
+│  └───────────┼────────────────────────────────────────────────────────┘   │
+│              │                                                             │
+│  ┌───────────▼──────────────────────────────────────────────────────┐    │
+│  │              STORAGE & DATA LAYER                                │    │
+│  ├───────────────────────────────────────────────────────────────────┤    │
+│  │                                                                   │    │
+│  │  ┌─────────────────────────────────────────────────────────────┐ │    │
+│  │  │ LOCAL FILE SYSTEM (Primary Data Storage)                    │ │    │
+│  │  │ users/                                                       │ │    │
+│  │  │ ├── kundli_index.json (with UID & has_analysis tracking)   │ │    │
+│  │  │ └── {timestamp}-{name}/                                     │ │    │
+│  │  │     ├── user_info.json                                      │ │    │
+│  │  │     ├── {name}_Kundli.json (1000+ data points)              │ │    │
+│  │  │     ├── {name}_Kundli.txt                                   │ │    │
+│  │  │     ├── {name}_AI_Analysis.txt (if generated)               │ │    │
+│  │  │     ├── {name}_AI_Analysis.pdf (if generated)               │ │    │
+│  │  │     └── charts/                                             │ │    │
+│  │  │         ├── json/ (D1-D60 JSON format)                      │ │    │
+│  │  │         ├── text/ (D1-D60 Text format)                      │ │    │
+│  │  │         └── images/ (D1-D60 PNG format)                     │ │    │
+│  │  └─────────────────────────────────────────────────────────────┘ │    │
+│  │                                                                   │    │
+│  │  ┌─────────────────────────────────────────────────────────────┐ │    │
+│  │  │ FIREBASE (Authentication & Metadata)                        │ │    │
+│  │  │ - Firebase Auth (Google Sign-In, Email/Password)            │ │    │
+│  │  │ - Firestore (User profiles, calculation metadata)           │ │    │
+│  │  │ - Firebase Storage (Backup PDF reports)                     │ │    │
+│  │  └─────────────────────────────────────────────────────────────┘ │    │
+│  │                                                                   │    │
+│  │  ┌─────────────────────────────────────────────────────────────┐ │    │
+│  │  │ FRONTEND CACHING (Browser)                                  │ │    │
+│  │  │ - localStorage: Kundli data per kundli_id                   │ │    │
+│  │  │ - Dual-fetch strategy (API → localStorage fallback)         │ │    │
+│  │  │ - CacheManager for data persistence                         │ │    │
+│  │  └─────────────────────────────────────────────────────────────┘ │    │
+│  │                                                                   │    │
+│  └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────┐    │
+│  │           DEPLOYMENT & INFRASTRUCTURE LAYER                       │    │
+│  ├───────────────────────────────────────────────────────────────────┤    │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │    │
 │  │  │   Docker     │  │  Cloudflare  │  │  HTTPS/SSL           │   │    │
 │  │  │  Containers  │  │   Tunnel     │  │  (Zero Trust)        │   │    │
+│  │  │  - Backend   │  │  - Secure    │  │  - Encryption        │   │    │
+│  │  │  - Frontend  │  │    Remote    │  │  - DDoS Protection   │   │    │
+│  │  │  - Compose   │  │    Access    │  │  - WAF               │   │    │
 │  │  └──────────────┘  └──────────────┘  └──────────────────────┘   │    │
-│  └──────────────────────────────────────────────────────────────────┘    │
-│                                                                            │
-└──────────────────────────────────────────────────────────────────────────┘
+│  └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Architecture Layers
@@ -802,7 +861,100 @@ The generated data feeds into AI models for:
 
 ## Recent Updates (April 2026)
 
-### Dashboard Redesign
+### Critical Fixes & Improvements (Past 7 Days)
+
+#### 1. **Data Isolation & Security Fix** ✅
+**Problem:** Users logged in with different emails could see all kundlis generated by any user.
+
+**Solution Implemented:**
+- Added `uid` parameter to `FileManager.add_to_index()` to track user's Firebase UID
+- Updated 4 endpoints with UID filtering:
+  - `/api/calculations/history` - Filters by `metadata.uid == current_user.uid`
+  - `/api/user/calculations` - Filters by `metadata.uid == current_user.uid`
+  - `/api/kundlis/list` - Filters by `metadata.uid == current_user.uid`
+  - `/api/kundli/{kundli_id}` - Added 403 FORBIDDEN check for unauthorized access
+- Each user now only sees their own kundlis
+- Direct URL access to other users' kundlis is blocked
+
+**Files Modified:** `backend/file_manager.py`, `backend/main.py`
+
+---
+
+#### 2. **Singleton State Isolation Fix** ✅
+**Problem:** Duplicate kundlis were generated with identical data. The `AstrologyService` was using a singleton pattern, causing the underlying `JyotishganitChartAPI` library to maintain state between requests.
+
+**Solution Implemented:**
+- Changed `AstrologyService` to create **fresh API instances for each request**
+- Added `_get_fresh_api()` method that instantiates new `JyotishganitChartAPI()` per call
+- Updated all 6 methods to use fresh instances:
+  - `generate_kundli()`
+  - `generate_charts()`
+  - `get_planet_position()`
+  - `get_planets_in_house()`
+  - `format_kundli_text()`
+  - `format_chart_text()`
+- Prevents state leakage between concurrent requests
+- Each kundli now generates unique, correct data
+
+**Files Modified:** `backend/astrology_service.py`
+
+---
+
+#### 3. **Analysis Detection Fix** ✅
+**Problem:** "With Analysis" card on dashboard showed 0 even though 1 analysis existed. The `has_analysis` field was hardcoded to `False`.
+
+**Solution Implemented:**
+- Added `has_analysis()` method to `FileManager`:
+  ```python
+  def has_analysis(self, folder_path: str, user_name: str) -> bool:
+      """Check if analysis exists for a kundli"""
+      analysis_file = os.path.join(folder_path, "analysis", f"{user_name}_AI_Analysis.txt")
+      return os.path.exists(analysis_file)
+  ```
+- Updated 2 endpoints to check for actual analysis files:
+  - `/api/calculations/history` (lines 995-998)
+  - `/api/user/calculations` (lines 1084-1087)
+- Dashboard now displays accurate analysis count
+
+**Files Modified:** `backend/file_manager.py`, `backend/main.py`
+
+---
+
+#### 4. **Data Storage Migration** ✅
+**Problem:** Dashboard and Kundli pages weren't showing generated data. Frontend was trying to fetch from Firebase which wasn't being used for data storage.
+
+**Solution Implemented:**
+- **Backend:** Replaced Firebase calls with local file system queries
+  - `/api/calculations/history` - Reads from `kundli_index.json`
+  - `/api/user/calculations` - Reads from `kundli_index.json`
+  - `/api/kundlis/list` - Reads from local index and loads kundli files
+  - `/api/dashboard/insights` - Wrapped Firebase call in try-catch
+
+- **Frontend:** Implemented dual-fetch strategy with localStorage fallback
+  - `KundliCompletionPage.tsx` - Stores kundli data in localStorage after generation
+  - `ResultsPage.tsx` - Stores kundli data in localStorage after fetching
+  - `DashboardPage.tsx` - Tries backend API first, falls back to localStorage
+  - `api.ts` - Changed error logging for missing token from error to warning
+
+**Files Modified:** `backend/main.py`, `frontend/src/services/api.ts`, `frontend/src/pages/KundliCompletionPage.tsx`, `frontend/src/pages/ResultsPage.tsx`, `frontend/src/pages/DashboardPage.tsx`
+
+---
+
+#### 5. **View Results Button Implementation** ✅
+**Problem:** Users couldn't easily navigate to view results for generated kundlis.
+
+**Solution Implemented:**
+- Added "View Results" button to `KundliCompletionPage`
+- Button navigates to `/results/:kundliId` with proper session management
+- Supports multiple kundlis in one session (each has unique kundli_id)
+- Button order: Download → View Results → Chat with AI
+- Emerald-to-teal gradient styling with Eye icon
+
+**Files Modified:** `frontend/src/pages/KundliCompletionPage.tsx`
+
+---
+
+#### 6. **Dashboard Redesign**
 
 **Removed Features:**
 - Recent Kundlis tab (replaced with inline generator)
@@ -827,6 +979,18 @@ The generated data feeds into AI models for:
 - Better error handling for city search failures
 - Responsive form layout with proper spacing
 - Loading states for all async operations
+
+---
+
+### Summary of Changes
+
+| Issue | Root Cause | Fix | Impact |
+|-------|-----------|-----|--------|
+| Data Isolation | No UID tracking | Added UID filtering to 4 endpoints | Users can only see their own data |
+| Duplicate Kundlis | Singleton state | Fresh API instances per request | Each kundli generates unique data |
+| Analysis Count Wrong | Hardcoded has_analysis | Check actual analysis files | Dashboard shows correct count |
+| Missing Data Display | Firebase vs Local FS | Dual-fetch with localStorage | Data displays correctly |
+| No Results Navigation | Missing button | Added View Results button | Easy access to results |
 
 ---
 
