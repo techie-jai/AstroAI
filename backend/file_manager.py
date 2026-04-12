@@ -222,6 +222,20 @@ class FileManager:
         
         return file_path
     
+    def has_analysis(self, folder_path: str, user_name: str) -> bool:
+        """
+        Check if analysis exists for a kundli
+        
+        Args:
+            folder_path: Path to user's folder
+            user_name: User's name
+            
+        Returns:
+            True if analysis file exists, False otherwise
+        """
+        analysis_file = os.path.join(folder_path, "analysis", f"{user_name}_AI_Analysis.txt")
+        return os.path.exists(analysis_file)
+    
     def get_kundli_json_path(self, folder_path: str, user_name: str) -> Optional[str]:
         """
         Get path to kundli JSON file

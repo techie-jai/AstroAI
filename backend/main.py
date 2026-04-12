@@ -992,12 +992,17 @@ async def get_calculation_history(
             birth_data = metadata.get('birth_data', {})
             # Only include if birth_data has required fields
             if birth_data and birth_data.get('name'):
+                # Check if analysis exists for this kundli
+                file_path = metadata.get('file_path', '')
+                user_folder = file_path.rsplit('\\', 2)[0] if '\\' in file_path else file_path.rsplit('/', 2)[0]
+                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''))
+                
                 calculations.append({
                     'calculation_id': kundli_id,
                     'kundli_id': kundli_id,
                     'birth_data': birth_data,
                     'generation_date': metadata.get('generated_at'),
-                    'has_analysis': False  # TODO: Check if analysis file exists
+                    'has_analysis': has_analysis
                 })
         
         # Sort by generation date (newest first)
@@ -1076,12 +1081,17 @@ async def get_user_calculations(
             birth_data = metadata.get('birth_data', {})
             # Only include if birth_data has required fields
             if birth_data and birth_data.get('name'):
+                # Check if analysis exists for this kundli
+                file_path = metadata.get('file_path', '')
+                user_folder = file_path.rsplit('\\', 2)[0] if '\\' in file_path else file_path.rsplit('/', 2)[0]
+                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''))
+                
                 calculations.append({
                     'calculation_id': kundli_id,
                     'kundli_id': kundli_id,
                     'birth_data': birth_data,
                     'generation_date': metadata.get('generated_at'),
-                    'has_analysis': False  # TODO: Check if analysis file exists
+                    'has_analysis': has_analysis
                 })
         
         # Sort by generation date (newest first)
