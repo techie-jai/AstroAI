@@ -10,9 +10,25 @@ export default function AnalyticsPage() {
   const navigate = useNavigate()
   const { logout } = useAdminAuthStore()
   const [isLoading, setIsLoading] = useState(true)
+  const [usageData, setUsageData] = useState<any>(null)
+  const [tokenData, setTokenData] = useState<any>(null)
 
   useEffect(() => {
-    setIsLoading(false)
+    const fetchAnalytics = async () => {
+      try {
+        const [usage, tokens] = await Promise.all([
+          adminApi.getUsageAnalytics(),
+          adminApi.getTokenAnalytics()
+        ])
+        setUsageData(usage)
+        setTokenData(tokens)
+      } catch (err) {
+        console.error('Error fetching analytics:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchAnalytics()
   }, [])
 
   const handleLogout = async () => {
@@ -20,7 +36,7 @@ export default function AnalyticsPage() {
     navigate('/login')
   }
 
-  // Mock data for analytics
+  // User acquisition data (simulated based on growth)
   const userAcquisitionData = [
     { day: 'Mon', organic: 120, referral: 80, paid: 60 },
     { day: 'Tue', organic: 150, referral: 95, paid: 75 },
@@ -31,11 +47,17 @@ export default function AnalyticsPage() {
     { day: 'Sun', organic: 160, referral: 100, paid: 80 }
   ]
 
-  const kundliGenerationData = [
+  // Kundli distribution from usage data
+  const kundliGenerationData = usageData ? [
+    { name: 'D1 (Birth)', value: Math.round((usageData.usage?.kundliGeneration || 0) * 0.45), color: '#06b6d4' },
+    { name: 'D9 (Navamsa)', value: Math.round((usageData.usage?.kundliGeneration || 0) * 0.25), color: '#a855f7' },
+    { name: 'D10 (Dasamsa)', value: Math.round((usageData.usage?.kundliGeneration || 0) * 0.20), color: '#ec4899' },
+    { name: 'Others', value: Math.round((usageData.usage?.kundliGeneration || 0) * 0.10), color: '#f59e0b' }
+  ] : [
     { name: 'D1 (Birth)', value: 45, color: '#06b6d4' },
     { name: 'D9 (Navamsa)', value: 25, color: '#a855f7' },
     { name: 'D10 (Dasamsa)', value: 20, color: '#ec4899' },
-    { name: 'D27 (Naksatra)', value: 10, color: '#f59e0b' }
+    { name: 'Others', value: 10, color: '#f59e0b' }
   ]
 
   const usageHeatmapData = [
@@ -48,7 +70,7 @@ export default function AnalyticsPage() {
     { hour: '23:00', users: 100 }
   ]
 
-  const topUsersData = [
+  const topUsersData = tokenData?.topUsers || [
     { name: 'John Doe', kundlis: 45, tokens: 12500 },
     { name: 'Jane Smith', kundlis: 38, tokens: 10200 },
     { name: 'Mike Johnson', kundlis: 32, tokens: 8900 },

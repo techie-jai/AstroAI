@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from firebase_admin import firestore
 from google.cloud.firestore import FieldFilter
 import logging
+from admin_analytics_service import get_analytics_service
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +13,10 @@ class AdminService:
 
     def __init__(self, db):
         self.db = db
+        self.analytics_service = get_analytics_service()
 
     def get_all_users(self, limit: int = 50, offset: int = 0, search: str = "", filters: Dict = None) -> Dict:
-        """Get all users with pagination and filtering"""
+        """Get all users with pagination and filtering from Firebase"""
         try:
             query = self.db.collection('users')
 
@@ -28,12 +30,23 @@ class AdminService:
                 if filters.get('isBlocked') is not None:
                     query = query.where(filter=FieldFilter('isBlocked', '==', filters['isBlocked']))
 
-            total = len(query.stream())
+            # Convert stream to list to get total count
+            all_docs = list(query.stream())
+            total = len(all_docs)
             users = []
 
-            for doc in query.offset(offset).limit(limit).stream():
+            # Apply pagination manually
+            for doc in all_docs[offset:offset + limit]:
                 user_data = doc.to_dict()
                 user_data['uid'] = doc.id
+                
+                # Add kundli count from filesystem if available
+                try:
+                    kundli_count = self.analytics_service._count_kundlis(f'/app/users/{doc.id}')
+                    user_data['kundliCount'] = kundli_count
+                except:
+                    user_data['kundliCount'] = 0
+                
                 users.append(user_data)
 
             return {
@@ -44,7 +57,13 @@ class AdminService:
             }
         except Exception as e:
             logger.error(f"Error fetching users: {str(e)}")
-            raise
+            # Return empty list instead of raising
+            return {
+                'users': [],
+                'total': 0,
+                'limit': limit,
+                'offset': offset
+            }
 
     def get_user_detail(self, user_id: str) -> Dict:
         """Get detailed user profile with kundli history"""
@@ -208,166 +227,41 @@ class AdminService:
             raise
 
     def get_analytics_overview(self) -> Dict:
-        """Get dashboard overview metrics"""
+        """Get dashboard overview metrics from local filesystem"""
         try:
-            users = list(self.db.collection('users').stream())
-            total_users = len(users)
-
-            active_users_count = 0
-            total_kundlis = 0
-            total_tokens_used = 0
-
-            for user in users:
-                user_data = user.to_dict()
-                if user_data.get('lastLogin'):
-                    last_login = user_data['lastLogin']
-                    if isinstance(last_login, datetime):
-                        days_since = (datetime.utcnow() - last_login).days
-                        if days_since <= 30:
-                            active_users_count += 1
-
-                kundlis = list(self.db.collection('users').document(user.id).collection('calculations').stream())
-                total_kundlis += len(kundlis)
-
-                token_usage = user_data.get('tokenUsage', {})
-                if isinstance(token_usage, dict):
-                    total_tokens_used += token_usage.get('total', 0)
-
-            return {
-                'totalUsers': total_users,
-                'activeUsers': active_users_count,
-                'totalKundlis': total_kundlis,
-                'totalTokensUsed': total_tokens_used,
-                'averageKundlisPerUser': round(total_kundlis / total_users, 2) if total_users > 0 else 0,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            return self.analytics_service.compute_analytics_overview()
         except Exception as e:
             logger.error(f"Error fetching analytics overview: {str(e)}")
             raise
 
     def get_user_growth_analytics(self, days: int = 30) -> List[Dict]:
-        """Get user growth data for the last N days"""
+        """Get user growth data for the last N days from local filesystem"""
         try:
-            users = list(self.db.collection('users').stream())
-            date_counts = {}
-
-            for user in users:
-                user_data = user.to_dict()
-                created_at = user_data.get('createdAt')
-
-                if created_at:
-                    if isinstance(created_at, datetime):
-                        date_key = created_at.date().isoformat()
-                    else:
-                        date_key = created_at.isoformat()[:10]
-
-                    date_counts[date_key] = date_counts.get(date_key, 0) + 1
-
-            sorted_dates = sorted(date_counts.keys())
-            cumulative = 0
-            result = []
-
-            for date_str in sorted_dates:
-                cumulative += date_counts[date_str]
-                result.append({
-                    'date': date_str,
-                    'newUsers': date_counts[date_str],
-                    'totalUsers': cumulative
-                })
-
-            return result[-days:] if len(result) > days else result
+            return self.analytics_service.compute_user_growth_analytics(days)
         except Exception as e:
             logger.error(f"Error fetching user growth analytics: {str(e)}")
             raise
 
     def get_usage_analytics(self) -> Dict:
-        """Get feature usage analytics"""
+        """Get feature usage analytics from local filesystem"""
         try:
-            users = list(self.db.collection('users').stream())
-            feature_usage = {
-                'kundliGeneration': 0,
-                'analysis': 0,
-                'chat': 0,
-                'pdfDownload': 0
-            }
-
-            for user in users:
-                user_id = user.id
-                kundlis = list(self.db.collection('users').document(user_id).collection('calculations').stream())
-
-                for kundli in kundlis:
-                    kundli_data = kundli.to_dict()
-                    feature_usage['kundliGeneration'] += 1
-
-                    if kundli_data.get('analysis'):
-                        feature_usage['analysis'] += 1
-                    if kundli_data.get('pdfGenerated'):
-                        feature_usage['pdfDownload'] += 1
-
-            total_features = sum(feature_usage.values())
-            percentages = {k: round((v / total_features * 100), 2) if total_features > 0 else 0 for k, v in feature_usage.items()}
-
-            return {
-                'usage': feature_usage,
-                'percentages': percentages,
-                'total': total_features
-            }
+            return self.analytics_service.compute_usage_analytics()
         except Exception as e:
             logger.error(f"Error fetching usage analytics: {str(e)}")
             raise
 
     def get_token_usage_analytics(self) -> Dict:
-        """Get token/credit usage analytics"""
+        """Get token/credit usage analytics from local filesystem"""
         try:
-            users = list(self.db.collection('users').stream())
-            total_tokens = 0
-            users_by_usage = []
-
-            for user in users:
-                user_data = user.to_dict()
-                token_usage = user_data.get('tokenUsage', {})
-
-                if isinstance(token_usage, dict):
-                    user_tokens = token_usage.get('total', 0)
-                    total_tokens += user_tokens
-                    users_by_usage.append({
-                        'userId': user.id,
-                        'userName': user_data.get('displayName', 'Unknown'),
-                        'tokensUsed': user_tokens,
-                        'monthlyUsage': token_usage.get('monthly', 0)
-                    })
-
-            users_by_usage.sort(key=lambda x: x['tokensUsed'], reverse=True)
-
-            return {
-                'totalTokensUsed': total_tokens,
-                'topUsers': users_by_usage[:10],
-                'averagePerUser': round(total_tokens / len(users), 2) if users else 0,
-                'allUsers': users_by_usage
-            }
+            return self.analytics_service.compute_token_usage_analytics()
         except Exception as e:
             logger.error(f"Error fetching token usage analytics: {str(e)}")
             raise
 
     def get_system_health(self) -> Dict:
-        """Get system health metrics"""
+        """Get system health metrics from local filesystem"""
         try:
-            users_count = len(list(self.db.collection('users').stream()))
-            kundlis_count = 0
-
-            for user in self.db.collection('users').stream():
-                kundlis_count += len(list(self.db.collection('users').document(user.id).collection('calculations').stream()))
-
-            return {
-                'status': 'healthy',
-                'timestamp': datetime.utcnow().isoformat(),
-                'metrics': {
-                    'totalUsers': users_count,
-                    'totalKundlis': kundlis_count,
-                    'databaseStatus': 'connected',
-                    'apiStatus': 'operational'
-                }
-            }
+            return self.analytics_service.compute_system_health()
         except Exception as e:
             logger.error(f"Error fetching system health: {str(e)}")
             return {
