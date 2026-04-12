@@ -18,6 +18,7 @@ interface Calculation {
   calculation_id: string
   kundli_id: string
   birth_data?: BirthData
+  generation_date?: string
   result_summary?: {
     kundli_id: string
     generated_at: string
@@ -108,8 +109,8 @@ export default function AnalysisPage() {
           <div className="space-y-4">
             {calculations.map((calc) => {
               const birthData = calc.birth_data
-              const kundliId = calc.result_summary?.kundli_id || calc.kundli_id
-              const generatedAt = calc.result_summary?.generated_at || calc.created_at
+              const kundliId = calc.kundli_id
+              const generatedAt = calc.generation_date
               const name = birthData?.name || 'Kundli'
               const birthDate = birthData ? `${birthData.year}-${String(birthData.month).padStart(2, '0')}-${String(birthData.day).padStart(2, '0')}` : 'N/A'
               const place = birthData?.place_name || 'N/A'

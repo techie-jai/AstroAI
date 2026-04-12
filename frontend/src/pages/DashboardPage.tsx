@@ -54,12 +54,54 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const response = await api.getUserCalculations()
-        const calcs = response.data.calculations || []
-        setCalculations(calcs)
+        
+        // Try to fetch from backend first
+        try {
+          const response = await api.getUserCalculations()
+          const rawCalcs = response.data.calculations || []
+          // Map backend response to Calculation interface
+          const calcs: Calculation[] = rawCalcs.map((calc: any) => ({
+            calculation_id: calc.calculation_id,
+            kundli_id: calc.kundli_id,
+            name: calc.birth_data?.name || 'Unknown',
+            birth_date: calc.birth_data ? `${calc.birth_data.year}-${String(calc.birth_data.month).padStart(2, '0')}-${String(calc.birth_data.day).padStart(2, '0')}` : 'N/A',
+            generation_date: calc.generation_date,
+            has_analysis: calc.has_analysis || false
+          }))
+          setCalculations(calcs)
 
-        if (calcs.length > 0) {
-          await fetchInsights(calcs[0].kundli_id)
+          if (calcs.length > 0) {
+            await fetchInsights(calcs[0].kundli_id)
+          }
+        } catch (backendError) {
+          console.warn('[DASHBOARD] Backend fetch failed, trying localStorage:', backendError)
+          
+          // Fallback to localStorage
+          const storedKundlis = JSON.parse(localStorage.getItem('kundlis') || '{}')
+          const calcs: Calculation[] = Object.entries(storedKundlis).map(([kundliId, data]: [string, any]) => {
+            const birthData = data.birth_data || {}
+            return {
+              calculation_id: kundliId,
+              kundli_id: kundliId,
+              name: birthData.name || 'Unknown',
+              birth_date: birthData.date || 'N/A',
+              generation_date: data.generated_at,
+              has_analysis: false
+            }
+          })
+          
+          // Sort by generation date (newest first)
+          calcs.sort((a, b) => {
+            const dateA = new Date(a.generation_date || 0).getTime()
+            const dateB = new Date(b.generation_date || 0).getTime()
+            return dateB - dateA
+          })
+          
+          setCalculations(calcs)
+          
+          if (calcs.length > 0) {
+            await fetchInsights(calcs[0].kundli_id)
+          }
         }
       } catch (error) {
         console.error('Failed to fetch data:', error)

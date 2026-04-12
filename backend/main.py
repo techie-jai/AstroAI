@@ -952,16 +952,14 @@ async def get_calculation_history(
 
     """
 
-    Get user's calculation history
+    Get user's calculation history from local file index
 
     
-
     Args:
 
         limit: Maximum number of records to return
 
         
-
     Returns:
 
         List of calculations
@@ -970,9 +968,30 @@ async def get_calculation_history(
 
     try:
 
-        calculations = FirebaseService.get_user_calculations(current_user['uid'], limit)
+        print(f"[CALCULATIONS] Fetching calculation history for user: {current_user.get('uid')}")
 
+        # Read from local kundli index
+        index = file_manager._read_index()
         
+        # Convert index to calculations list
+        calculations = []
+        for kundli_id, metadata in index.items():
+            birth_data = metadata.get('birth_data', {})
+            calculations.append({
+                'calculation_id': kundli_id,
+                'kundli_id': kundli_id,
+                'birth_data': birth_data,
+                'generation_date': metadata.get('generated_at'),
+                'has_analysis': False  # TODO: Check if analysis file exists
+            })
+        
+        # Sort by generation date (newest first)
+        calculations.sort(key=lambda x: x.get('generation_date', ''), reverse=True)
+        
+        # Apply limit
+        calculations = calculations[:limit]
+        
+        print(f"[CALCULATIONS] Found {len(calculations)} calculations")
 
         return {
 
@@ -986,10 +1005,11 @@ async def get_calculation_history(
 
     except Exception as e:
 
+        print(f"[CALCULATIONS] ERROR: {type(e).__name__}: {str(e)}")
+
         raise HTTPException(
 
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-
             detail=str(e)
 
         )
@@ -1010,16 +1030,14 @@ async def get_user_calculations(
 
     """
 
-    Get user's calculation history (alias for /api/calculations/history)
+    Get user's calculation history from local file index (alias for /api/calculations/history)
 
     
-
     Args:
 
         limit: Maximum number of records to return
 
         
-
     Returns:
 
         List of calculations
@@ -1028,9 +1046,30 @@ async def get_user_calculations(
 
     try:
 
-        calculations = FirebaseService.get_user_calculations(current_user['uid'], limit)
+        print(f"[USER_CALCULATIONS] Fetching calculation history for user: {current_user.get('uid')}")
 
+        # Read from local kundli index
+        index = file_manager._read_index()
         
+        # Convert index to calculations list
+        calculations = []
+        for kundli_id, metadata in index.items():
+            birth_data = metadata.get('birth_data', {})
+            calculations.append({
+                'calculation_id': kundli_id,
+                'kundli_id': kundli_id,
+                'birth_data': birth_data,
+                'generation_date': metadata.get('generated_at'),
+                'has_analysis': False  # TODO: Check if analysis file exists
+            })
+        
+        # Sort by generation date (newest first)
+        calculations.sort(key=lambda x: x.get('generation_date', ''), reverse=True)
+        
+        # Apply limit
+        calculations = calculations[:limit]
+        
+        print(f"[USER_CALCULATIONS] Found {len(calculations)} calculations")
 
         return {
 
@@ -1043,6 +1082,8 @@ async def get_user_calculations(
     
 
     except Exception as e:
+
+        print(f"[USER_CALCULATIONS] ERROR: {type(e).__name__}: {str(e)}")
 
         raise HTTPException(
 
@@ -1068,16 +1109,14 @@ async def get_user_kundlis(
 
     """
 
-    Get all kundlis for current user (for LLM access)
+    Get all kundlis for current user from local file index (for LLM access)
 
     
-
     Args:
 
         limit: Maximum number of kundlis to return
 
         
-
     Returns:
 
         List of kundli documents with all data
@@ -1088,12 +1127,35 @@ async def get_user_kundlis(
 
         print(f"[GET_KUNDLIS] Fetching kundlis for user: {current_user.get('uid')}")
 
-        kundlis = FirebaseService.get_user_kundlis(current_user['uid'], limit)
+        # Read from local kundli index
+        index = file_manager._read_index()
+        
+        kundlis = []
+        for kundli_id, metadata in index.items():
+            birth_data = metadata.get('birth_data', {})
+            file_path = metadata.get('file_path')
+            
+            # Read kundli data from file
+            if file_path and os.path.exists(file_path):
+                kundli_data = file_manager.read_kundli_json(file_path)
+                if kundli_data:
+                    kundlis.append({
+                        'kundli_id': kundli_id,
+                        'birth_data': birth_data,
+                        'horoscope_info': kundli_data.get('horoscope_info', {}),
+                        'generated_at': metadata.get('generated_at'),
+                        'charts': kundli_data.get('charts', {})
+                    })
+        
+        # Sort by generation date (newest first)
+        kundlis.sort(key=lambda x: x.get('generated_at', ''), reverse=True)
+        
+        # Apply limit
+        kundlis = kundlis[:limit]
 
         print(f"[GET_KUNDLIS] Found {len(kundlis)} kundlis")
 
         
-
         return {
 
             "total": len(kundlis),
@@ -1967,51 +2029,32 @@ async def get_dashboard_insights(
     """
 
     try:
-
         print(f"[INSIGHTS] Fetching insights for user: {current_user.get('uid')}, email: {current_user.get('email')}")
 
+        # Try to get latest insights for this user
+        try:
+            insights = FirebaseService.get_user_insights(current_user['uid'], limit=1)
+            
+            if insights:
+                print(f"[INSIGHTS] Found {len(insights)} insights")
+                latest_insight = insights[0]
+                return {
+                    "status": "success",
+                    "insights": latest_insight,
+                    "total_insights": latest_insight.get('total_insights', 0),
+                    "health_insights": latest_insight.get('health_insights', []),
+                    "career_insights": latest_insight.get('career_insights', []),
+                    "relationship_insights": latest_insight.get('relationship_insights', []),
+                    "money_insights": latest_insight.get('money_insights', []),
+                    "all_insights": latest_insight.get('all_insights', []),
+                    "created_at": latest_insight.get('created_at')
+                }
+        except Exception as firebase_error:
+            print(f"[INSIGHTS] Firebase error: {str(firebase_error)}, returning default insights")
         
-
-        # Get latest insights for this user
-
-        insights = FirebaseService.get_user_insights(current_user['uid'], limit=1)
-
-        
-
-        if insights:
-
-            print(f"[INSIGHTS] Found {len(insights)} insights")
-
-            latest_insight = insights[0]
-
-            return {
-
-                "status": "success",
-
-                "insights": latest_insight,
-
-                "total_insights": latest_insight.get('total_insights', 0),
-
-                "health_insights": latest_insight.get('health_insights', []),
-
-                "career_insights": latest_insight.get('career_insights', []),
-
-                "relationship_insights": latest_insight.get('relationship_insights', []),
-
-                "money_insights": latest_insight.get('money_insights', []),
-
-                "all_insights": latest_insight.get('all_insights', []),
-
-                "created_at": latest_insight.get('created_at')
-
-            }
-
-        
-
         print(f"[INSIGHTS] No insights found for user {current_user.get('uid')}")
 
         return {
-
             "status": "no_insights",
 
             "message": "No insights found. Please generate an analysis first.",

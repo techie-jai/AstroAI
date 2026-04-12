@@ -18,6 +18,7 @@ interface Calculation {
   calculation_id: string
   kundli_id: string
   birth_data?: BirthData
+  generation_date?: string
   result_summary?: {
     kundli_id: string
     generated_at: string
@@ -88,13 +89,19 @@ export default function KundliPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {calculations.map((calc) => {
               const birthData = calc.birth_data
-              const kundliId = calc.result_summary?.kundli_id || calc.kundli_id
-              const generatedAt = calc.result_summary?.generated_at || calc.created_at
+              const kundliId = calc.kundli_id
+              const generatedAt = calc.generation_date
+              
+              // Extract date and time from birth_data
+              const birthDate = birthData ? `${birthData.year}-${String(birthData.month).padStart(2, '0')}-${String(birthData.day).padStart(2, '0')}` : 'N/A'
+              const birthTime = birthData ? `${String(birthData.hour).padStart(2, '0')}:${String(birthData.minute).padStart(2, '0')}` : 'N/A'
+              const birthPlace = birthData?.place_name || 'N/A'
+              const personName = birthData?.name || 'Kundli'
               
               return (
                 <div key={calc.calculation_id} className="bg-white rounded-lg shadow-lg hover:shadow-xl transition overflow-hidden">
                   <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-                    <h3 className="text-xl font-bold">{birthData?.name || 'Kundli'}</h3>
+                    <h3 className="text-xl font-bold">{personName}</h3>
                   </div>
                   
                   <div className="p-6 space-y-4">
@@ -102,9 +109,7 @@ export default function KundliPage() {
                       <Calendar size={18} className="text-indigo-600" />
                       <div>
                         <p className="text-sm text-gray-500">Birth Date</p>
-                        <p className="font-semibold">
-                          {birthData ? `${birthData.year}-${String(birthData.month).padStart(2, '0')}-${String(birthData.day).padStart(2, '0')}` : 'N/A'}
-                        </p>
+                        <p className="font-semibold">{birthDate}</p>
                       </div>
                     </div>
                     
@@ -112,9 +117,7 @@ export default function KundliPage() {
                       <Clock size={18} className="text-indigo-600" />
                       <div>
                         <p className="text-sm text-gray-500">Birth Time</p>
-                        <p className="font-semibold">
-                          {birthData ? `${String(birthData.hour).padStart(2, '0')}:${String(birthData.minute).padStart(2, '0')}` : 'N/A'}
-                        </p>
+                        <p className="font-semibold">{birthTime}</p>
                       </div>
                     </div>
                     
@@ -122,7 +125,7 @@ export default function KundliPage() {
                       <MapPin size={18} className="text-indigo-600" />
                       <div>
                         <p className="text-sm text-gray-500">Place</p>
-                        <p className="font-semibold">{birthData?.place_name || 'N/A'}</p>
+                        <p className="font-semibold">{birthPlace}</p>
                       </div>
                     </div>
 

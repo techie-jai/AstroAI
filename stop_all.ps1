@@ -97,9 +97,32 @@ try {
 }
 
 Write-Host ""
+
+# Close terminal windows for backend, frontend, and admin panel
+Write-Host "Closing terminal windows..." -ForegroundColor Yellow
+try {
+    $psProcesses = Get-Process -Name "powershell" -ErrorAction SilentlyContinue
+    if ($psProcesses) {
+        foreach ($proc in $psProcesses) {
+            $procId = $proc.Id
+            $currentProcId = $PID
+            if ($procId -ne $currentProcId) {
+                Write-Host "Closing PowerShell window (PID: $procId)" -ForegroundColor Cyan
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+                Write-Host "✓ Closed terminal window (PID: $procId)" -ForegroundColor Green
+            }
+        }
+    } else {
+        Write-Host "⚠ No PowerShell windows found to close" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "✗ Error closing terminal windows: $_" -ForegroundColor Red
+}
+
+Write-Host ""
 Write-Host "================================================================================" -ForegroundColor Cyan
 Write-Host "Shutdown Complete" -ForegroundColor Cyan
 Write-Host "================================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "All services have been terminated." -ForegroundColor Green
+Write-Host "All services have been terminated and terminal windows closed." -ForegroundColor Green
 Write-Host ""

@@ -67,7 +67,7 @@ const analysisClient = axios.create({
 
 // Setup interceptors for both clients
 const setupInterceptors = (client: typeof apiClient) => {
-  // Request interceptor to add Firebase token and cache-busting to every request
+  // Request interceptor to add auth token and cache-busting to every request
   client.interceptors.request.use((config) => {
     const token = localStorage.getItem('firebaseToken')
     console.log('[API] Request to:', config.url)
@@ -77,7 +77,7 @@ const setupInterceptors = (client: typeof apiClient) => {
       config.headers.Authorization = `Bearer ${token}`
       console.log('[API] Authorization header set:', config.headers.Authorization ? 'YES' : 'NO')
     } else {
-      console.error('[API] ERROR: No Firebase token in localStorage!')
+      console.log('[API] No token found, continuing without authorization header')
     }
     
     // Add cache-busting query parameter for GET requests
