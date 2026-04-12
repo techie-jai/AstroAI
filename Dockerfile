@@ -11,13 +11,15 @@ FROM node:18-alpine AS admin-builder
 
 WORKDIR /app/admin-panel
 COPY admin-panel/package*.json ./
-RUN npm install
+RUN npm ci
 COPY admin-panel/ .
 ENV VITE_ADMIN_API_URL=http://astroai:8000
 ENV VITE_FIREBASE_PROJECT_ID=""
 ENV VITE_FIREBASE_API_KEY=""
 ENV VITE_FIREBASE_AUTH_DOMAIN=""
 ENV VITE_FIREBASE_STORAGE_BUCKET=""
+ENV VITE_FIREBASE_MESSAGING_SENDER_ID=""
+ENV VITE_FIREBASE_APP_ID=""
 RUN npm run build
 
 FROM python:3.11-slim

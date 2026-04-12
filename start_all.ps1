@@ -40,7 +40,7 @@ Write-Host "Starting Frontend..." -ForegroundColor Green
 $ViteBin = Join-Path $FrontendDir "node_modules\.bin\vite.cmd"
 if (!(Test-Path $ViteBin)) {
     Write-Host "Frontend dependencies missing or incomplete, running npm install..." -ForegroundColor Yellow
-    Start-Process -NoNewWindow -Wait -FilePath "npm" -ArgumentList "install" -WorkingDirectory $FrontendDir
+    cmd /c "cd $FrontendDir && npm install"
     Write-Host "npm install completed for frontend" -ForegroundColor Green
 }
 
@@ -60,7 +60,7 @@ Write-Host "Starting Admin Panel (Optional)..." -ForegroundColor Green
 $AdminViteBin = Join-Path $AdminPanelDir "node_modules\.bin\vite.cmd"
 if (!(Test-Path $AdminViteBin)) {
     Write-Host "Admin panel dependencies missing or incomplete, running npm install..." -ForegroundColor Yellow
-    Start-Process -NoNewWindow -Wait -FilePath "npm" -ArgumentList "install" -WorkingDirectory $AdminPanelDir
+    cmd /c "cd $AdminPanelDir && npm install"
     Write-Host "npm install completed for admin panel" -ForegroundColor Green
 }
 
