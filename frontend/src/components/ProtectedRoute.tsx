@@ -8,6 +8,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuthStore()
+  const hasToken = localStorage.getItem('firebaseToken')
 
   if (loading) {
     return (
@@ -17,7 +18,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  if (!user) {
+  if (!user && !hasToken) {
     return <Navigate to="/login" replace />
   }
 

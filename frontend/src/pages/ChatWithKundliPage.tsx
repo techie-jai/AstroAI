@@ -84,9 +84,14 @@ export default function ChatWithKundliPage() {
           timestamp: new Date(),
         }
         setMessages([welcomeMessage])
-      } catch (error) {
+      } catch (error: any) {
         console.error('[CHAT] Error loading kundli:', error)
-        toast.error('Failed to load kundli data')
+        console.error('[CHAT] Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        })
+        toast.error(`Failed to load kundli data: ${error.response?.data?.detail || error.message}`)
       } finally {
         setPageLoading(false)
       }

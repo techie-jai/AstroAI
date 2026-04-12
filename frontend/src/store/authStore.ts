@@ -44,8 +44,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // Check if token exists in localStorage (for new tabs/windows)
     const existingToken = localStorage.getItem('firebaseToken')
     if (existingToken) {
-      console.log('[AUTH] Found existing token in localStorage, marking as loaded')
-      set({ loading: false })
+      console.log('[AUTH] Found existing token in localStorage, waiting for auth state...')
     }
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import apiClient from '../services/api'
 import toast from 'react-hot-toast'
@@ -24,6 +24,7 @@ interface KundliData {
 
 export default function ResultsPage() {
   const { kundliId } = useParams()
+  const navigate = useNavigate()
   const [kundli, setKundli] = useState<KundliData | null>(null)
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
@@ -162,11 +163,11 @@ export default function ResultsPage() {
 
     try {
       console.log('[RESULTS] Opening chat for kundliId:', kundliId)
+      // Store kundli data in sessionStorage for the chat page
+      sessionStorage.setItem('kundli_data', JSON.stringify(kundli))
       // Navigate to the chat page with the kundli ID
-      // The ChatWithKundliPage will fetch fresh data using the kundliId from URL
-      const chatUrl = `${window.location.origin}/chat/${kundliId}`
-      window.open(chatUrl, '_blank')
-      toast.success('Opening chat in new tab...')
+      navigate(`/chat/${kundliId}`)
+      toast.success('Opening chat...')
     } catch (error) {
       console.error('[RESULTS] Failed to open chat:', error)
       toast.error('Failed to open chat')

@@ -900,8 +900,13 @@ async def get_kundli(
             "kundli_json_path": file_path
         }
         
+        # Include charts if they exist in the file
+        if 'charts' in kundli_file_data:
+            response_data['charts'] = kundli_file_data.get('charts', {})
+        
         # Return with cache-control headers to prevent caching
         print(f"[GET_KUNDLI] Returning response with no-cache headers")
+        print(f"[GET_KUNDLI] Response size - horoscope_info keys: {len(response_data.get('horoscope_info', {}))}")
         return JSONResponse(
             content=response_data,
             headers={
