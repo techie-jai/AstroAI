@@ -31,10 +31,6 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
-
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -42,6 +38,10 @@ COPY backend/ ./backend/
 COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
 COPY world_cities_with_tz.csv .
+
+# Create users directory for local Kundli storage with hash-based naming
+RUN mkdir -p /app/users
+RUN echo "Created users directory for local Kundli storage"
 
 RUN find /app -name "*.py" -type f -exec sed -i 's/\r$//' {} \;
 COPY frontend/package*.json ./frontend/
@@ -68,12 +68,6 @@ RUN mkdir -p /app/new-ui
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY --from=admin-builder /app/admin-panel/dist ./admin-panel/dist
 
-WORKDIR /app/frontend
-RUN npm ci
-
-WORKDIR /app/admin-panel
-RUN npm install
-
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
@@ -85,6 +79,13 @@ ENV VITE_FIREBASE_PROJECT_ID=""
 ENV VITE_FIREBASE_STORAGE_BUCKET=""
 ENV VITE_FIREBASE_MESSAGING_SENDER_ID=""
 ENV VITE_FIREBASE_APP_ID=""
+
+# Backend Environment Variables
+ENV FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
+ENV FIREBASE_STORAGE_BUCKET=""
+ENV GEMINI_API_KEY=""
+ENV ENVIRONMENT=production
+ENV DEBUG=False
 
 # Bot Integration Environment Variables
 ENV WHATSAPP_PHONE_NUMBER_ID=""

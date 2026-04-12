@@ -7,6 +7,12 @@ echo "AstroAI Complete Startup (Docker)"
 echo "================================================================================"
 echo ""
 
+# Create users directory for local Kundli storage if it doesn't exist
+if [ ! -d "/app/users" ]; then
+    mkdir -p /app/users
+    echo "Created users directory for local Kundli storage: /app/users"
+fi
+
 # Function to handle cleanup on exit
 cleanup() {
     echo ""
@@ -30,62 +36,23 @@ sleep 5
 
 echo ""
 echo "Starting Frontend..."
-echo "Command: npm run dev"
+echo "Command: python -m http.server 3000 (serving pre-built dist)"
 echo ""
 
-# Create .env.local file for Vite with environment variables
-# Use Docker service name for internal communication
-API_BASE_URL=${VITE_API_BASE_URL:-http://astroai:8000/api}
-cat > /app/frontend/.env.local << EOF
-VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
-VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN}
-VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID}
-VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET}
-VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID}
-VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID}
-VITE_API_BASE_URL=${API_BASE_URL}
-EOF
-
-echo "Created /app/frontend/.env.local with Firebase configuration"
-
-cd /app/frontend
-npm run dev -- --host 0.0.0.0 &
+cd /app/frontend/dist
+python -m http.server 3000 &
 FRONTEND_PID=$!
 
-echo "Waiting 3 seconds for frontend to start..."
-sleep 3
+echo "Waiting 2 seconds for frontend to start..."
+sleep 2
 
 echo ""
 echo "Starting Admin Panel..."
-echo "Command: npm run dev with environment variables"
+echo "Command: python -m http.server 3001 (serving pre-built dist)"
 echo ""
 
-cd /app/admin-panel
-
-# Create .env.local file for Admin Panel with environment variables
-cat > /app/admin-panel/.env.local << EOF
-VITE_ADMIN_API_URL=http://astroai:8000
-VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID}
-VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
-VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN}
-VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET}
-VITE_ADMIN_INACTIVITY_TIMEOUT=1800000
-EOF
-
-echo "Created /app/admin-panel/.env.local with Firebase configuration"
-echo "Firebase Config:"
-echo "  Project ID: ${VITE_FIREBASE_PROJECT_ID}"
-echo "  Auth Domain: ${VITE_FIREBASE_AUTH_DOMAIN}"
-echo "  API Key: ${VITE_FIREBASE_API_KEY:0:10}..."
-
-# Run dev server with environment variables
-VITE_ADMIN_API_URL=http://astroai:8000 \
-VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID} \
-VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY} \
-VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN} \
-VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET} \
-VITE_ADMIN_INACTIVITY_TIMEOUT=1800000 \
-npm run dev -- --host 0.0.0.0 &
+cd /app/admin-panel/dist
+python -m http.server 3001 &
 ADMIN_PID=$!
 
 echo ""
