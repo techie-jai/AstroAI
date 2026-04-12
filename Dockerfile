@@ -39,6 +39,9 @@ COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
 COPY world_cities_with_tz.csv .
 
+# Verify CSV file was copied
+RUN ls -lh /app/world_cities_with_tz.csv && echo "CSV file copied successfully"
+
 # Create users directory for local Kundli storage with hash-based naming
 RUN mkdir -p /app/users
 RUN echo "Created users directory for local Kundli storage"

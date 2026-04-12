@@ -2578,19 +2578,24 @@ async def search_cities(query: str = "") -> List[Dict]:
 
     """Search for cities by name or partial match"""
     try:
-        cities_file = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "world_cities_with_tz.csv"
-        )
+        # Try multiple possible locations for the CSV file
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), "..", "world_cities_with_tz.csv"),  # /app/world_cities_with_tz.csv
+            os.path.join("/app", "world_cities_with_tz.csv"),  # Docker absolute path
+            os.path.join(os.getcwd(), "world_cities_with_tz.csv"),  # Current working directory
+        ]
         
-        print(f"[CITIES] Backend dir: {os.path.dirname(__file__)}")
-        print(f"[CITIES] Looking for cities file at: {cities_file}")
-        print(f"[CITIES] File exists: {os.path.exists(cities_file)}")
-
-        if not os.path.exists(cities_file):
-            print(f"[CITIES] ERROR: Cities database not found at {cities_file}")
-            raise HTTPException(status_code=404, detail=f"Cities database not found at {cities_file}")
+        cities_file = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                cities_file = path
+                print(f"[CITIES] Found cities file at: {cities_file}")
+                break
+        
+        if not cities_file:
+            print(f"[CITIES] ERROR: Cities database not found")
+            print(f"[CITIES] Tried paths: {possible_paths}")
+            raise HTTPException(status_code=404, detail=f"Cities database not found. Tried: {possible_paths}")
 
         
 
