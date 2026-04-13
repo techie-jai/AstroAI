@@ -4,6 +4,8 @@ import csv
 
 import json
 
+from datetime import datetime
+
 from fastapi import FastAPI, Depends, HTTPException, status
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -163,11 +165,11 @@ try:
 
     FirebaseConfig.initialize()
 
-    print("✅ Firebase initialized successfully")
+    print("Firebase initialized successfully")
 
 except Exception as e:
 
-    print(f"⚠️ Firebase initialization warning: {str(e)}")
+    print(f"Firebase initialization warning: {str(e)}")
 
 
 
@@ -584,27 +586,16 @@ async def generate_kundli(
         kundli_id = f"{safe_name}-Kundli-{counter}-{kundli_hash}"
         print(f"[KUNDLI] Step 4: New kundli_id: {kundli_id}")
 
-        # Format kundli text
-
-        print(f"[KUNDLI] Step 5: Formatting kundli text...")
-
-        kundli_text = format_kundli_text(kundli_data, birth_data_dict)
-
-        # Step 6: Save kundli files locally with new naming
-
-        print(f"[KUNDLI] Step 6: Saving kundli files locally with hash-based naming...")
-
-        kundli_json_path = file_manager.save_kundli_json(user_folder, user_name, kundli_data, counter=counter, hash_value=kundli_hash)
-
-        kundli_text_path = file_manager.save_kundli_text(user_folder, user_name, kundli_text, counter=counter, hash_value=kundli_hash)
-
-        print(f"[KUNDLI] Step 6: Kundli saved: {kundli_json_path}")
+        # Step 6: Save comprehensive Kundli JSON only
+        print(f"[KUNDLI] Step 6: Saving comprehensive Kundli JSON...")
+        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data)
+        print(f"[KUNDLI] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
         # Step 7: Add to local index
         print(f"[KUNDLI] Step 7: Adding kundli to local index...")
         file_manager.add_to_index(
             kundli_id=kundli_id,
-            file_path=kundli_json_path,
+            file_path=comprehensive_kundli_path,
             birth_data=birth_data_dict,
             generated_at=result['generated_at'],
             hash_value=kundli_hash,
@@ -612,42 +603,6 @@ async def generate_kundli(
             uid=current_user['uid']
         )
         print(f"[KUNDLI] Step 7: Added to local index")
-
-        # Generate charts
-
-        print(f"[KUNDLI] Step 8: Generating divisional charts...")
-
-        chart_types = request.chart_types or ['D1', 'D7', 'D9', 'D10']
-
-        charts_result = astrology_service.generate_charts(birth_data_dict, chart_types)
-
-        charts_dict = {}
-
-        if charts_result.get('success'):
-
-            charts_dict = charts_result.get('charts', {})
-
-            print(f"[KUNDLI] Step 8: Generated {len(charts_dict)} charts")
-
-            for chart_type, chart_data in charts_dict.items():
-
-                # Format chart text
-
-                chart_text_result = astrology_service.format_chart_text(birth_data_dict, chart_type)
-
-                chart_text = chart_text_result.get('text', '') if chart_text_result.get('success') else ''
-
-                # Save chart JSON and text
-
-                file_manager.save_chart_json(user_folder, chart_type, chart_data)
-
-                file_manager.save_chart_text(user_folder, chart_type, chart_text)
-
-                print(f"[KUNDLI] Step 8: Saved chart: {chart_type}")
-
-        else:
-
-            print(f"[KUNDLI] Step 8: Chart generation failed: {charts_result.get('error', 'Unknown error')}")
 
         # Ensure user profile exists
 
@@ -685,6 +640,9 @@ async def generate_kundli(
 
         
 
+        # Read the comprehensive Kundli data to include in response
+        comprehensive_kundli_data = file_manager.get_comprehensive_kundli(user_folder, user_name)
+        
         response_data = {
 
             "kundli_id": kundli_id,
@@ -693,11 +651,11 @@ async def generate_kundli(
 
             "user_folder": user_folder,
 
-            "kundli_json_path": kundli_json_path,
-
-            "kundli_text_path": kundli_text_path,
+            "comprehensive_kundli_path": comprehensive_kundli_path,
 
             "birth_data": birth_data_dict,
+
+            "comprehensive_kundli": comprehensive_kundli_data,
 
             "generated_at": result['generated_at'],
 
@@ -887,8 +845,27 @@ async def get_kundli(
         
         print(f"[GET_KUNDLI] Loaded kundli from local file")
         
-        # Get birth data from metadata
+        # Get birth data from metadata first
         birth_data = metadata.get('birth_data', {})
+        
+        # Check if this is an old file without divisionalCharts, try to get comprehensive Kundli
+        has_divisional_charts = ('divisionalCharts' in kundli_file_data or 
+                                ('jyotishganit_json' in kundli_file_data and 
+                                 'divisionalCharts' in kundli_file_data.get('jyotishganit_json', {})))
+        
+        if not has_divisional_charts:
+            print(f"[GET_KUNDLI] Old Kundli file detected, looking for comprehensive Kundli...")
+            user_folder = os.path.dirname(file_path)
+            user_name = birth_data.get('name', 'User')
+            comprehensive_kundli_data = file_manager.get_comprehensive_kundli(user_folder, user_name)
+            
+            if comprehensive_kundli_data:
+                print(f"[GET_KUNDLI] Found comprehensive Kundli, using it instead")
+                kundli_file_data = comprehensive_kundli_data
+            else:
+                print(f"[GET_KUNDLI] No comprehensive Kundli found, using old file")
+        else:
+            print(f"[GET_KUNDLI] Kundli file has divisional charts, using as-is")
         
         # Format birth_data for UI compatibility
         formatted_birth_data = {
@@ -909,7 +886,18 @@ async def get_kundli(
             "kundli_json_path": file_path
         }
         
-        # Include charts if they exist in the file
+        # Include divisional charts if they exist in the file
+        divisional_charts = {}
+        if 'divisionalCharts' in kundli_file_data:
+            divisional_charts = kundli_file_data.get('divisionalCharts', {})
+        # Check for nested divisionalCharts in jyotishganit_json
+        elif 'jyotishganit_json' in kundli_file_data and 'divisionalCharts' in kundli_file_data.get('jyotishganit_json', {}):
+            divisional_charts = kundli_file_data.get('jyotishganit_json', {}).get('divisionalCharts', {})
+        
+        if divisional_charts:
+            response_data['divisionalCharts'] = divisional_charts
+            
+        # Also include charts for backward compatibility
         if 'charts' in kundli_file_data:
             response_data['charts'] = kundli_file_data.get('charts', {})
         
@@ -1724,29 +1712,40 @@ async def download_analysis_pdf(
             )
 
         
-        # Get PDF file path
-
+        # Get PDF file path - find the latest PDF file for this user
+        
         user_name = birth_data.get('name', 'User')
-
-        pdf_filename = f"{user_name}_AI_Analysis.pdf"
-
-        pdf_path = os.path.join(user_folder, "analysis", pdf_filename)
-
         
-
-        if not os.path.exists(pdf_path):
-
-            print(f"[DOWNLOAD] PDF file not found: {pdf_path}")
-
+        analysis_folder = os.path.join(user_folder, "analysis")
+        
+        if not os.path.exists(analysis_folder):
+            print(f"[DOWNLOAD] Analysis folder not found: {analysis_folder}")
             raise HTTPException(
-
                 status_code=status.HTTP_404_NOT_FOUND,
-
-                detail="Analysis PDF not found. Please generate the analysis first."
-
+                detail="Analysis folder not found. Please generate the analysis first."
             )
-
         
+        # Find all PDF files for this user
+        import glob
+        safe_name = user_name.replace(' ', '-')
+        pdf_pattern = os.path.join(analysis_folder, f"{safe_name}_analysis_*.pdf")
+        pdf_files = glob.glob(pdf_pattern)
+        
+        if not pdf_files:
+            # Try old naming convention as fallback
+            old_pdf_path = os.path.join(analysis_folder, f"{user_name}_AI_Analysis.pdf")
+            if os.path.exists(old_pdf_path):
+                pdf_path = old_pdf_path
+            else:
+                print(f"[DOWNLOAD] No PDF files found for user: {user_name}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Analysis PDF not found. Please generate the analysis first."
+                )
+        else:
+            # Get the most recent PDF file
+            pdf_path = max(pdf_files, key=os.path.getmtime)
+            print(f"[DOWNLOAD] Found {len(pdf_files)} PDF files, using latest: {os.path.basename(pdf_path)}")    
 
         print(f"[DOWNLOAD] Returning PDF file: {pdf_path}")
 
@@ -1755,13 +1754,13 @@ async def download_analysis_pdf(
         # Return PDF file
 
         return FileResponse(
-
+        
             path=pdf_path,
-
-            filename=pdf_filename,
-
+        
+            filename=os.path.basename(pdf_path),
+        
             media_type="application/pdf"
-
+        
         )
 
     
@@ -2260,69 +2259,23 @@ async def livechat_generate_kundli(
         print(f"[LIVECHAT] Step 4: New kundli_id: {kundli_id}")
 
         
-        # Format kundli text
-        print(f"[LIVECHAT] Step 5: Formatting kundli text...")
-
-        kundli_text = format_kundli_text(kundli_data, birth_data_dict)
-
-        
-        # Step 6: Save kundli files locally with new naming
-        print(f"[LIVECHAT] Step 6: Saving kundli files locally with hash-based naming...")
-
-        kundli_json_path = file_manager.save_kundli_json(user_folder, user_name, kundli_data, counter=counter, hash_value=kundli_hash)
-
-        kundli_text_path = file_manager.save_kundli_text(user_folder, user_name, kundli_text, counter=counter, hash_value=kundli_hash)
-
-        print(f"[LIVECHAT] Step 6: Kundli saved: {kundli_json_path}")
+        # Step 6: Save comprehensive Kundli JSON only
+        print(f"[LIVECHAT] Step 6: Saving comprehensive Kundli JSON...")
+        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data)
+        print(f"[LIVECHAT] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
         
         # Step 7: Add to local index
         print(f"[LIVECHAT] Step 7: Adding kundli to local index...")
         file_manager.add_to_index(
             kundli_id=kundli_id,
-            file_path=kundli_json_path,
+            file_path=comprehensive_kundli_path,
             birth_data=birth_data_dict,
             generated_at=result['generated_at'],
             hash_value=kundli_hash,
             counter=counter
         )
         print(f"[LIVECHAT] Step 7: Added to local index")
-
-        
-        # Generate charts
-        print(f"[LIVECHAT] Step 8: Generating divisional charts...")
-
-        chart_types = request_data.get('chart_types') or ['D1', 'D7', 'D9', 'D10']
-
-        charts_result = astrology_service.generate_charts(birth_data_dict, chart_types)
-
-        
-        charts_dict = {}
-
-        if charts_result.get('success'):
-
-            charts_dict = charts_result.get('charts', {})
-
-            print(f"[LIVECHAT] Step 8: Generated {len(charts_dict)} charts")
-
-            for chart_type, chart_data in charts_dict.items():
-
-                # Format chart text
-                chart_text_result = astrology_service.format_chart_text(birth_data_dict, chart_type)
-
-                chart_text = chart_text_result.get('text', '') if chart_text_result.get('success') else ''
-
-                
-                # Save chart JSON and text
-                file_manager.save_chart_json(user_folder, chart_type, chart_data)
-
-                file_manager.save_chart_text(user_folder, chart_type, chart_text)
-
-                print(f"[LIVECHAT] Step 8: Saved chart: {chart_type}")
-
-        else:
-
-            print(f"[LIVECHAT] Step 8: Chart generation failed: {charts_result.get('error', 'Unknown error')}")
 
         
         # Ensure user profile exists
@@ -2357,6 +2310,9 @@ async def livechat_generate_kundli(
         )
 
         
+        # Read the comprehensive Kundli data to include in response
+        comprehensive_kundli_data = file_manager.get_comprehensive_kundli(user_folder, user_name)
+        
         response_data = {
 
             "kundli_id": kundli_id,
@@ -2365,15 +2321,13 @@ async def livechat_generate_kundli(
 
             "user_folder": user_folder,
 
-            "kundli_json_path": kundli_json_path,
-
-            "kundli_text_path": kundli_text_path,
+            "comprehensive_kundli_path": comprehensive_kundli_path,
 
             "birth_data": birth_data_dict,
 
             "horoscope_info": kundli_data.get('horoscope_info', {}),
 
-            "charts": charts_dict,
+            "comprehensive_kundli": comprehensive_kundli_data,
 
             "generated_at": result['generated_at']
 
@@ -2406,25 +2360,181 @@ async def livechat_generate_kundli(
 
 
 @app.post("/api/livechat/message")
-
 async def livechat_message(
     request_data: dict,
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Send a message in live chat and get AI response based on kundli
+    Legacy live chat endpoint - redirects to unified chat endpoint
+    """
+    return await unified_chat_endpoint(request_data, current_user)
+
+
+class KundliDataExtractor:
+    """
+    Utility class to extract comprehensive Kundli data for LLM processing
+    """
+    
+    @staticmethod
+    def extract_comprehensive_kundli_data(kundli_data: dict) -> dict:
+        """
+        Extract all relevant Kundli data from comprehensive Kundli JSON
+        
+        Args:
+            kundli_data: Raw Kundli data from get_kundli endpoint
+            
+        Returns:
+            Comprehensive Kundli data dictionary with all astrological details
+        """
+        import json
+        
+        extracted_data = {
+            "basic_info": {},
+            "birth_details": {},
+            "horoscope_analysis": {},
+            "planetary_positions": {},
+            "divisional_charts": {},
+            "ashtakavarga": {},
+            "dashas": {},
+            "advanced_analysis": {},
+            "metadata": {}
+        }
+        
+        # Extract basic birth information
+        birth_data = kundli_data.get('birth_data', {})
+        extracted_data["basic_info"] = {
+            "name": birth_data.get('name', 'Unknown'),
+            "date": birth_data.get('date', 'Unknown'),
+            "time": birth_data.get('time', 'Unknown'),
+            "place": birth_data.get('place', 'Unknown'),
+            "latitude": birth_data.get('latitude', 0),
+            "longitude": birth_data.get('longitude', 0),
+            "timezone_offset": birth_data.get('timezone_offset', 0)
+        }
+        
+        # Extract horoscope info
+        horoscope_info = kundli_data.get('horoscope_info', {})
+        extracted_data["horoscope_analysis"] = {
+            "tithi": horoscope_info.get('tithi', ''),
+            "nakshatra": horoscope_info.get('nakshatra', ''),
+            "yoga": horoscope_info.get('yoga', ''),
+            "karana": horoscope_info.get('karana', ''),
+            "vaara": horoscope_info.get('vaara', ''),
+            "ayanamsa": {
+                "name": horoscope_info.get('ayanamsa_name', ''),
+                "value": horoscope_info.get('ayanamsa_value', 0)
+            },
+            "houses": {},
+            "planetary_positions": {}
+        }
+        
+        # Extract house information
+        for i in range(1, 13):
+            house_key = f"house_{i}_sign"
+            lord_key = f"house_{i}_lord"
+            if house_key in horoscope_info:
+                extracted_data["horoscope_analysis"]["houses"][f"house_{i}"] = {
+                    "sign": horoscope_info.get(house_key, ''),
+                    "lord": horoscope_info.get(lord_key, '')
+                }
+        
+        # Extract planetary positions from horoscope info
+        planets = ['sun', 'moon', 'mars', 'mercury', 'jupiter', 'venus', 'saturn', 'rahu', 'ketu']
+        for planet in planets:
+            planet_sign_key = f"{planet}_sign"
+            planet_house_key = f"{planet}_house"
+            planet_nakshatra_key = f"{planet}_nakshatra"
+            
+            if planet_sign_key in horoscope_info:
+                extracted_data["horoscope_analysis"]["planetary_positions"][planet] = {
+                    "sign": horoscope_info.get(planet_sign_key, ''),
+                    "house": horoscope_info.get(planet_house_key, 0),
+                    "nakshatra": horoscope_info.get(planet_nakshatra_key, '')
+                }
+        
+        # Extract divisional charts
+        divisional_charts = kundli_data.get('divisionalCharts', {})
+        if divisional_charts:
+            extracted_data["divisional_charts"] = divisional_charts
+            extracted_data["divisional_charts"]["available_charts"] = list(divisional_charts.keys())
+            extracted_data["divisional_charts"]["total_charts"] = len(divisional_charts)
+        
+        # Extract ashtakavarga
+        if 'ashtakavarga' in horoscope_info:
+            extracted_data["ashtakavarga"] = horoscope_info['ashtakavarga']
+        
+        # Extract dashas
+        if 'dashas' in horoscope_info:
+            extracted_data["dashas"] = horoscope_info['dashas']
+        
+        # Extract comprehensive Kundli data if available
+        comprehensive_kundli = kundli_data.get('comprehensive_kundli', {})
+        if comprehensive_kundli:
+            # Extract detailed birth details
+            if 'birth_details' in comprehensive_kundli:
+                extracted_data["birth_details"] = comprehensive_kundli['birth_details']
+            
+            # Extract jyotishganit_json for advanced analysis
+            if 'jyotishganit_json' in comprehensive_kundli:
+                jyotish_json = comprehensive_kundli['jyotishganit_json']
+                
+                # Extract detailed D1 chart
+                if 'd1Chart' in jyotish_json:
+                    extracted_data["advanced_analysis"]["d1_chart"] = jyotish_json['d1Chart']
+                
+                # Extract divisional charts from jyotishganit_json if not already extracted
+                if 'divisionalCharts' in jyotish_json and not extracted_data["divisional_charts"]:
+                    extracted_data["divisional_charts"] = jyotish_json['divisionalCharts']
+                    extracted_data["divisional_charts"]["available_charts"] = list(jyotish_json['divisionalCharts'].keys())
+                    extracted_data["divisional_charts"]["total_charts"] = len(jyotish_json['divisionalCharts'])
+                
+                # Extract panchanga
+                if 'panchanga' in jyotish_json:
+                    extracted_data["advanced_analysis"]["panchanga"] = jyotish_json['panchanga']
+                
+                # Extract ayanamsa details
+                if 'ayanamsa' in jyotish_json:
+                    extracted_data["advanced_analysis"]["ayanamsa"] = jyotish_json['ayanamsa']
+                
+                # Extract ashtakavarga from jyotishganit_json
+                if 'ashtakavarga' in jyotish_json:
+                    extracted_data["advanced_analysis"]["ashtakavarga_detailed"] = jyotish_json['ashtakavarga']
+                
+                # Extract dashas from jyotishganit_json
+                if 'dashas' in jyotish_json:
+                    extracted_data["advanced_analysis"]["dashas_detailed"] = jyotish_json['dashas']
+            
+            # Extract metadata
+            if 'metadata' in comprehensive_kundli:
+                extracted_data["metadata"] = comprehensive_kundli['metadata']
+        
+        return extracted_data
+
+
+@app.post("/api/chat/unified")
+async def unified_chat_endpoint(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Unified chat endpoint for all Kundli-related conversations
+    
+    This endpoint handles both live chat and chat with existing Kundli data.
+    It extracts comprehensive astrological information and provides detailed AI responses.
     
     Args:
         request_data: Contains kundli_data, user_message, and chat_history
+        current_user: Authenticated user information
         
     Returns:
-        AI response based on kundli analysis
+        AI response based on comprehensive Kundli analysis
     """
     try:
-        print(f"[LIVECHAT_MSG] Processing message for user: {current_user.get('uid')}")
+        print(f"[UNIFIED_CHAT] Processing message for user: {current_user.get('uid')}")
         
+        # Validate request data
+        user_message = request_data.get('user_message', '').strip()
         kundli_data = request_data.get('kundli_data', {})
-        user_message = request_data.get('user_message', '')
         chat_history = request_data.get('chat_history', [])
         
         if not user_message:
@@ -2439,215 +2549,115 @@ async def livechat_message(
                 detail="kundli_data is required"
             )
         
-        print(f"[LIVECHAT_MSG] User message: {user_message[:100]}...")
-        print(f"[LIVECHAT_MSG] Chat history length: {len(chat_history)}")
+        # Log request details
+        print(f"[UNIFIED_CHAT] User message: {user_message[:100]}...")
+        print(f"[UNIFIED_CHAT] Chat history length: {len(chat_history)}")
+        print(f"[UNIFIED_CHAT] Kundli ID: {kundli_data.get('kundli_id', 'NOT PROVIDED')}")
+        print(f"[UNIFIED_CHAT] Birth name: {kundli_data.get('birth_data', {}).get('name', 'NOT PROVIDED')}")
         
-        # Check if Gemini service is available
+        # Check Gemini service availability
         if not gemini_service:
-            print(f"[LIVECHAT_MSG] ERROR: Gemini service not initialized")
+            print(f"[UNIFIED_CHAT] ERROR: Gemini service not initialized")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Gemini API key not configured. Please set GEMINI_API_KEY in environment variables."
             )
         
-        # Extract horoscope info from kundli data
-        horoscope_info = kundli_data.get('horoscope_info', {})
-        birth_data = kundli_data.get('birth_data', {})
+        # Extract comprehensive Kundli data
+        print(f"[UNIFIED_CHAT] Extracting comprehensive Kundli data...")
+        comprehensive_data = KundliDataExtractor.extract_comprehensive_kundli_data(kundli_data)
         
-        print(f"[LIVECHAT_MSG] Horoscope info keys: {list(horoscope_info.keys())[:10]}...")
-        print(f"[LIVECHAT_MSG] Birth data: {birth_data.get('name', 'Unknown')}")
+        # Log data extraction summary
+        print(f"[UNIFIED_CHAT] Extracted data summary:")
+        print(f"  - Basic info: {len(comprehensive_data['basic_info'])} fields")
+        print(f"  - Horoscope analysis: {len(comprehensive_data['horoscope_analysis'])} sections")
+        print(f"  - Divisional charts: {comprehensive_data['divisional_charts'].get('total_charts', 0)} charts")
+        print(f"  - Ashtakavarga: {'Present' if comprehensive_data['ashtakavarga'] else 'Not present'}")
+        print(f"  - Dashas: {'Present' if comprehensive_data['dashas'] else 'Not present'}")
+        print(f"  - Advanced analysis: {len(comprehensive_data['advanced_analysis'])} sections")
         
-        # Generate response using Gemini API with kundli context
-        print(f"[LIVECHAT_MSG] Generating response with Gemini API...")
+        # Build chat context
+        chat_context = ""
+        if chat_history:
+            chat_context = "\n=== PREVIOUS CONVERSATION ===\n"
+            for msg in chat_history[-3:]:  # Last 3 messages for context
+                role = msg.get('role', 'user').upper()
+                content = msg.get('content', '')
+                chat_context += f"{role}: {content}\n"
+            chat_context += "=== END PREVIOUS CONVERSATION ===\n"
         
-        try:
-            import json
-            
-            # Convert horoscope_info to formatted JSON
-            horoscope_json = json.dumps(horoscope_info, indent=2)
-            
-            # Build chat history for context
-            chat_context = ""
-            if chat_history:
-                chat_context = "\nPrevious conversation:\n"
-                for msg in chat_history[-5:]:  # Last 5 messages for context
-                    role = msg.get('role', 'user')
-                    content = msg.get('content', '')
-                    chat_context += f"{role}: {content}\n"
-            
-            # Create the prompt for Gemini with complete JSON data
-            prompt = f"""You are an expert Vedic astrology guide. Analyze the user's birth chart data provided below and answer their question.
+        # Create comprehensive prompt for Gemini
+        import json
+        
+        prompt = f"""You are an expert Vedic astrologer with deep knowledge of all aspects of Jyotish. 
+Analyze the comprehensive Kundli data provided below and give a detailed, accurate response.
 
-KUNDLI DATA (JSON):
-{horoscope_json}
+=== COMPREHENSIVE KUNDLI DATA ===
+{json.dumps(comprehensive_data, indent=2, default=str)}
 
-USER INFO:
-Name: {birth_data.get('name', 'Unknown')}
-Date: {birth_data.get('year', 'Unknown')}-{birth_data.get('month', 'Unknown')}-{birth_data.get('day', 'Unknown')}
-Time: {birth_data.get('hour', 'Unknown')}:{birth_data.get('minute', 'Unknown')}
-Place: {birth_data.get('place_name', 'Unknown')}
+=== USER INFORMATION ===
+Name: {comprehensive_data['basic_info'].get('name', 'Unknown')}
+Birth Date: {comprehensive_data['basic_info'].get('date', 'Unknown')}
+Birth Time: {comprehensive_data['basic_info'].get('time', 'Unknown')}
+Birth Place: {comprehensive_data['basic_info'].get('place', 'Unknown')}
 
 {chat_context}
 
-User's question: {user_message}
+=== USER'S QUESTION ===
+{user_message}
 
-Provide a personalized astrological response based on the kundli JSON data above."""
-            
-            # Call Gemini API
-            response = gemini_service.model.generate_content(prompt)
-            ai_response = response.text
-            
-            print(f"[LIVECHAT_MSG] Response generated successfully")
-            print(f"[LIVECHAT_MSG] Response length: {len(ai_response)}")
-            
-            return {
-                "status": "success",
-                "response": ai_response,
-                "user_message": user_message
+=== INSTRUCTIONS ===
+1. Provide a comprehensive astrological analysis based on ALL available data
+2. Include insights from divisional charts (D1-D60) if available
+3. Consider ashtakavarga, dashas, and planetary strengths
+4. Give practical, actionable advice
+5. Maintain a professional and empathetic tone
+6. If specific charts are mentioned, analyze them in detail
+
+Please provide a thorough response incorporating all relevant astrological factors."""
+        
+        # Generate AI response
+        print(f"[UNIFIED_CHAT] Generating AI response...")
+        response = gemini_service.model.generate_content(prompt)
+        ai_response = response.text
+        
+        print(f"[UNIFIED_CHAT] Response generated successfully")
+        print(f"[UNIFIED_CHAT] Response length: {len(ai_response)} characters")
+        
+        return {
+            "status": "success",
+            "response": ai_response,
+            "timestamp": datetime.now().isoformat(),
+            "data_summary": {
+                "divisional_charts_available": comprehensive_data['divisional_charts'].get('available_charts', []),
+                "has_ashtakavarga": bool(comprehensive_data['ashtakavarga']),
+                "has_dashas": bool(comprehensive_data['dashas']),
+                "has_advanced_analysis": bool(comprehensive_data['advanced_analysis'])
             }
-            
-        except Exception as e:
-            print(f"[LIVECHAT_MSG] ERROR generating response: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to generate response: {str(e)}"
-            )
-    
+        }
+        
     except HTTPException:
         raise
     
     except Exception as e:
-        print(f"[LIVECHAT_MSG] ERROR: {type(e).__name__}: {str(e)}")
+        print(f"[UNIFIED_CHAT] ERROR: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=f"Failed to process chat request: {str(e)}"
         )
 
 
 @app.post("/api/chat/message-with-kundli")
-
 async def chat_message_with_kundli(
     request_data: dict,
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Send a message in chat with kundli context and get AI response
-    
-    Args:
-        request_data: Contains kundli_data, user_message, and chat_history
-        
-    Returns:
-        AI response based on kundli analysis
+    Legacy endpoint - redirects to unified chat endpoint
     """
-    try:
-        print(f"[CHAT_MSG] Processing message for user: {current_user.get('uid')}")
-        
-        kundli_data = request_data.get('kundli_data', {})
-        user_message = request_data.get('user_message', '')
-        chat_history = request_data.get('chat_history', [])
-        
-        if not user_message:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="user_message is required"
-            )
-        
-        if not kundli_data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="kundli_data is required"
-            )
-        
-        print(f"[CHAT_MSG] User message: {user_message[:100]}...")
-        print(f"[CHAT_MSG] Chat history length: {len(chat_history)}")
-        print(f"[CHAT_MSG] Received kundli_id: {kundli_data.get('kundli_id', 'NOT PROVIDED')}")
-        print(f"[CHAT_MSG] Received birth_data name: {kundli_data.get('birth_data', {}).get('name', 'NOT PROVIDED')}")
-        print(f"[CHAT_MSG] Received horoscope_info keys count: {len(kundli_data.get('horoscope_info', {}))}")
-        
-        # Check if Gemini service is available
-        if not gemini_service:
-            print(f"[CHAT_MSG] ERROR: Gemini service not initialized")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Gemini API key not configured. Please set GEMINI_API_KEY in environment variables."
-            )
-        
-        # Extract horoscope info from kundli data
-        horoscope_info = kundli_data.get('horoscope_info', {})
-        birth_data = kundli_data.get('birth_data', {})
-        
-        print(f"[CHAT_MSG] Horoscope info keys: {list(horoscope_info.keys())[:10]}...")
-        print(f"[CHAT_MSG] Birth data: {birth_data.get('name', 'Unknown')}")
-        
-        # Generate response using Gemini API with kundli context
-        print(f"[CHAT_MSG] Generating response with Gemini API...")
-        
-        try:
-            import json
-            
-            # Convert horoscope_info to formatted JSON
-            horoscope_json = json.dumps(horoscope_info, indent=2)
-            
-            # Build chat history for context
-            chat_context = ""
-            if chat_history:
-                chat_context = "\nPrevious conversation:\n"
-                for msg in chat_history[-5:]:  # Last 5 messages for context
-                    role = msg.get('role', 'user')
-                    content = msg.get('content', '')
-                    chat_context += f"{role}: {content}\n"
-            
-            # Create the prompt for Gemini with complete JSON data
-            prompt = f"""You are an expert Vedic astrology guide. Analyze the user's birth chart data provided below and answer their question.
-
-KUNDLI DATA (JSON):
-{horoscope_json}
-
-USER INFO:
-Name: {birth_data.get('name', 'Unknown')}
-Date: {birth_data.get('year', 'Unknown')}-{birth_data.get('month', 'Unknown')}-{birth_data.get('day', 'Unknown')}
-Time: {birth_data.get('hour', 'Unknown')}:{birth_data.get('minute', 'Unknown')}
-Place: {birth_data.get('place_name', 'Unknown')}
-
-{chat_context}
-
-User's question: {user_message}
-
-Provide a personalized astrological response based on the kundli JSON data above."""
-            
-            # Call Gemini API
-            response = gemini_service.model.generate_content(prompt)
-            ai_response = response.text
-            
-            print(f"[CHAT_MSG] Response generated successfully")
-            print(f"[CHAT_MSG] Response length: {len(ai_response)}")
-            
-            return {
-                "status": "success",
-                "response": ai_response,
-                "user_message": user_message
-            }
-            
-        except Exception as e:
-            print(f"[CHAT_MSG] ERROR generating response: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to generate response: {str(e)}"
-            )
-    
-    except HTTPException:
-        raise
-    
-    except Exception as e:
-        print(f"[CHAT_MSG] ERROR: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+    return await unified_chat_endpoint(request_data, current_user)
 
 
 @app.get("/api/cities/search")
