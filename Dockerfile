@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     wget \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
@@ -42,9 +43,6 @@ COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
 COPY world_cities_with_tz.csv .
 
-# Copy validation script
-COPY backend/validate_admin_data.py ./backend/
-
 # Verify CSV file was copied
 RUN ls -lh /app/world_cities_with_tz.csv && echo "CSV file copied successfully"
 
@@ -53,26 +51,6 @@ RUN mkdir -p /app/users
 RUN echo "Created users directory for local Kundli storage"
 
 RUN find /app -name "*.py" -type f -exec sed -i 's/\r$//' {} \;
-COPY frontend/package*.json ./frontend/
-COPY frontend/src ./frontend/src
-COPY frontend/index.html ./frontend/
-COPY frontend/vite.config.ts ./frontend/
-COPY frontend/tsconfig.json ./frontend/
-COPY frontend/tsconfig.node.json ./frontend/
-COPY frontend/tailwind.config.js ./frontend/
-COPY frontend/postcss.config.js ./frontend/
-
-COPY admin-panel/package*.json ./admin-panel/
-COPY admin-panel/src ./admin-panel/src
-COPY admin-panel/index.html ./admin-panel/
-COPY admin-panel/vite.config.ts ./admin-panel/
-COPY admin-panel/tsconfig.json ./admin-panel/
-COPY admin-panel/tsconfig.node.json ./admin-panel/
-COPY admin-panel/tailwind.config.js ./admin-panel/
-COPY admin-panel/postcss.config.js ./admin-panel/
-COPY admin-panel/.env.example ./admin-panel/
-
-RUN mkdir -p /app/new-ui
 
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY --from=admin-builder /app/admin-panel/dist ./admin-panel/dist
