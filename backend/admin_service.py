@@ -241,34 +241,21 @@ class AdminService:
             raise
 
     def get_all_kundlis(self, limit: int = 50, offset: int = 0, filters: Dict = None) -> Dict:
-        """Get all kundlis with filtering"""
+        """Get all kundlis from filesystem with filtering"""
         try:
-            all_kundlis = []
-            users = self.db.collection('users').stream()
-
-            for user in users:
-                user_id = user.id
-                user_data = user.to_dict()
-                kundlis = self.db.collection('users').document(user_id).collection('calculations').stream()
-
-                for kundli in kundlis:
-                    kundli_data = kundli.to_dict()
-                    kundli_data['id'] = kundli.id
-                    kundli_data['userId'] = user_id
-                    kundli_data['userName'] = user_data.get('displayName', 'Unknown')
-                    kundli_data['userEmail'] = user_data.get('email', '')
-
-                    if filters:
-                        if filters.get('userId') and filters['userId'] != user_id:
-                            continue
-                        if filters.get('hasAnalysis') is not None:
-                            has_analysis = 'analysis' in kundli_data and kundli_data['analysis'] is not None
-                            if filters['hasAnalysis'] != has_analysis:
-                                continue
-
-                    all_kundlis.append(kundli_data)
-
-            all_kundlis.sort(key=lambda x: x.get('generatedAt', datetime.utcnow()), reverse=True)
+            # Get kundlis from filesystem instead of Firebase
+            all_kundlis = self.analytics_service.get_all_kundlis_from_filesystem()
+            
+            # Apply filters
+            if filters:
+                if filters.get('userId'):
+                    all_kundlis = [k for k in all_kundlis if k.get('userId') == filters['userId']]
+                if filters.get('hasAnalysis') is not None:
+                    all_kundlis = [k for k in all_kundlis if k.get('hasAnalysis', False) == filters['hasAnalysis']]
+            
+            # Sort by generated date (newest first)
+            all_kundlis.sort(key=lambda x: x.get('generatedAt', datetime.utcnow().isoformat()), reverse=True)
+            
             total = len(all_kundlis)
             paginated = all_kundlis[offset:offset + limit]
 
@@ -280,7 +267,13 @@ class AdminService:
             }
         except Exception as e:
             logger.error(f"Error fetching kundlis: {str(e)}")
-            raise
+            # Return empty list instead of raising
+            return {
+                'kundlis': [],
+                'total': 0,
+                'limit': limit,
+                'offset': offset
+            }
 
     def get_kundli_detail(self, user_id: str, kundli_id: str) -> Dict:
         """Get detailed kundli information"""
@@ -315,9 +308,43 @@ class AdminService:
             raise
 
     def get_analytics_overview(self) -> Dict:
-        """Get dashboard overview metrics from local filesystem"""
+        """Get dashboard overview metrics - Firebase users count with filesystem kundli data"""
         try:
-            return self.analytics_service.compute_analytics_overview()
+            # Get the base analytics from filesystem
+            analytics = self.analytics_service.compute_analytics_overview()
+            
+            # Override totalUsers and activeUsers with Firebase counts (source of truth)
+            try:
+                firebase_users = list(self.db.collection('users').stream())
+                total_firebase_users = len(firebase_users)
+                
+                # Count active users from Firebase (users created in last 30 days)
+                thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+                active_firebase_users = 0
+                
+                for user_doc in firebase_users:
+                    user_data = user_doc.to_dict()
+                    created_at = user_data.get('createdAt')
+                    if created_at:
+                        # Handle both timestamp and string formats
+                        if hasattr(created_at, 'timestamp'):
+                            created_timestamp = created_at.timestamp()
+                        else:
+                            created_timestamp = created_at
+                        
+                        if created_timestamp > thirty_days_ago.timestamp():
+                            active_firebase_users += 1
+                
+                # Update analytics with Firebase user counts
+                analytics['totalUsers'] = total_firebase_users
+                analytics['activeUsers'] = active_firebase_users
+                
+                logger.info(f"Analytics overview - Firebase users: {total_firebase_users}, Active: {active_firebase_users}, Kundlis: {analytics.get('totalKundlis', 0)}")
+            except Exception as e:
+                logger.warning(f"Could not fetch Firebase user counts, using filesystem counts: {str(e)}")
+                # Fall back to filesystem counts if Firebase query fails
+            
+            return analytics
         except Exception as e:
             logger.error(f"Error fetching analytics overview: {str(e)}")
             raise
