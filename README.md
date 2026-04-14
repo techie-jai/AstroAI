@@ -55,6 +55,7 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 - **Special Lagnas & Upagrahas**: Advanced astrological points
 - **Ashtaka Varga & Shodhya Pinda**: Strength analysis
 - **Doshas**: Kala Sarpa, Manglik, Pitru, and others
+- **Dosha Bhanga (NEW)**: Automatic detection of dosha cancellations with detailed reasons
 - **Yogas**: 284+ yogas from classical texts
 - **Compatibility Analysis**: Marriage and relationship compatibility
 
@@ -861,6 +862,115 @@ The generated data feeds into AI models for:
 
 ## Recent Updates (April 2026)
 
+### 🎉 NEW: Dosha Bhanga (Cancellation) Implementation ✅
+
+**Status:** COMPLETE - Backend & Frontend Fully Implemented
+
+#### Overview
+Implemented comprehensive Dosha Bhanga (cancellation) detection in both backend rules engine and frontend UI. Users can now see which doshas are cancelled by protective yogas and understand why.
+
+#### Backend Implementation (rules_engine.py)
+
+**Updated Dosha Model:**
+- Added `is_present: bool` - Tracks if dosha exists
+- Added `is_cancelled: bool` - Tracks if dosha is cancelled (default=False)
+- Added `cancellation_reasons: List[str]` - Stores detailed cancellation reasons
+- Maintained `detected` field for backward compatibility
+
+**Helper Methods Added (6 new methods):**
+- `get_planet_sign()` - Extracts sign from planet object
+- `check_aspect_between_planets()` - Checks aspects using pre-calculated data
+- `is_benefic_planet()` - Identifies benefic planets (Jupiter, Venus, Mercury, Moon, Sun)
+- `get_kendra_planets()` - Gets planets in Kendra houses (1,4,7,10), excluding Sun/Rahu/Ketu
+
+**Specialized Bhanga Check Methods (4 new methods):**
+- `check_mangal_dosha_bhanga()` - Mars in own sign (Aries/Scorpio), exaltation (Capricorn), 2nd house, or aspects from Jupiter/Moon
+- `check_kemadruma_dosha_bhanga()` - Supporting planets in Kendra houses or Jupiter aspect to Moon
+- `check_kaal_sarp_dosha_bhanga()` - Ascendant or benefic planets outside Rahu-Ketu axis
+- `check_conjunction_dosha_bhanga()` - Conjunction in ruling planet's own/exalted sign or Jupiter aspect
+
+**Updated All 8 Dosha Detection Methods:**
+Each method now performs two-step check:
+1. Detect if dosha is present (`is_present`)
+2. If present, run bhanga check and populate `cancellation_reasons`
+3. Return complete Dosha object with all fields
+
+Doshas updated:
+- ✅ Mangal Dosha (Mars affliction)
+- ✅ Kaal Sarp Dosha (Rahu-Ketu axis)
+- ✅ Pitra Dosha (Ancestral debt)
+- ✅ Guru Chandal Dosha (Jupiter-Rahu conjunction)
+- ✅ Kemadruma Dosha (Moon without support)
+- ✅ Grahan Dosha (Eclipse point affliction)
+- ✅ Vish Dosha (Mars-Saturn poison)
+- ✅ Gandmool Dosha (Root affliction)
+
+#### Frontend Implementation (DoshDashaAnalysisPage.tsx)
+
+**Updated Dosha Interface:**
+```typescript
+major_doshas: Array<{
+  name: string
+  is_present: boolean
+  is_cancelled: boolean
+  severity: string
+  description: string
+  cancellation_reasons: string[]
+  remedies: string[]
+  detected?: boolean  // backward compatibility
+}>
+```
+
+**Enhanced Color Functions:**
+- `getSeverityColor()` - Returns green styling (bg-green-50, text-green-600) when cancelled
+- `getSeverityBadgeColor()` - Returns green badge (bg-green-100, text-green-800) when cancelled
+
+**Updated Major Doshas Section:**
+- **Transparent Display**: Doshas remain visible even when cancelled (user knows they were checked)
+- **Green "Good News" Message**: Prominent green box with CheckCircle icon
+- **Bulleted Reasons**: All cancellation reasons displayed in green text
+- **Status Badge**: Shows "CANCELLED" instead of severity level
+- **Conditional Remedies**: Only displays remedies if dosha is active (not cancelled)
+
+#### Cancellation Rules Implemented
+
+**Mangal Dosha:**
+- Mars in own sign (Aries/Scorpio)
+- Mars in exaltation (Capricorn)
+- Mars in 2nd house
+- Mars aspected by Jupiter or Moon
+
+**Kemadruma Dosha:**
+- Supporting planets in Kendra houses from Moon (Mars, Mercury, Jupiter, Venus, Saturn only)
+- Moon aspected by Jupiter
+
+**Kaal Sarp Dosha:**
+- Ascendant outside Rahu-Ketu axis
+- Benefic planets (Jupiter, Venus, Mercury) outside axis
+
+**Guru Chandal, Vish, Grahan Doshas:**
+- Conjunction in ruling planet's own sign
+- Conjunction in exaltation sign
+- Strong Jupiter aspect to conjunction
+
+#### Files Modified
+- `backend/models.py` - Updated Dosha model with 3 new fields
+- `backend/rules_engine.py` - Added 10 new methods (6 helpers + 4 bhanga checks), updated 8 dosha detection methods
+- `frontend/src/pages/DoshDashaAnalysisPage.tsx` - Updated interface, color functions, and dosha rendering
+
+#### Key Features
+✅ **Vedic Accuracy** - Implements classical Vedic astrology cancellation rules
+✅ **Transparent Design** - Cancelled doshas remain visible for transparency
+✅ **Clear Messaging** - "Good News" message with green styling and checkmark
+✅ **Detailed Explanations** - All cancellation reasons listed
+✅ **User-Friendly** - Easy to understand why a dosha is cancelled
+✅ **Backward Compatible** - Old `detected` field still supported
+✅ **Responsive UI** - Works on all screen sizes
+
+**Commit:** `v32-dosh-cancellation` - "dosh cancellation working as expected"
+
+---
+
 ### Critical Fixes & Improvements (Past 7 Days)
 
 #### 1. **Data Isolation & Security Fix** ✅
@@ -1630,6 +1740,7 @@ Custom languages can be added by creating language files in the `lang/` director
 - ✅ Panchanga calculations
 - ✅ Doshas and Yogas
 - ✅ Strength analysis (Shadbala)
+- ✅ **NEW:** Dosha Bhanga (Cancellation) Detection with detailed reasons
 
 **Desktop Application:**
 - ✅ PyQt6 UI with auto-complete
