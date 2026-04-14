@@ -113,6 +113,8 @@ export default function ResultsPage() {
         console.log('[RESULTS] Analysis generated successfully')
         setAnalysis(response.data.analysis_text || 'Analysis generated successfully')
         toast.success('Analysis generated successfully')
+        
+        window.dispatchEvent(new CustomEvent('analysisGenerated', { detail: { kundliId } }))
       } catch (error: any) {
         console.error('[RESULTS] Failed to generate analysis:', error)
         

@@ -25,11 +25,19 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true)
+        setError('')
+        
+        console.log('[Dashboard] Fetching analytics data...')
         const [analyticsData, growthData, usageAnalytics] = await Promise.all([
           adminApi.getAnalyticsOverview(),
           adminApi.getUserGrowth(30),
           adminApi.getUsageAnalytics()
         ])
+        
+        console.log('[Dashboard] Analytics data received:', analyticsData)
+        console.log('[Dashboard] Growth data received:', growthData)
+        console.log('[Dashboard] Usage data received:', usageAnalytics)
+        
         setAnalytics(analyticsData)
         setUserGrowth(growthData || [])
         setUsageData(usageAnalytics)
@@ -46,6 +54,7 @@ export default function DashboardPage() {
           setRecentActivity(activities)
         }
       } catch (err: any) {
+        console.error('[Dashboard] Error fetching data:', err)
         setError(err.message || 'Failed to load analytics')
       } finally {
         setIsLoading(false)

@@ -13,6 +13,7 @@ WORKDIR /app/admin-panel
 COPY admin-panel/package*.json ./
 RUN npm ci
 COPY admin-panel/ .
+# Admin panel environment - will be overridden at runtime
 ENV VITE_ADMIN_API_URL=http://astroai:8000
 ENV VITE_FIREBASE_PROJECT_ID=""
 ENV VITE_FIREBASE_API_KEY=""
@@ -40,6 +41,9 @@ COPY backend/ ./backend/
 COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
 COPY world_cities_with_tz.csv .
+
+# Copy validation script
+COPY backend/validate_admin_data.py ./backend/
 
 # Verify CSV file was copied
 RUN ls -lh /app/world_cities_with_tz.csv && echo "CSV file copied successfully"

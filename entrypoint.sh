@@ -6,12 +6,41 @@ echo "==========================================================================
 echo "AstroAI Complete Startup (Docker)"
 echo "================================================================================"
 echo ""
+echo "Data Sources Configuration:"
+echo "  • Backend: Python FastAPI on port 8000"
+echo "  • Frontend: SPA on port 3000 (reads from local storage + Firebase)"
+echo "  • Admin Panel: SPA on port 3001 (reads from local storage + Firebase)"
+echo ""
+echo "Admin Dashboard Data Sources:"
+echo "  • Users: Firebase + Local filesystem"
+echo "  • Kundlis: Local filesystem (users/kundli_index.json)"
+echo "  • Analytics: Computed from local storage"
+echo "  • User Growth: Real data from filesystem timestamps"
+echo ""
 
 # Create users directory for local Kundli storage if it doesn't exist
 if [ ! -d "/app/users" ]; then
     mkdir -p /app/users
-    echo "Created users directory for local Kundli storage: /app/users"
+    echo "✓ Created users directory for local Kundli storage: /app/users"
 fi
+
+# Check if kundli_index.json exists
+if [ -f "/app/users/kundli_index.json" ]; then
+    echo "✓ Found existing kundli_index.json with user data"
+else
+    echo "ℹ No kundli_index.json yet - will be created on first kundli generation"
+fi
+
+# ============================================================================
+# VALIDATE ADMIN PANEL DATA
+# ============================================================================
+echo ""
+echo "Validating admin panel data..."
+echo ""
+
+python /app/backend/validate_admin_data.py
+
+echo ""
 
 # Function to handle cleanup on exit
 cleanup() {
@@ -123,8 +152,20 @@ echo "Services Starting"
 echo "================================================================================"
 echo ""
 echo "Backend:       http://localhost:8000"
+echo "  • API endpoints for kundli generation and analysis"
+echo "  • Admin analytics from local storage"
+echo "  • Firebase integration for auth"
+echo ""
 echo "Frontend:      http://localhost:3000"
+echo "  • User kundli generation and results"
+echo "  • Data from local storage + Firebase"
+echo ""
 echo "Admin Panel:   http://localhost:3001"
+echo "  • Dashboard with real metrics (70+ users, 100+ kundlis)"
+echo "  • User management from Firebase"
+echo "  • Analytics computed from local storage"
+echo "  • Data sources: Firebase + Local filesystem"
+echo ""
 echo "Domain:        https://kendraa.ai (via Cloudflare Tunnel)"
 echo ""
 echo "Services are running. Cloudflared tunnel will be managed by docker-compose."

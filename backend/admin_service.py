@@ -42,9 +42,10 @@ class AdminService:
                 
                 # Add kundli count from filesystem if available
                 try:
-                    kundli_count = self.analytics_service._count_kundlis(f'/app/users/{doc.id}')
+                    kundli_count = self.analytics_service._count_kundlis(doc.id)
                     user_data['kundliCount'] = kundli_count
-                except:
+                except Exception as e:
+                    logger.warning(f"Could not get kundli count for user {doc.id}: {str(e)}")
                     user_data['kundliCount'] = 0
                 
                 users.append(user_data)

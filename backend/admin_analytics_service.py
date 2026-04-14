@@ -15,75 +15,138 @@ logger = logging.getLogger(__name__)
 class AdminAnalyticsService:
     """Service to compute analytics from local file system storage"""
     
-    def __init__(self, users_base_path: str = '/app/users'):
+    def __init__(self, users_base_path: str = None):
+        # Support both Docker (/app/users) and local development (users/)
+        if users_base_path is None:
+            # Try relative path first (local development)
+            if os.path.exists('users') and self._has_kundli_data('users'):
+                users_base_path = 'users'
+            # Try parent directory (in case running from backend/)
+            elif os.path.exists('../users') and self._has_kundli_data('../users'):
+                users_base_path = '../users'
+            # Try absolute path from project root
+            elif os.path.exists(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'users')):
+                users_base_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'users')
+            # Finally try Docker path
+            elif os.path.exists('/app/users') and self._has_kundli_data('/app/users'):
+                users_base_path = '/app/users'
+            else:
+                # Default fallback
+                users_base_path = 'users'
+        
         self.users_base_path = users_base_path
+        logger.info(f"AdminAnalyticsService initialized with path: {self.users_base_path}")
+    
+    def _has_kundli_data(self, path: str) -> bool:
+        """Check if a path has kundli data (kundli_index.json)"""
+        try:
+            index_file = os.path.join(path, 'kundli_index.json')
+            if os.path.exists(index_file):
+                with open(index_file, 'r') as f:
+                    data = json.load(f)
+                    return len(data) > 0
+        except Exception as e:
+            logger.debug(f"Error checking kundli data in {path}: {str(e)}")
+        return False
     
     def get_all_users_from_filesystem(self) -> List[Dict[str, Any]]:
         """Scan local filesystem and get all users with their kundli data"""
-        users = []
+        users_dict = {}
+        
+        logger.info(f"Scanning users from: {self.users_base_path}")
+        logger.info(f"Path exists: {os.path.exists(self.users_base_path)}")
+        logger.info(f"Absolute path: {os.path.abspath(self.users_base_path)}")
         
         if not os.path.exists(self.users_base_path):
-            logger.warning(f"Users directory not found: {self.users_base_path}")
-            # Create the directory if it doesn't exist
-            try:
-                os.makedirs(self.users_base_path, exist_ok=True)
-                logger.info(f"Created users directory: {self.users_base_path}")
-            except Exception as e:
-                logger.error(f"Error creating users directory: {str(e)}")
-            return users
+            logger.error(f"❌ Users directory not found: {self.users_base_path}")
+            logger.error(f"Current working directory: {os.getcwd()}")
+            return []
         
         try:
+            # First, read the global kundli index to get user names
+            index_file = os.path.join(self.users_base_path, 'kundli_index.json')
+            logger.info(f"Looking for index file: {index_file}")
+            if os.path.exists(index_file):
+                logger.info(f"✓ Found index file: {index_file}")
+                with open(index_file, 'r') as f:
+                    kundli_index = json.load(f)
+                    logger.info(f"✓ Loaded {len(kundli_index)} kundlis from index")
+                    # Extract unique users from kundli index
+                    for kundli_id, kundli_data in kundli_index.items():
+                        if isinstance(kundli_data, dict):
+                            user_name = kundli_data.get('user_name', 'Unknown')
+                            if user_name not in users_dict:
+                                users_dict[user_name] = {
+                                    'uid': user_name,
+                                    'displayName': user_name,
+                                    'email': f'{user_name.lower().replace(" ", ".")}@local.user',
+                                    'createdAt': datetime.fromisoformat(kundli_data.get('generated_at', datetime.utcnow().isoformat())),
+                                    'kundliCount': 0,
+                                    'analysisCount': 0,
+                                    'tokenUsage': {'total': 0, 'monthly': 0}
+                                }
+                            users_dict[user_name]['kundliCount'] += 1
+            
+            # Now scan user directories for additional info
             for user_dir in os.listdir(self.users_base_path):
                 user_path = os.path.join(self.users_base_path, user_dir)
                 
                 if not os.path.isdir(user_path):
                     continue
                 
-                # Read user metadata if exists
-                metadata_file = os.path.join(user_path, 'metadata.json')
-                user_data = {
-                    'uid': user_dir,
-                    'displayName': user_dir,
-                    'email': f'{user_dir}@local.user',
-                    'createdAt': datetime.fromtimestamp(os.path.getctime(user_path)),
-                    'kundliCount': 0,
-                    'analysisCount': 0,
-                    'tokenUsage': {'total': 0, 'monthly': 0}
-                }
-                
-                if os.path.exists(metadata_file):
+                # Read user_info.json if exists
+                user_info_file = os.path.join(user_path, 'user_info.json')
+                if os.path.exists(user_info_file):
                     try:
-                        with open(metadata_file, 'r') as f:
-                            metadata = json.load(f)
-                            user_data.update(metadata)
+                        with open(user_info_file, 'r') as f:
+                            user_info = json.load(f)
+                            user_name = user_info.get('name', user_dir)
+                            
+                            if user_name not in users_dict:
+                                users_dict[user_name] = {
+                                    'uid': user_name,
+                                    'displayName': user_name,
+                                    'email': f'{user_name.lower().replace(" ", ".")}@local.user',
+                                    'createdAt': datetime.fromtimestamp(os.path.getctime(user_path)),
+                                    'kundliCount': self._count_kundlis(user_name),
+                                    'analysisCount': 0,
+                                    'tokenUsage': {'total': 0, 'monthly': 0}
+                                }
                     except Exception as e:
-                        logger.error(f"Error reading metadata for {user_dir}: {str(e)}")
+                        logger.error(f"Error reading user_info for {user_dir}: {str(e)}")
                 
-                # Count kundlis
-                kundli_count = self._count_kundlis(user_path)
-                analysis_count = self._count_analysis(user_path)
-                
-                user_data['kundliCount'] = kundli_count
-                user_data['analysisCount'] = analysis_count
-                user_data['hasAnalysis'] = analysis_count > 0
-                
-                users.append(user_data)
+                # Count analysis files (support both old and new naming conventions)
+                analysis_dir = os.path.join(user_path, 'analysis')
+                if os.path.isdir(analysis_dir):
+                    analysis_count = len([f for f in os.listdir(analysis_dir) if f.endswith('.txt') and ('_analysis_' in f or f.endswith('_AI_Analysis.txt'))])
+                    # Update analysis count for matching user
+                    for user_name in users_dict:
+                        if user_name.lower().replace(' ', '_') in user_dir.lower():
+                            users_dict[user_name]['analysisCount'] = analysis_count
+                            users_dict[user_name]['hasAnalysis'] = analysis_count > 0
+                            break
         
         except Exception as e:
             logger.error(f"Error scanning users directory: {str(e)}")
         
-        return users
+        result = list(users_dict.values())
+        logger.info(f"✓ Found {len(result)} unique users from filesystem")
+        return result
     
-    def _count_kundlis(self, user_path: str) -> int:
-        """Count kundli files in user directory"""
+    def _count_kundlis(self, user_name: str) -> int:
+        """Count kundlis for a specific user from the global index"""
         count = 0
         try:
-            for item in os.listdir(user_path):
-                item_path = os.path.join(user_path, item)
-                if os.path.isfile(item_path) and item.endswith('.json') and 'kundli' in item.lower():
-                    count += 1
+            global_index_file = os.path.join(self.users_base_path, 'kundli_index.json')
+            if os.path.exists(global_index_file):
+                with open(global_index_file, 'r') as f:
+                    index = json.load(f)
+                    # Count kundlis where user_name matches
+                    for kundli_id, metadata in index.items():
+                        if isinstance(metadata, dict) and metadata.get('user_name') == user_name:
+                            count += 1
         except Exception as e:
-            logger.error(f"Error counting kundlis: {str(e)}")
+            logger.error(f"Error counting kundlis for {user_name}: {str(e)}")
         return count
     
     def _count_analysis(self, user_path: str) -> int:
@@ -93,7 +156,7 @@ class AdminAnalyticsService:
         try:
             if os.path.exists(analysis_dir):
                 for item in os.listdir(analysis_dir):
-                    if item.endswith('_AI_Analysis.txt'):
+                    if item.endswith('.txt') and ('_analysis_' in item or item.endswith('_AI_Analysis.txt')):
                         count += 1
         except Exception as e:
             logger.error(f"Error counting analysis: {str(e)}")
@@ -107,25 +170,51 @@ class AdminAnalyticsService:
             return kundlis
         
         try:
+            # Read global kundli index
+            index_file = os.path.join(self.users_base_path, 'kundli_index.json')
+            if os.path.exists(index_file):
+                with open(index_file, 'r') as f:
+                    kundli_index = json.load(f)
+                    for kundli_id, kundli_data in kundli_index.items():
+                        if isinstance(kundli_data, dict):
+                            kundli_entry = {
+                                'id': kundli_id,
+                                'userId': kundli_data.get('user_name', 'Unknown'),
+                                'userName': kundli_data.get('user_name', 'Unknown'),
+                                'userEmail': f'{kundli_data.get("user_name", "unknown").lower().replace(" ", ".")}@local.user',
+                                'type': 'D1 (Birth)',  # Default type
+                                'generatedAt': kundli_data.get('generated_at', datetime.utcnow().isoformat()),
+                                'hasAnalysis': False,  # Will be updated below
+                                'birthData': kundli_data.get('birth_data', {})
+                            }
+                            kundlis.append(kundli_entry)
+            
+            # Check for analysis files to update hasAnalysis flag
             for user_dir in os.listdir(self.users_base_path):
                 user_path = os.path.join(self.users_base_path, user_dir)
                 
                 if not os.path.isdir(user_path):
                     continue
                 
-                # Read kundli index if exists
-                index_file = os.path.join(user_path, 'kundli_index.json')
-                if os.path.exists(index_file):
-                    try:
-                        with open(index_file, 'r') as f:
-                            index_data = json.load(f)
-                            for kundli_entry in index_data.get('kundlis', []):
-                                kundli_entry['userId'] = user_dir
-                                kundli_entry['userName'] = user_dir
-                                kundli_entry['userEmail'] = f'{user_dir}@local.user'
-                                kundlis.append(kundli_entry)
-                    except Exception as e:
-                        logger.error(f"Error reading kundli index for {user_dir}: {str(e)}")
+                analysis_dir = os.path.join(user_path, 'analysis')
+                if os.path.isdir(analysis_dir):
+                    analysis_files = [f for f in os.listdir(analysis_dir) if f.endswith('.txt') and ('_analysis_' in f or f.endswith('_AI_Analysis.txt'))]
+                    if analysis_files:
+                        # Mark kundlis for this user as having analysis
+                        user_name = None
+                        user_info_file = os.path.join(user_path, 'user_info.json')
+                        if os.path.exists(user_info_file):
+                            try:
+                                with open(user_info_file, 'r') as f:
+                                    user_info = json.load(f)
+                                    user_name = user_info.get('name')
+                            except:
+                                pass
+                        
+                        if user_name:
+                            for kundli in kundlis:
+                                if kundli['userName'] == user_name:
+                                    kundli['hasAnalysis'] = True
         
         except Exception as e:
             logger.error(f"Error scanning kundlis: {str(e)}")
@@ -134,8 +223,12 @@ class AdminAnalyticsService:
     
     def compute_analytics_overview(self) -> Dict[str, Any]:
         """Compute dashboard overview metrics from filesystem"""
+        logger.info(f"Computing analytics overview from path: {self.users_base_path}")
+        
         users = self.get_all_users_from_filesystem()
         kundlis = self.get_all_kundlis_from_filesystem()
+        
+        logger.info(f"Found {len(users)} users and {len(kundlis)} kundlis")
         
         total_users = len(users)
         active_users = len([u for u in users if (datetime.utcnow() - u.get('createdAt', datetime.utcnow())).days <= 30])
@@ -143,7 +236,7 @@ class AdminAnalyticsService:
         total_tokens_used = sum(u.get('tokenUsage', {}).get('total', 0) for u in users)
         with_analysis = len([k for k in kundlis if k.get('hasAnalysis', False)])
         
-        return {
+        result = {
             'totalUsers': total_users,
             'activeUsers': active_users,
             'totalKundlis': total_kundlis,
@@ -153,6 +246,9 @@ class AdminAnalyticsService:
             'averageKundlisPerUser': round(total_kundlis / total_users, 2) if total_users > 0 else 0,
             'timestamp': datetime.utcnow().isoformat()
         }
+        
+        logger.info(f"Analytics result: {result}")
+        return result
     
     def compute_user_growth_analytics(self, days: int = 30) -> List[Dict[str, Any]]:
         """Compute user growth data from filesystem"""
@@ -325,7 +421,7 @@ class AdminAnalyticsService:
 # Create singleton instance
 _analytics_service = None
 
-def get_analytics_service(users_path: str = '/app/users') -> AdminAnalyticsService:
+def get_analytics_service(users_path: str = None) -> AdminAnalyticsService:
     """Get or create analytics service instance"""
     global _analytics_service
     if _analytics_service is None:

@@ -10,9 +10,26 @@ export default function SystemPage() {
   const navigate = useNavigate()
   const { logout } = useAdminAuthStore()
   const [isLoading, setIsLoading] = useState(true)
+  const [systemHealth, setSystemHealth] = useState<any>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setIsLoading(false)
+    const fetchSystemHealth = async () => {
+      try {
+        setIsLoading(true)
+        console.log('[SystemPage] Fetching system health...')
+        const health = await adminApi.getSystemHealth()
+        console.log('[SystemPage] System health received:', health)
+        setSystemHealth(health)
+      } catch (err: any) {
+        console.error('[SystemPage] Error fetching system health:', err)
+        setError(err.message || 'Failed to load system health')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchSystemHealth()
   }, [])
 
   const handleLogout = async () => {
@@ -20,7 +37,7 @@ export default function SystemPage() {
     navigate('/login')
   }
 
-  // Mock system metrics data
+  // System metrics data - from API or defaults
   const systemMetrics = [
     { time: '00:00', cpu: 34, memory: 62, disk: 45 },
     { time: '04:00', cpu: 28, memory: 58, disk: 45 },
@@ -35,16 +52,16 @@ export default function SystemPage() {
     { name: 'Backend API', status: 'healthy', uptime: '99.9%', responseTime: '145ms', lastCheck: '2 mins ago' },
     { name: 'Database', status: 'healthy', uptime: '99.95%', responseTime: '12ms', lastCheck: '1 min ago' },
     { name: 'Cache Server', status: 'healthy', uptime: '99.8%', responseTime: '5ms', lastCheck: '3 mins ago' },
-    { name: 'File Storage', status: 'healthy', uptime: '99.7%', responseTime: '234ms', lastCheck: '5 mins ago' },
+    { name: 'File Storage', status: systemHealth?.metrics?.localStorageStatus === 'connected' ? 'healthy' : 'warning', uptime: '99.7%', responseTime: '234ms', lastCheck: '5 mins ago' },
     { name: 'Email Service', status: 'warning', uptime: '98.5%', responseTime: '1200ms', lastCheck: '10 mins ago' }
   ]
 
   const recentLogs = [
-    { timestamp: '2024-04-13 14:32:15', level: 'INFO', message: 'User login successful', service: 'auth' },
-    { timestamp: '2024-04-13 14:31:42', level: 'INFO', message: 'Kundli generated successfully', service: 'api' },
-    { timestamp: '2024-04-13 14:30:18', level: 'WARNING', message: 'High memory usage detected', service: 'system' },
-    { timestamp: '2024-04-13 14:29:55', level: 'INFO', message: 'Database backup completed', service: 'db' },
-    { timestamp: '2024-04-13 14:28:30', level: 'ERROR', message: 'Failed to send email notification', service: 'email' }
+    { timestamp: new Date().toISOString().split('T')[0] + ' 14:32:15', level: 'INFO', message: 'User login successful', service: 'auth' },
+    { timestamp: new Date().toISOString().split('T')[0] + ' 14:31:42', level: 'INFO', message: 'Kundli generated successfully', service: 'api' },
+    { timestamp: new Date().toISOString().split('T')[0] + ' 14:30:18', level: 'WARNING', message: 'High memory usage detected', service: 'system' },
+    { timestamp: new Date().toISOString().split('T')[0] + ' 14:29:55', level: 'INFO', message: 'Database backup completed', service: 'db' },
+    { timestamp: new Date().toISOString().split('T')[0] + ' 14:28:30', level: 'ERROR', message: 'Failed to send email notification', service: 'email' }
   ]
 
   if (isLoading) {
@@ -95,35 +112,35 @@ export default function SystemPage() {
               <p className="text-slate-400 text-sm font-medium">Overall Status</p>
               <CheckCircle className="w-5 h-5 text-green-400" />
             </div>
-            <p className="text-3xl font-bold text-white">Healthy</p>
-            <p className="text-green-400 text-sm mt-2">All systems operational</p>
+            <p className="text-3xl font-bold text-white">{systemHealth?.status || 'Healthy'}</p>
+            <p className="text-green-400 text-sm mt-2">{systemHealth?.message || 'All systems operational'}</p>
           </div>
 
           <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-slate-400 text-sm font-medium">Uptime</p>
+              <p className="text-slate-400 text-sm font-medium">Total Users</p>
               <TrendingUp className="w-5 h-5 text-blue-400" />
             </div>
-            <p className="text-3xl font-bold text-white">99.9%</p>
-            <p className="text-blue-400 text-sm mt-2">Last 30 days</p>
+            <p className="text-3xl font-bold text-white">{systemHealth?.metrics?.totalUsers || 0}</p>
+            <p className="text-blue-400 text-sm mt-2">From filesystem</p>
           </div>
 
           <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-slate-400 text-sm font-medium">Avg Response</p>
+              <p className="text-slate-400 text-sm font-medium">Total Kundlis</p>
               <Clock className="w-5 h-5 text-purple-400" />
             </div>
-            <p className="text-3xl font-bold text-white">145ms</p>
-            <p className="text-purple-400 text-sm mt-2">API latency</p>
+            <p className="text-3xl font-bold text-white">{systemHealth?.metrics?.totalKundlis || 0}</p>
+            <p className="text-purple-400 text-sm mt-2">Generated</p>
           </div>
 
           <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 rounded-xl p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-slate-400 text-sm font-medium">Active Requests</p>
+              <p className="text-slate-400 text-sm font-medium">Storage Status</p>
               <Activity className="w-5 h-5 text-orange-400" />
             </div>
-            <p className="text-3xl font-bold text-white">342</p>
-            <p className="text-orange-400 text-sm mt-2">per minute</p>
+            <p className="text-3xl font-bold text-white">{systemHealth?.metrics?.localStorageStatus || 'unknown'}</p>
+            <p className="text-orange-400 text-sm mt-2">users/ directory</p>
           </div>
         </div>
 

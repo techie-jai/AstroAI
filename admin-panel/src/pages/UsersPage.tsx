@@ -37,9 +37,31 @@ export default function UsersPage() {
     if (!window.confirm('Are you sure you want to block this user?')) return
     try {
       await adminApi.blockUser(userId, true)
+      alert('User blocked successfully')
       fetchUsers()
     } catch (err: any) {
       alert('Error: ' + (err.message || 'Failed to block user'))
+    }
+  }
+
+  const handleUnblockUser = async (userId: string) => {
+    if (!window.confirm('Are you sure you want to unblock this user?')) return
+    try {
+      await adminApi.blockUser(userId, false)
+      alert('User unblocked successfully')
+      fetchUsers()
+    } catch (err: any) {
+      alert('Error: ' + (err.message || 'Failed to unblock user'))
+    }
+  }
+
+  const handleResetPassword = async (userId: string) => {
+    if (!window.confirm('Send password reset email to this user?')) return
+    try {
+      await adminApi.resetPassword(userId)
+      alert('Password reset email sent successfully')
+    } catch (err: any) {
+      alert('Error: ' + (err.message || 'Failed to reset password'))
     }
   }
 
@@ -47,18 +69,10 @@ export default function UsersPage() {
     if (!window.confirm('Are you sure? This will delete all user data.')) return
     try {
       await adminApi.deleteUser(userId)
+      alert('User deleted successfully')
       fetchUsers()
     } catch (err: any) {
       alert('Error: ' + (err.message || 'Failed to delete user'))
-    }
-  }
-
-  const handleResetPassword = async (userId: string) => {
-    try {
-      await adminApi.resetPassword(userId)
-      alert('Password reset initiated')
-    } catch (err: any) {
-      alert('Error: ' + (err.message || 'Failed to reset password'))
     }
   }
 
@@ -254,9 +268,13 @@ export default function UsersPage() {
                             View
                           </button>
                           <button
-                            onClick={() => handleBlockUser(user.uid)}
-                            className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition border border-yellow-500/30"
-                            title="Block user"
+                            onClick={() => user.isBlocked ? handleUnblockUser(user.uid) : handleBlockUser(user.uid)}
+                            className={`p-2 rounded-lg transition border ${
+                              user.isBlocked
+                                ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30'
+                                : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border-yellow-500/30'
+                            }`}
+                            title={user.isBlocked ? 'Unblock user' : 'Block user'}
                           >
                             <Lock className="w-4 h-4" />
                           </button>

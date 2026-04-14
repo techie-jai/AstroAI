@@ -105,17 +105,23 @@ class AdminApiService {
   }
 
   async getAnalyticsOverview(): Promise<Analytics> {
+    console.log('[AdminApi] Fetching analytics overview from:', `${this.api.defaults.baseURL}/api/admin/analytics/overview`)
     const response = await this.api.get('/api/admin/analytics/overview')
+    console.log('[AdminApi] Analytics overview response:', response.data)
     return response.data
   }
 
   async getUserGrowth(days: number = 30): Promise<UserGrowth[]> {
+    console.log('[AdminApi] Fetching user growth from:', `${this.api.defaults.baseURL}/api/admin/analytics/user-growth?days=${days}`)
     const response = await this.api.get(`/api/admin/analytics/user-growth?days=${days}`)
+    console.log('[AdminApi] User growth response:', response.data)
     return response.data.data
   }
 
   async getUsageAnalytics(): Promise<UsageAnalytics> {
+    console.log('[AdminApi] Fetching usage analytics from:', `${this.api.defaults.baseURL}/api/admin/analytics/usage`)
     const response = await this.api.get('/api/admin/analytics/usage')
+    console.log('[AdminApi] Usage analytics response:', response.data)
     return response.data
   }
 
