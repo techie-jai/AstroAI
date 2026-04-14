@@ -99,3 +99,86 @@ class CreateProfileRequest(BaseModel):
     """Request to create user profile"""
     token: str = Field(..., description="Firebase ID token")
     display_name: Optional[str] = Field(None, description="Optional display name")
+
+
+class Dosha(BaseModel):
+    """Dosha detection result"""
+    name: str = Field(..., description="Name of the dosha (e.g., Mangal Dosha)")
+    detected: bool = Field(..., description="Whether dosha is present")
+    severity: str = Field(..., description="Severity level: severe, moderate, mild")
+    description: str = Field(..., description="Detailed explanation of the dosha")
+    remedies: List[str] = Field(default_factory=list, description="Suggested remedies (Upayas)")
+
+
+class Avastha(BaseModel):
+    """Planetary avastha (state/condition)"""
+    planet: str = Field(..., description="Planet name")
+    avastha_type: str = Field(..., description="Type: neecha, asta, yuddha, retrograde")
+    severity: str = Field(..., description="Severity: severe, moderate, mild")
+    description: str = Field(..., description="Explanation of the avastha")
+
+
+class DusthanaAffliction(BaseModel):
+    """Affliction in dusthana houses (6, 8, 12)"""
+    house: int = Field(..., ge=6, le=12, description="House number (6, 8, or 12)")
+    planets: List[str] = Field(..., description="Planets in this dusthana house")
+    severity: str = Field(..., description="Severity: severe, moderate, mild")
+    description: str = Field(..., description="Explanation of the affliction")
+
+
+class DChartAffliction(BaseModel):
+    """D-Chart specific afflictions"""
+    chart_type: str = Field(..., description="D-chart type (D9, D6, D8, D30, D60)")
+    affliction_type: str = Field(..., description="Type of affliction")
+    severity: str = Field(..., description="Severity: severe, moderate, mild")
+    description: str = Field(..., description="Explanation")
+    planets: Optional[List[str]] = Field(default=None, description="Affected planets")
+
+
+class CurrentDasha(BaseModel):
+    """Current Mahadasha/Antardasha information"""
+    planet: str = Field(..., description="Planet ruling the dasha")
+    start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
+    end_date: str = Field(..., description="End date (YYYY-MM-DD)")
+    duration_years: float = Field(..., description="Total duration in years")
+    progress_percent: float = Field(..., ge=0, le=100, description="Percentage of dasha completed")
+    days_remaining: int = Field(..., description="Days remaining in dasha")
+
+
+class NegativePeriod(BaseModel):
+    """Active negative period (Sade Sati, Maraka, etc.)"""
+    type: str = Field(..., description="Type: sade_sati, maraka, badhaka, rahu_mahadasha, ketu_mahadasha")
+    start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
+    end_date: str = Field(..., description="End date (YYYY-MM-DD)")
+    days_remaining: int = Field(..., description="Days remaining")
+    severity: str = Field(..., description="Severity: severe, moderate, mild")
+    description: str = Field(..., description="Explanation of the period")
+
+
+class DoshaAnalysisSummary(BaseModel):
+    """Summary statistics of dosha analysis"""
+    total_doshas: int = Field(..., description="Total doshas detected")
+    severe_count: int = Field(..., description="Count of severe doshas")
+    moderate_count: int = Field(..., description="Count of moderate doshas")
+    mild_count: int = Field(..., description="Count of mild doshas")
+    active_negative_periods: int = Field(..., description="Number of active negative periods")
+
+
+class DoshaAnalysisResponse(BaseModel):
+    """Complete dosha and timeline analysis response"""
+    kundli_id: str = Field(..., description="ID of analyzed kundli")
+    analysis_date: datetime = Field(..., description="When analysis was performed")
+    birth_data: Dict[str, Any] = Field(..., description="Birth data from kundli")
+    
+    doshas: Dict[str, Any] = Field(..., description="All detected doshas")
+    major_doshas: List[Dosha] = Field(..., description="8 major doshas")
+    planetary_avasthas: List[Avastha] = Field(..., description="Planetary states")
+    dusthana_afflictions: List[DusthanaAffliction] = Field(..., description="6th, 8th, 12th house afflictions")
+    d_chart_afflictions: List[DChartAffliction] = Field(..., description="D-chart specific afflictions")
+    
+    active_timelines: Dict[str, Any] = Field(..., description="Timeline data")
+    current_mahadasha: Optional[CurrentDasha] = Field(None, description="Current Mahadasha")
+    current_antardasha: Optional[CurrentDasha] = Field(None, description="Current Antardasha")
+    negative_periods: List[NegativePeriod] = Field(..., description="Active negative periods")
+    
+    summary: DoshaAnalysisSummary = Field(..., description="Analysis summary")

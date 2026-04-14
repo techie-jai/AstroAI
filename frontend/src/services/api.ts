@@ -236,6 +236,12 @@ export const api = {
   searchCities: (query: string) =>
     apiClient.get('/cities/search', { params: { query } }),
 
+  // Dosha & Dasha Analysis
+  analyzeDoshaAndDasha: (kundliId: string) =>
+    apiClient.post(`/analysis/${kundliId}`),
+  getDoshaAnalysis: (kundliId: string) =>
+    apiClient.post(`/analysis/${kundliId}`),
+
   // Bot Services
   sendKundliWhatsApp: (phoneNumber: string, kundliData: Record<string, any>, birthData: Record<string, any>) =>
     apiClient.post('/bot/send-kundli-whatsapp', {
