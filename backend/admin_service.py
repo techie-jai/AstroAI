@@ -16,8 +16,9 @@ class AdminService:
         self.analytics_service = get_analytics_service()
 
     def get_all_users(self, limit: int = 50, offset: int = 0, search: str = "", filters: Dict = None) -> Dict:
-        """Get all users with pagination and filtering from Firebase"""
+        """Get all users from Firebase with kundli/analysis counts from filesystem"""
         try:
+            # Get all users from Firebase
             query = self.db.collection('users')
 
             if search:
@@ -35,18 +36,18 @@ class AdminService:
             total = len(all_docs)
             users = []
 
+            # Get kundli counts from filesystem indexed by uid
+            kundli_counts_by_uid = self._get_kundli_counts_by_uid()
+
             # Apply pagination manually
             for doc in all_docs[offset:offset + limit]:
                 user_data = doc.to_dict()
                 user_data['uid'] = doc.id
                 
-                # Add kundli count from filesystem if available
-                try:
-                    kundli_count = self.analytics_service._count_kundlis(doc.id)
-                    user_data['kundliCount'] = kundli_count
-                except Exception as e:
-                    logger.warning(f"Could not get kundli count for user {doc.id}: {str(e)}")
-                    user_data['kundliCount'] = 0
+                # Get kundli and analysis counts from filesystem using uid
+                uid = doc.id
+                user_data['kundliCount'] = kundli_counts_by_uid.get(uid, {}).get('kundliCount', 0)
+                user_data['analysisCount'] = kundli_counts_by_uid.get(uid, {}).get('analysisCount', 0)
                 
                 users.append(user_data)
 
@@ -65,6 +66,92 @@ class AdminService:
                 'limit': limit,
                 'offset': offset
             }
+    
+    def _get_kundli_counts_by_uid(self) -> Dict[str, Dict]:
+        """Get kundli and analysis counts indexed by Firebase UID"""
+        counts = {}
+        try:
+            import os
+            import json
+            
+            # Get the users base path
+            users_path = self.analytics_service.users_base_path
+            index_file = os.path.join(users_path, 'kundli_index.json')
+            kundli_index = {}
+            
+            if os.path.exists(index_file):
+                with open(index_file, 'r') as f:
+                    kundli_index = json.load(f)
+                    
+                    # Count kundlis by uid (for new kundlis that have uid)
+                    for kundli_id, metadata in kundli_index.items():
+                        if isinstance(metadata, dict):
+                            uid = metadata.get('uid')
+                            if uid:
+                                if uid not in counts:
+                                    counts[uid] = {'kundliCount': 0, 'analysisCount': 0}
+                                counts[uid]['kundliCount'] += 1
+            
+            # Count analysis files by scanning user directories
+            if os.path.exists(users_path):
+                for user_dir in os.listdir(users_path):
+                    user_path = os.path.join(users_path, user_dir)
+                    if not os.path.isdir(user_path):
+                        continue
+                    
+                    # Try to get uid from user_info.json
+                    user_info_file = os.path.join(user_path, 'user_info.json')
+                    uid = None
+                    user_name = None
+                    
+                    if os.path.exists(user_info_file):
+                        try:
+                            with open(user_info_file, 'r') as f:
+                                user_info = json.load(f)
+                                uid = user_info.get('uid')
+                                user_name = user_info.get('name')
+                        except:
+                            pass
+                    
+                    # If no uid in user_info, try to extract from kundli_index
+                    if not uid and user_name:
+                        for kundli_id, metadata in kundli_index.items():
+                            if isinstance(metadata, dict):
+                                if metadata.get('user_name') == user_name:
+                                    uid = metadata.get('uid')
+                                    if uid:
+                                        break
+                    
+                    # Count analysis files
+                    analysis_dir = os.path.join(user_path, 'analysis')
+                    analysis_count = 0
+                    if os.path.isdir(analysis_dir):
+                        analysis_count = len([f for f in os.listdir(analysis_dir) 
+                                            if f.endswith('.txt') and ('_analysis_' in f or f.endswith('_AI_Analysis.txt'))])
+                    
+                    # Store analysis count
+                    if uid:
+                        if uid not in counts:
+                            counts[uid] = {'kundliCount': 0, 'analysisCount': 0}
+                        counts[uid]['analysisCount'] = analysis_count
+                    elif user_name:
+                        # For old kundlis without uid, count by user_name from kundli_index
+                        user_kundli_count = sum(1 for k, v in kundli_index.items() 
+                                              if isinstance(v, dict) and v.get('user_name') == user_name and not v.get('uid'))
+                        # Find any uid for this user from kundli_index
+                        for kundli_id, metadata in kundli_index.items():
+                            if isinstance(metadata, dict) and metadata.get('user_name') == user_name:
+                                uid = metadata.get('uid')
+                                if uid:
+                                    if uid not in counts:
+                                        counts[uid] = {'kundliCount': 0, 'analysisCount': 0}
+                                    counts[uid]['kundliCount'] += user_kundli_count
+                                    counts[uid]['analysisCount'] = analysis_count
+                                    break
+        except Exception as e:
+            logger.error(f"Error getting kundli counts by uid: {str(e)}")
+        
+        return counts
 
     def get_user_detail(self, user_id: str) -> Dict:
         """Get detailed user profile with kundli history"""

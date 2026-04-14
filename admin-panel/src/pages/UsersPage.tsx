@@ -207,48 +207,55 @@ export default function UsersPage() {
         ) : (
           <ChartCard title={`Users (${sortedUsers.length})`}>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-max">
                 <thead>
                   <tr className="border-b border-slate-700/50">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">User</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Email</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Kundlis</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Tokens</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-slate-300">Actions</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold text-slate-300 whitespace-nowrap">User</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold text-slate-300 whitespace-nowrap">Email</th>
+                    <th className="px-3 py-4 text-left text-sm font-semibold text-slate-300 whitespace-nowrap">Kundlis</th>
+                    <th className="px-3 py-4 text-left text-sm font-semibold text-slate-300 whitespace-nowrap">Analysis</th>
+                    <th className="px-3 py-4 text-left text-sm font-semibold text-slate-300 whitespace-nowrap">Tokens</th>
+                    <th className="px-3 py-4 text-left text-sm font-semibold text-slate-300 whitespace-nowrap">Status</th>
+                    <th className="px-4 py-4 text-left text-sm font-semibold text-slate-300 whitespace-nowrap sticky right-0 bg-slate-800/50 backdrop-blur-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/30">
                   {sortedUsers.map((user) => (
                     <tr key={user.uid} className="hover:bg-slate-700/20 transition">
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-white font-bold text-sm">
-                            {(user.displayName || 'U')[0].toUpperCase()}
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            {(user.displayName || user.email || 'U')[0].toUpperCase()}
                           </div>
-                          <span className="text-white font-medium">{user.displayName || 'Unknown'}</span>
+                          <span className="text-white font-medium truncate">{user.displayName || user.email || 'Unknown'}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-slate-400 text-sm">
-                          <Mail className="w-4 h-4" />
-                          {user.email}
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2 text-slate-400 text-sm truncate">
+                          <Mail className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{user.email}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-slate-300">
+                      <td className="px-3 py-4">
+                        <div className="flex items-center gap-2 text-slate-300 justify-center">
                           <BookOpen className="w-4 h-4 text-purple-400" />
-                          {user.kundliCount || 0}
+                          <span className="font-semibold">{user.kundliCount || 0}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-slate-300">
+                      <td className="px-3 py-4">
+                        <div className="flex items-center gap-2 text-slate-300 justify-center">
+                          <BookOpen className="w-4 h-4 text-indigo-400" />
+                          <span className="font-semibold">{user.analysisCount || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4">
+                        <div className="flex items-center gap-2 text-slate-300 justify-center">
                           <Zap className="w-4 h-4 text-orange-400" />
-                          {(user.tokenUsage?.total || 0).toLocaleString()}
+                          <span className="font-semibold">{(user.tokenUsage?.total || 0).toLocaleString()}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      <td className="px-3 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                           user.isBlocked
                             ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                             : 'bg-green-500/20 text-green-400 border border-green-500/30'
@@ -256,8 +263,8 @@ export default function UsersPage() {
                           {user.isBlocked ? 'Blocked' : 'Active'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
+                      <td className="px-4 py-4 sticky right-0 bg-slate-800/50 backdrop-blur-sm">
+                        <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => {
                               setSelectedUser(user)
@@ -336,6 +343,10 @@ export default function UsersPage() {
                   <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-4">
                     <p className="text-slate-400 text-sm mb-1">Kundlis Generated</p>
                     <p className="text-white font-semibold">{selectedUser.kundliCount || 0}</p>
+                  </div>
+                  <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-4">
+                    <p className="text-slate-400 text-sm mb-1">Analysis Generated</p>
+                    <p className="text-white font-semibold">{selectedUser.analysisCount || 0}</p>
                   </div>
                   <div className="bg-slate-700/30 border border-slate-600/30 rounded-lg p-4">
                     <p className="text-slate-400 text-sm mb-1">Tokens Used</p>

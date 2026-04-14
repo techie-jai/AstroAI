@@ -19,6 +19,7 @@ export interface User {
     lastReset?: string
   }
   kundliCount: number
+  analysisCount?: number
   subscription?: string
   blockedAt?: string
 }
