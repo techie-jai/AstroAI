@@ -104,10 +104,13 @@ class CreateProfileRequest(BaseModel):
 class Dosha(BaseModel):
     """Dosha detection result"""
     name: str = Field(..., description="Name of the dosha (e.g., Mangal Dosha)")
-    detected: bool = Field(..., description="Whether dosha is present")
+    is_present: bool = Field(..., description="Whether dosha is present")
+    is_cancelled: bool = Field(default=False, description="Whether dosha is cancelled by Bhanga yogas")
     severity: str = Field(..., description="Severity level: severe, moderate, mild")
     description: str = Field(..., description="Detailed explanation of the dosha")
+    cancellation_reasons: List[str] = Field(default_factory=list, description="Reasons why dosha is cancelled (Dosha Bhanga)")
     remedies: List[str] = Field(default_factory=list, description="Suggested remedies (Upayas)")
+    detected: bool = Field(default=False, description="[DEPRECATED] Use is_present instead")
 
 
 class Avastha(BaseModel):

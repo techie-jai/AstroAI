@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../services/api'
-import { AlertCircle, Loader, ChevronDown, Calendar, TrendingDown, ChevronUp } from 'lucide-react'
+import { AlertCircle, Loader, ChevronDown, Calendar, TrendingDown, ChevronUp, CheckCircle } from 'lucide-react'
 
 interface Kundli {
   id: string
@@ -17,10 +17,13 @@ interface DoshaAnalysis {
   birth_data: Record<string, any>
   major_doshas: Array<{
     name: string
-    detected: boolean
+    is_present: boolean
+    is_cancelled: boolean
     severity: string
     description: string
+    cancellation_reasons: string[]
     remedies: string[]
+    detected?: boolean
   }>
   planetary_avasthas: Array<{
     planet: string
@@ -176,7 +179,10 @@ const DoshDashaAnalysisPage: React.FC = () => {
     }))
   }
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: string, isCancelled: boolean = false) => {
+    if (isCancelled) {
+      return 'text-green-600 bg-green-50 border-green-200'
+    }
     switch (severity) {
       case 'severe':
         return 'text-red-600 bg-red-50 border-red-200'
@@ -189,7 +195,10 @@ const DoshDashaAnalysisPage: React.FC = () => {
     }
   }
 
-  const getSeverityBadgeColor = (severity: string) => {
+  const getSeverityBadgeColor = (severity: string, isCancelled: boolean = false) => {
+    if (isCancelled) {
+      return 'bg-green-100 text-green-800'
+    }
     switch (severity) {
       case 'severe':
         return 'bg-red-100 text-red-800'
@@ -448,35 +457,61 @@ const DoshDashaAnalysisPage: React.FC = () => {
               </button>
               {expandedSections.doshas && (
                 <div className="px-6 pb-6 space-y-4 border-t border-gray-200">
-                  {analysis.major_doshas.map((dosha, idx) => (
-                  <div
-                    key={idx}
-                    className={`border rounded-lg p-4 ${getSeverityColor(dosha.severity)}`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg">{dosha.name}</h3>
-                        <p className="text-sm mt-2 opacity-90">{dosha.description}</p>
-                        {dosha.detected && dosha.remedies.length > 0 && (
-                          <div className="mt-3">
-                            <p className="text-sm font-semibold mb-2">Remedies:</p>
-                            <ul className="text-sm space-y-1">
-                              {dosha.remedies.slice(0, 3).map((remedy, i) => (
-                                <li key={i} className="flex items-start">
-                                  <span className="mr-2">•</span>
-                                  <span>{remedy}</span>
-                                </li>
-                              ))}
-                            </ul>
+                  {analysis.major_doshas.map((dosha, idx) => {
+                    const isPresent = dosha.is_present !== undefined ? dosha.is_present : dosha.detected
+                    const isCancelled = dosha.is_cancelled || false
+                    
+                    return (
+                      <div
+                        key={idx}
+                        className={`border rounded-lg p-4 ${getSeverityColor(dosha.severity, isCancelled)}`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg">{dosha.name}</h3>
+                            
+                            {/* Cancellation Message */}
+                            {isPresent && isCancelled && (
+                              <div className="mt-3 p-3 bg-green-100 rounded-lg border border-green-300">
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="font-bold text-green-800 text-sm">Good News: This Dosha is cancelled out in your chart due to the following reasons:</p>
+                                    <ul className="mt-2 text-sm text-green-700 space-y-1">
+                                      {dosha.cancellation_reasons.map((reason, i) => (
+                                        <li key={i} className="flex items-start">
+                                          <span className="mr-2">•</span>
+                                          <span>{reason}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <p className="text-sm mt-2 opacity-90">{dosha.description}</p>
+                            {isPresent && !isCancelled && dosha.remedies.length > 0 && (
+                              <div className="mt-3">
+                                <p className="text-sm font-semibold mb-2">Remedies:</p>
+                                <ul className="text-sm space-y-1">
+                                  {dosha.remedies.slice(0, 3).map((remedy, i) => (
+                                    <li key={i} className="flex items-start">
+                                      <span className="mr-2">•</span>
+                                      <span>{remedy}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-4 flex-shrink-0 ${getSeverityBadgeColor(dosha.severity, isCancelled)}`}>
+                            {isCancelled ? 'CANCELLED' : (isPresent ? dosha.severity.toUpperCase() : 'NOT PRESENT')}
+                          </span>
+                        </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-4 ${getSeverityBadgeColor(dosha.severity)}`}>
-                        {dosha.detected ? dosha.severity.toUpperCase() : 'NOT PRESENT'}
-                      </span>
-                    </div>
-                  </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
