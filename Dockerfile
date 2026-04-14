@@ -13,14 +13,25 @@ WORKDIR /app/admin-panel
 COPY admin-panel/package*.json ./
 RUN npm ci
 COPY admin-panel/ .
-# Admin panel environment - will be overridden at runtime
-ENV VITE_ADMIN_API_URL=http://astroai:8000
-ENV VITE_FIREBASE_PROJECT_ID=""
-ENV VITE_FIREBASE_API_KEY=""
-ENV VITE_FIREBASE_AUTH_DOMAIN=""
-ENV VITE_FIREBASE_STORAGE_BUCKET=""
-ENV VITE_FIREBASE_MESSAGING_SENDER_ID=""
-ENV VITE_FIREBASE_APP_ID=""
+
+# Accept build arguments for Firebase configuration
+ARG VITE_ADMIN_API_URL=http://localhost:8000
+ARG VITE_FIREBASE_PROJECT_ID
+ARG VITE_FIREBASE_API_KEY
+ARG VITE_FIREBASE_AUTH_DOMAIN
+ARG VITE_FIREBASE_STORAGE_BUCKET
+ARG VITE_FIREBASE_MESSAGING_SENDER_ID
+ARG VITE_FIREBASE_APP_ID
+
+# Set environment variables from build arguments
+ENV VITE_ADMIN_API_URL=${VITE_ADMIN_API_URL}
+ENV VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID}
+ENV VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
+ENV VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN}
+ENV VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET}
+ENV VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID}
+ENV VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID}
+
 RUN npm run build
 
 FROM python:3.11-slim
@@ -32,6 +43,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     wget \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
@@ -42,9 +54,6 @@ COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
 COPY world_cities_with_tz.csv .
 
-# Copy validation script
-COPY backend/validate_admin_data.py ./backend/
-
 # Verify CSV file was copied
 RUN ls -lh /app/world_cities_with_tz.csv && echo "CSV file copied successfully"
 
@@ -53,26 +62,6 @@ RUN mkdir -p /app/users
 RUN echo "Created users directory for local Kundli storage"
 
 RUN find /app -name "*.py" -type f -exec sed -i 's/\r$//' {} \;
-COPY frontend/package*.json ./frontend/
-COPY frontend/src ./frontend/src
-COPY frontend/index.html ./frontend/
-COPY frontend/vite.config.ts ./frontend/
-COPY frontend/tsconfig.json ./frontend/
-COPY frontend/tsconfig.node.json ./frontend/
-COPY frontend/tailwind.config.js ./frontend/
-COPY frontend/postcss.config.js ./frontend/
-
-COPY admin-panel/package*.json ./admin-panel/
-COPY admin-panel/src ./admin-panel/src
-COPY admin-panel/index.html ./admin-panel/
-COPY admin-panel/vite.config.ts ./admin-panel/
-COPY admin-panel/tsconfig.json ./admin-panel/
-COPY admin-panel/tsconfig.node.json ./admin-panel/
-COPY admin-panel/tailwind.config.js ./admin-panel/
-COPY admin-panel/postcss.config.js ./admin-panel/
-COPY admin-panel/.env.example ./admin-panel/
-
-RUN mkdir -p /app/new-ui
 
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY --from=admin-builder /app/admin-panel/dist ./admin-panel/dist
