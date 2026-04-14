@@ -4,8 +4,7 @@ import { useAdminAuthStore } from './store/adminAuthStore'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import UsersPage from './pages/UsersPage'
-import KundlisPage from './pages/KundlisPage'
-import AnalyticsPage from './pages/AnalyticsPage'
+import KundliAnalyticsPage from './pages/KundliAnalyticsPage'
 import SystemPage from './pages/SystemPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -60,7 +59,7 @@ function App() {
           path="/kundlis"
           element={
             <ProtectedRoute>
-              <KundlisPage />
+              <KundliAnalyticsPage />
             </ProtectedRoute>
           }
         />
@@ -68,7 +67,7 @@ function App() {
           path="/analytics"
           element={
             <ProtectedRoute>
-              <AnalyticsPage />
+              <KundliAnalyticsPage />
             </ProtectedRoute>
           }
         />

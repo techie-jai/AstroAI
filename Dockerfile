@@ -11,13 +11,16 @@ FROM node:18-alpine AS admin-builder
 
 WORKDIR /app/admin-panel
 COPY admin-panel/package*.json ./
-RUN npm install
+RUN npm ci
 COPY admin-panel/ .
+# Admin panel environment - will be overridden at runtime
 ENV VITE_ADMIN_API_URL=http://astroai:8000
 ENV VITE_FIREBASE_PROJECT_ID=""
 ENV VITE_FIREBASE_API_KEY=""
 ENV VITE_FIREBASE_AUTH_DOMAIN=""
 ENV VITE_FIREBASE_STORAGE_BUCKET=""
+ENV VITE_FIREBASE_MESSAGING_SENDER_ID=""
+ENV VITE_FIREBASE_APP_ID=""
 RUN npm run build
 
 FROM python:3.11-slim
@@ -38,6 +41,9 @@ COPY backend/ ./backend/
 COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
 COPY world_cities_with_tz.csv .
+
+# Copy validation script
+COPY backend/validate_admin_data.py ./backend/
 
 # Verify CSV file was copied
 RUN ls -lh /app/world_cities_with_tz.csv && echo "CSV file copied successfully"

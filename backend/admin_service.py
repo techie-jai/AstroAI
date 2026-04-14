@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from firebase_admin import firestore
 from google.cloud.firestore import FieldFilter
 import logging
+from admin_analytics_service import get_analytics_service
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +13,12 @@ class AdminService:
 
     def __init__(self, db):
         self.db = db
+        self.analytics_service = get_analytics_service()
 
     def get_all_users(self, limit: int = 50, offset: int = 0, search: str = "", filters: Dict = None) -> Dict:
-        """Get all users with pagination and filtering"""
+        """Get all users from Firebase with kundli/analysis counts from filesystem"""
         try:
+            # Get all users from Firebase
             query = self.db.collection('users')
 
             if search:
@@ -28,12 +31,24 @@ class AdminService:
                 if filters.get('isBlocked') is not None:
                     query = query.where(filter=FieldFilter('isBlocked', '==', filters['isBlocked']))
 
-            total = len(query.stream())
+            # Convert stream to list to get total count
+            all_docs = list(query.stream())
+            total = len(all_docs)
             users = []
 
-            for doc in query.offset(offset).limit(limit).stream():
+            # Get kundli counts from filesystem indexed by uid
+            kundli_counts_by_uid = self._get_kundli_counts_by_uid()
+
+            # Apply pagination manually
+            for doc in all_docs[offset:offset + limit]:
                 user_data = doc.to_dict()
                 user_data['uid'] = doc.id
+                
+                # Get kundli and analysis counts from filesystem using uid
+                uid = doc.id
+                user_data['kundliCount'] = kundli_counts_by_uid.get(uid, {}).get('kundliCount', 0)
+                user_data['analysisCount'] = kundli_counts_by_uid.get(uid, {}).get('analysisCount', 0)
+                
                 users.append(user_data)
 
             return {
@@ -44,7 +59,99 @@ class AdminService:
             }
         except Exception as e:
             logger.error(f"Error fetching users: {str(e)}")
-            raise
+            # Return empty list instead of raising
+            return {
+                'users': [],
+                'total': 0,
+                'limit': limit,
+                'offset': offset
+            }
+    
+    def _get_kundli_counts_by_uid(self) -> Dict[str, Dict]:
+        """Get kundli and analysis counts indexed by Firebase UID"""
+        counts = {}
+        try:
+            import os
+            import json
+            
+            # Get the users base path
+            users_path = self.analytics_service.users_base_path
+            index_file = os.path.join(users_path, 'kundli_index.json')
+            kundli_index = {}
+            
+            if os.path.exists(index_file):
+                with open(index_file, 'r') as f:
+                    kundli_index = json.load(f)
+                    
+                    # Count kundlis by uid (for new kundlis that have uid)
+                    for kundli_id, metadata in kundli_index.items():
+                        if isinstance(metadata, dict):
+                            uid = metadata.get('uid')
+                            if uid:
+                                if uid not in counts:
+                                    counts[uid] = {'kundliCount': 0, 'analysisCount': 0}
+                                counts[uid]['kundliCount'] += 1
+            
+            # Count analysis files by scanning user directories
+            if os.path.exists(users_path):
+                for user_dir in os.listdir(users_path):
+                    user_path = os.path.join(users_path, user_dir)
+                    if not os.path.isdir(user_path):
+                        continue
+                    
+                    # Try to get uid from user_info.json
+                    user_info_file = os.path.join(user_path, 'user_info.json')
+                    uid = None
+                    user_name = None
+                    
+                    if os.path.exists(user_info_file):
+                        try:
+                            with open(user_info_file, 'r') as f:
+                                user_info = json.load(f)
+                                uid = user_info.get('uid')
+                                user_name = user_info.get('name')
+                        except:
+                            pass
+                    
+                    # If no uid in user_info, try to extract from kundli_index
+                    if not uid and user_name:
+                        for kundli_id, metadata in kundli_index.items():
+                            if isinstance(metadata, dict):
+                                if metadata.get('user_name') == user_name:
+                                    uid = metadata.get('uid')
+                                    if uid:
+                                        break
+                    
+                    # Count analysis files
+                    analysis_dir = os.path.join(user_path, 'analysis')
+                    analysis_count = 0
+                    if os.path.isdir(analysis_dir):
+                        analysis_count = len([f for f in os.listdir(analysis_dir) 
+                                            if f.endswith('.txt') and ('_analysis_' in f or f.endswith('_AI_Analysis.txt'))])
+                    
+                    # Store analysis count
+                    if uid:
+                        if uid not in counts:
+                            counts[uid] = {'kundliCount': 0, 'analysisCount': 0}
+                        counts[uid]['analysisCount'] = analysis_count
+                    elif user_name:
+                        # For old kundlis without uid, count by user_name from kundli_index
+                        user_kundli_count = sum(1 for k, v in kundli_index.items() 
+                                              if isinstance(v, dict) and v.get('user_name') == user_name and not v.get('uid'))
+                        # Find any uid for this user from kundli_index
+                        for kundli_id, metadata in kundli_index.items():
+                            if isinstance(metadata, dict) and metadata.get('user_name') == user_name:
+                                uid = metadata.get('uid')
+                                if uid:
+                                    if uid not in counts:
+                                        counts[uid] = {'kundliCount': 0, 'analysisCount': 0}
+                                    counts[uid]['kundliCount'] += user_kundli_count
+                                    counts[uid]['analysisCount'] = analysis_count
+                                    break
+        except Exception as e:
+            logger.error(f"Error getting kundli counts by uid: {str(e)}")
+        
+        return counts
 
     def get_user_detail(self, user_id: str) -> Dict:
         """Get detailed user profile with kundli history"""
@@ -134,34 +241,21 @@ class AdminService:
             raise
 
     def get_all_kundlis(self, limit: int = 50, offset: int = 0, filters: Dict = None) -> Dict:
-        """Get all kundlis with filtering"""
+        """Get all kundlis from filesystem with filtering"""
         try:
-            all_kundlis = []
-            users = self.db.collection('users').stream()
-
-            for user in users:
-                user_id = user.id
-                user_data = user.to_dict()
-                kundlis = self.db.collection('users').document(user_id).collection('calculations').stream()
-
-                for kundli in kundlis:
-                    kundli_data = kundli.to_dict()
-                    kundli_data['id'] = kundli.id
-                    kundli_data['userId'] = user_id
-                    kundli_data['userName'] = user_data.get('displayName', 'Unknown')
-                    kundli_data['userEmail'] = user_data.get('email', '')
-
-                    if filters:
-                        if filters.get('userId') and filters['userId'] != user_id:
-                            continue
-                        if filters.get('hasAnalysis') is not None:
-                            has_analysis = 'analysis' in kundli_data and kundli_data['analysis'] is not None
-                            if filters['hasAnalysis'] != has_analysis:
-                                continue
-
-                    all_kundlis.append(kundli_data)
-
-            all_kundlis.sort(key=lambda x: x.get('generatedAt', datetime.utcnow()), reverse=True)
+            # Get kundlis from filesystem instead of Firebase
+            all_kundlis = self.analytics_service.get_all_kundlis_from_filesystem()
+            
+            # Apply filters
+            if filters:
+                if filters.get('userId'):
+                    all_kundlis = [k for k in all_kundlis if k.get('userId') == filters['userId']]
+                if filters.get('hasAnalysis') is not None:
+                    all_kundlis = [k for k in all_kundlis if k.get('hasAnalysis', False) == filters['hasAnalysis']]
+            
+            # Sort by generated date (newest first)
+            all_kundlis.sort(key=lambda x: x.get('generatedAt', datetime.utcnow().isoformat()), reverse=True)
+            
             total = len(all_kundlis)
             paginated = all_kundlis[offset:offset + limit]
 
@@ -173,7 +267,13 @@ class AdminService:
             }
         except Exception as e:
             logger.error(f"Error fetching kundlis: {str(e)}")
-            raise
+            # Return empty list instead of raising
+            return {
+                'kundlis': [],
+                'total': 0,
+                'limit': limit,
+                'offset': offset
+            }
 
     def get_kundli_detail(self, user_id: str, kundli_id: str) -> Dict:
         """Get detailed kundli information"""
@@ -208,166 +308,75 @@ class AdminService:
             raise
 
     def get_analytics_overview(self) -> Dict:
-        """Get dashboard overview metrics"""
+        """Get dashboard overview metrics - Firebase users count with filesystem kundli data"""
         try:
-            users = list(self.db.collection('users').stream())
-            total_users = len(users)
-
-            active_users_count = 0
-            total_kundlis = 0
-            total_tokens_used = 0
-
-            for user in users:
-                user_data = user.to_dict()
-                if user_data.get('lastLogin'):
-                    last_login = user_data['lastLogin']
-                    if isinstance(last_login, datetime):
-                        days_since = (datetime.utcnow() - last_login).days
-                        if days_since <= 30:
-                            active_users_count += 1
-
-                kundlis = list(self.db.collection('users').document(user.id).collection('calculations').stream())
-                total_kundlis += len(kundlis)
-
-                token_usage = user_data.get('tokenUsage', {})
-                if isinstance(token_usage, dict):
-                    total_tokens_used += token_usage.get('total', 0)
-
-            return {
-                'totalUsers': total_users,
-                'activeUsers': active_users_count,
-                'totalKundlis': total_kundlis,
-                'totalTokensUsed': total_tokens_used,
-                'averageKundlisPerUser': round(total_kundlis / total_users, 2) if total_users > 0 else 0,
-                'timestamp': datetime.utcnow().isoformat()
-            }
+            # Get the base analytics from filesystem
+            analytics = self.analytics_service.compute_analytics_overview()
+            
+            # Override totalUsers and activeUsers with Firebase counts (source of truth)
+            try:
+                firebase_users = list(self.db.collection('users').stream())
+                total_firebase_users = len(firebase_users)
+                
+                # Count active users from Firebase (users created in last 30 days)
+                thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+                active_firebase_users = 0
+                
+                for user_doc in firebase_users:
+                    user_data = user_doc.to_dict()
+                    created_at = user_data.get('createdAt')
+                    if created_at:
+                        # Handle both timestamp and string formats
+                        if hasattr(created_at, 'timestamp'):
+                            created_timestamp = created_at.timestamp()
+                        else:
+                            created_timestamp = created_at
+                        
+                        if created_timestamp > thirty_days_ago.timestamp():
+                            active_firebase_users += 1
+                
+                # Update analytics with Firebase user counts
+                analytics['totalUsers'] = total_firebase_users
+                analytics['activeUsers'] = active_firebase_users
+                
+                logger.info(f"Analytics overview - Firebase users: {total_firebase_users}, Active: {active_firebase_users}, Kundlis: {analytics.get('totalKundlis', 0)}")
+            except Exception as e:
+                logger.warning(f"Could not fetch Firebase user counts, using filesystem counts: {str(e)}")
+                # Fall back to filesystem counts if Firebase query fails
+            
+            return analytics
         except Exception as e:
             logger.error(f"Error fetching analytics overview: {str(e)}")
             raise
 
     def get_user_growth_analytics(self, days: int = 30) -> List[Dict]:
-        """Get user growth data for the last N days"""
+        """Get user growth data for the last N days from local filesystem"""
         try:
-            users = list(self.db.collection('users').stream())
-            date_counts = {}
-
-            for user in users:
-                user_data = user.to_dict()
-                created_at = user_data.get('createdAt')
-
-                if created_at:
-                    if isinstance(created_at, datetime):
-                        date_key = created_at.date().isoformat()
-                    else:
-                        date_key = created_at.isoformat()[:10]
-
-                    date_counts[date_key] = date_counts.get(date_key, 0) + 1
-
-            sorted_dates = sorted(date_counts.keys())
-            cumulative = 0
-            result = []
-
-            for date_str in sorted_dates:
-                cumulative += date_counts[date_str]
-                result.append({
-                    'date': date_str,
-                    'newUsers': date_counts[date_str],
-                    'totalUsers': cumulative
-                })
-
-            return result[-days:] if len(result) > days else result
+            return self.analytics_service.compute_user_growth_analytics(days)
         except Exception as e:
             logger.error(f"Error fetching user growth analytics: {str(e)}")
             raise
 
     def get_usage_analytics(self) -> Dict:
-        """Get feature usage analytics"""
+        """Get feature usage analytics from local filesystem"""
         try:
-            users = list(self.db.collection('users').stream())
-            feature_usage = {
-                'kundliGeneration': 0,
-                'analysis': 0,
-                'chat': 0,
-                'pdfDownload': 0
-            }
-
-            for user in users:
-                user_id = user.id
-                kundlis = list(self.db.collection('users').document(user_id).collection('calculations').stream())
-
-                for kundli in kundlis:
-                    kundli_data = kundli.to_dict()
-                    feature_usage['kundliGeneration'] += 1
-
-                    if kundli_data.get('analysis'):
-                        feature_usage['analysis'] += 1
-                    if kundli_data.get('pdfGenerated'):
-                        feature_usage['pdfDownload'] += 1
-
-            total_features = sum(feature_usage.values())
-            percentages = {k: round((v / total_features * 100), 2) if total_features > 0 else 0 for k, v in feature_usage.items()}
-
-            return {
-                'usage': feature_usage,
-                'percentages': percentages,
-                'total': total_features
-            }
+            return self.analytics_service.compute_usage_analytics()
         except Exception as e:
             logger.error(f"Error fetching usage analytics: {str(e)}")
             raise
 
     def get_token_usage_analytics(self) -> Dict:
-        """Get token/credit usage analytics"""
+        """Get token/credit usage analytics from local filesystem"""
         try:
-            users = list(self.db.collection('users').stream())
-            total_tokens = 0
-            users_by_usage = []
-
-            for user in users:
-                user_data = user.to_dict()
-                token_usage = user_data.get('tokenUsage', {})
-
-                if isinstance(token_usage, dict):
-                    user_tokens = token_usage.get('total', 0)
-                    total_tokens += user_tokens
-                    users_by_usage.append({
-                        'userId': user.id,
-                        'userName': user_data.get('displayName', 'Unknown'),
-                        'tokensUsed': user_tokens,
-                        'monthlyUsage': token_usage.get('monthly', 0)
-                    })
-
-            users_by_usage.sort(key=lambda x: x['tokensUsed'], reverse=True)
-
-            return {
-                'totalTokensUsed': total_tokens,
-                'topUsers': users_by_usage[:10],
-                'averagePerUser': round(total_tokens / len(users), 2) if users else 0,
-                'allUsers': users_by_usage
-            }
+            return self.analytics_service.compute_token_usage_analytics()
         except Exception as e:
             logger.error(f"Error fetching token usage analytics: {str(e)}")
             raise
 
     def get_system_health(self) -> Dict:
-        """Get system health metrics"""
+        """Get system health metrics from local filesystem"""
         try:
-            users_count = len(list(self.db.collection('users').stream()))
-            kundlis_count = 0
-
-            for user in self.db.collection('users').stream():
-                kundlis_count += len(list(self.db.collection('users').document(user.id).collection('calculations').stream()))
-
-            return {
-                'status': 'healthy',
-                'timestamp': datetime.utcnow().isoformat(),
-                'metrics': {
-                    'totalUsers': users_count,
-                    'totalKundlis': kundlis_count,
-                    'databaseStatus': 'connected',
-                    'apiStatus': 'operational'
-                }
-            }
+            return self.analytics_service.compute_system_health()
         except Exception as e:
             logger.error(f"Error fetching system health: {str(e)}")
             return {

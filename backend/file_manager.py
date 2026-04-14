@@ -171,8 +171,18 @@ class FileManager:
         Returns:
             True if analysis file exists, False otherwise
         """
-        analysis_file = os.path.join(folder_path, "analysis", f"{user_name}_AI_Analysis.txt")
-        return os.path.exists(analysis_file)
+        analysis_folder = os.path.join(folder_path, "analysis")
+        if not os.path.isdir(analysis_folder):
+            return False
+        
+        safe_name = user_name.replace(' ', '-')
+        for file in os.listdir(analysis_folder):
+            if file.endswith(".txt"):
+                if file.startswith(f"{safe_name}_analysis_"):
+                    return True
+                if file == f"{user_name}_AI_Analysis.txt":
+                    return True
+        return False
     
     def get_kundli_json_path(self, folder_path: str, user_name: str) -> Optional[str]:
         """

@@ -50,43 +50,53 @@ export default function DashboardPage() {
     minute: 0,
   })
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      
+      // Try to fetch from backend first
       try {
-        setLoading(true)
-        
-        // Try to fetch from backend first
-        try {
-          const response = await api.getUserCalculations()
-          const rawCalcs = response.data.calculations || []
-          // Map backend response to Calculation interface
-          const calcs: Calculation[] = rawCalcs.map((calc: any) => ({
-            calculation_id: calc.calculation_id,
-            kundli_id: calc.kundli_id,
-            name: calc.birth_data?.name || 'Unknown',
-            birth_date: calc.birth_data ? `${calc.birth_data.year}-${String(calc.birth_data.month).padStart(2, '0')}-${String(calc.birth_data.day).padStart(2, '0')}` : 'N/A',
-            generation_date: calc.generation_date,
-            has_analysis: calc.has_analysis || false
-          }))
-          setCalculations(calcs)
+        const response = await api.getUserCalculations()
+        const rawCalcs = response.data.calculations || []
+        // Map backend response to Calculation interface
+        const calcs: Calculation[] = rawCalcs.map((calc: any) => ({
+          calculation_id: calc.calculation_id,
+          kundli_id: calc.kundli_id,
+          name: calc.birth_data?.name || 'Unknown',
+          birth_date: calc.birth_data ? `${calc.birth_data.year}-${String(calc.birth_data.month).padStart(2, '0')}-${String(calc.birth_data.day).padStart(2, '0')}` : 'N/A',
+          generation_date: calc.generation_date,
+          has_analysis: calc.has_analysis || false
+        }))
+        setCalculations(calcs)
 
-          if (calcs.length > 0) {
-            await fetchInsights(calcs[0].kundli_id)
-          }
-        } catch (backendError) {
-          console.error('[DASHBOARD] Backend fetch failed:', backendError)
-          setCalculations([])
-          toast.error('Failed to load kundlis from backend')
+        if (calcs.length > 0) {
+          await fetchInsights(calcs[0].kundli_id)
         }
-      } catch (error) {
-        console.error('Failed to fetch data:', error)
-        toast.error('Failed to load dashboard data')
-      } finally {
-        setLoading(false)
+      } catch (backendError) {
+        console.error('[DASHBOARD] Backend fetch failed:', backendError)
+        setCalculations([])
+        toast.error('Failed to load kundlis from backend')
       }
+    } catch (error) {
+      console.error('Failed to fetch data:', error)
+      toast.error('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  useEffect(() => {
+    const handleAnalysisGenerated = (event: Event) => {
+      console.log('[DASHBOARD] Analysis generated event received, refreshing data...')
+      fetchData()
     }
 
-    fetchData()
+    window.addEventListener('analysisGenerated', handleAnalysisGenerated)
+    return () => window.removeEventListener('analysisGenerated', handleAnalysisGenerated)
   }, [])
 
   useEffect(() => {
