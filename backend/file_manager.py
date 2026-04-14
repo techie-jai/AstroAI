@@ -52,13 +52,9 @@ class FileManager:
         folder_name = f"{unique_id}-{safe_name}"
         folder_path = os.path.join(self.base_dir, folder_name)
         
-        # Create directory structure
+        # Create directory structure - only kundli folder
         os.makedirs(folder_path, exist_ok=True)
         os.makedirs(os.path.join(folder_path, "kundli"), exist_ok=True)
-        os.makedirs(os.path.join(folder_path, "charts", "json"), exist_ok=True)
-        os.makedirs(os.path.join(folder_path, "charts", "text"), exist_ok=True)
-        os.makedirs(os.path.join(folder_path, "charts", "images"), exist_ok=True)
-        os.makedirs(os.path.join(folder_path, "analysis"), exist_ok=True)
         
         return folder_path, unique_id
     
@@ -114,113 +110,55 @@ class FileManager:
         
         return file_path
     
-    def save_kundli_text(self, folder_path: str, user_name: str, kundli_text: str,
-                        counter: int = None, hash_value: str = None) -> str:
+    def save_comprehensive_kundli(self, folder_path: str, user_name: str, comprehensive_kundli: Dict) -> str:
         """
-        Save kundli as formatted text
+        Save comprehensive Kundli data as JSON (single file approach)
         
         Args:
             folder_path: Path to user's folder
             user_name: User's name for filename
-            kundli_text: Formatted text representation
-            counter: Counter for this kundli (optional, for new naming scheme)
-            hash_value: Content hash (optional, for new naming scheme)
+            comprehensive_kundli: Complete Kundli data dictionary
             
         Returns:
             Path to saved file
         """
-        # Use new naming scheme if hash and counter provided
-        if hash_value and counter is not None:
-            safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '-')
-            filename = f"{safe_name}-Kundli-{counter}-{hash_value}.txt"
-        else:
-            # Fallback to old naming for backward compatibility
-            filename = f"{user_name}_Kundli.txt"
+        # Sanitize name for filename
+        safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '-')
+        if not safe_name:
+            safe_name = "User"
         
+        filename = f"{safe_name}_comprehensive_kundli.json"
         file_path = os.path.join(folder_path, "kundli", filename)
         
         with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(kundli_text)
+            json.dump(comprehensive_kundli, f, indent=2, ensure_ascii=False)
         
         return file_path
     
-    def save_chart_json(self, folder_path: str, chart_type: str, chart_data: Dict) -> str:
+    def get_comprehensive_kundli(self, folder_path: str, user_name: str) -> Optional[Dict]:
         """
-        Save chart data as JSON
+        Get comprehensive Kundli data
         
         Args:
             folder_path: Path to user's folder
-            chart_type: Chart type (e.g., 'D1', 'D9')
-            chart_data: Chart data dictionary
+            user_name: User's name
             
         Returns:
-            Path to saved file
+            Comprehensive Kundli data or None if not found
         """
-        file_path = os.path.join(folder_path, "charts", "json", f"{chart_type}.json")
+        # Sanitize name for filename
+        safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '-')
+        if not safe_name:
+            safe_name = "User"
         
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(chart_data, f, indent=2, ensure_ascii=False)
+        filename = f"{safe_name}_comprehensive_kundli.json"
+        file_path = os.path.join(folder_path, "kundli", filename)
         
-        return file_path
-    
-    def save_chart_text(self, folder_path: str, chart_type: str, chart_text: str) -> str:
-        """
-        Save chart as formatted text
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
         
-        Args:
-            folder_path: Path to user's folder
-            chart_type: Chart type (e.g., 'D1', 'D9')
-            chart_text: Formatted text representation
-            
-        Returns:
-            Path to saved file
-        """
-        file_path = os.path.join(folder_path, "charts", "text", f"{chart_type}.txt")
-        
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(chart_text)
-        
-        return file_path
-    
-    def save_analysis_pdf(self, folder_path: str, user_name: str, pdf_content: bytes) -> str:
-        """
-        Save analysis as PDF
-        
-        Args:
-            folder_path: Path to user's folder
-            user_name: User's name for filename
-            pdf_content: PDF file content as bytes
-            
-        Returns:
-            Path to saved file
-        """
-        filename = f"{user_name}_AI_Analysis.pdf"
-        file_path = os.path.join(folder_path, "analysis", filename)
-        
-        with open(file_path, 'wb') as f:
-            f.write(pdf_content)
-        
-        return file_path
-    
-    def save_analysis_text(self, folder_path: str, user_name: str, analysis_text: str) -> str:
-        """
-        Save analysis as text
-        
-        Args:
-            folder_path: Path to user's folder
-            user_name: User's name for filename
-            analysis_text: Analysis text content
-            
-        Returns:
-            Path to saved file
-        """
-        filename = f"{user_name}_AI_Analysis.txt"
-        file_path = os.path.join(folder_path, "analysis", filename)
-        
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(analysis_text)
-        
-        return file_path
+        return None
     
     def has_analysis(self, folder_path: str, user_name: str) -> bool:
         """
@@ -424,3 +362,63 @@ class FileManager:
             'uid': uid
         }
         self._write_index(index)
+    
+    def save_analysis_text(self, user_folder: str, user_name: str, analysis_text: str) -> str:
+        """
+        Save analysis text to file (for backward compatibility)
+        
+        Args:
+            user_folder: Path to user folder
+            user_name: User's name
+            analysis_text: Analysis text content
+            
+        Returns:
+            Path to saved analysis text file
+        """
+        # Create analysis subfolder if it doesn't exist
+        analysis_folder = os.path.join(user_folder, "analysis")
+        if not os.path.exists(analysis_folder):
+            os.makedirs(analysis_folder)
+        
+        # Generate filename
+        safe_name = user_name.replace(' ', '-')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{safe_name}_analysis_{timestamp}.txt"
+        file_path = os.path.join(analysis_folder, filename)
+        
+        # Save analysis text
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(analysis_text)
+        
+        print(f"[FILE_MANAGER] Analysis text saved: {file_path}")
+        return file_path
+    
+    def save_analysis_pdf(self, user_folder: str, user_name: str, pdf_content: bytes) -> str:
+        """
+        Save analysis PDF to file (for backward compatibility)
+        
+        Args:
+            user_folder: Path to user folder
+            user_name: User's name
+            pdf_content: PDF content as bytes
+            
+        Returns:
+            Path to saved analysis PDF file
+        """
+        # Create analysis subfolder if it doesn't exist
+        analysis_folder = os.path.join(user_folder, "analysis")
+        if not os.path.exists(analysis_folder):
+            os.makedirs(analysis_folder)
+        
+        # Generate filename
+        safe_name = user_name.replace(' ', '-')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{safe_name}_analysis_{timestamp}.pdf"
+        file_path = os.path.join(analysis_folder, filename)
+        
+        # Save PDF content
+        with open(file_path, 'wb') as f:
+            f.write(pdf_content)
+        
+        print(f"[FILE_MANAGER] Analysis PDF saved: {file_path}")
+        return file_path
