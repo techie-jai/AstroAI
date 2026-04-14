@@ -49,6 +49,54 @@ class RulesEngine:
             "Rahu": "Gemini",
             "Ketu": "Sagittarius"
         }
+    
+    def get_planet_name(self, planet: Dict) -> str:
+        """
+        Extract planet name from planet object, handling multiple field name variations.
+        
+        Args:
+            planet: Planet data dictionary
+            
+        Returns:
+            Planet name (e.g., "Jupiter", "Rahu", "Mars")
+        """
+        # Try different field names
+        name = planet.get("name", "") or planet.get("celestialBody", "") or planet.get("planet", "")
+        # Clean up the name (remove symbols like ♂, ♀, etc.)
+        name = name.replace("♂", "").replace("♀", "").replace("☊", "").replace("☋", "").strip()
+        return name
+    
+    def extract_planets_from_chart(self, d1_chart: Dict) -> List[Dict]:
+        """
+        Extract all planets from the D1 chart, handling both flat and nested structures.
+        
+        The chart can have planets in:
+        1. d1_chart["planets"] - flat array
+        2. d1_chart["houses"][].occupants[] - nested in houses
+        
+        Args:
+            d1_chart: D1 chart data
+            
+        Returns:
+            List of planet dictionaries with house information
+        """
+        planets = []
+        
+        # Try flat structure first
+        if "planets" in d1_chart and isinstance(d1_chart["planets"], list):
+            planets.extend(d1_chart["planets"])
+        
+        # Try nested structure (planets in houses)
+        if "houses" in d1_chart and isinstance(d1_chart["houses"], list):
+            for house in d1_chart["houses"]:
+                if "occupants" in house and isinstance(house["occupants"], list):
+                    for occupant in house["occupants"]:
+                        # Ensure house number is set
+                        if "house" not in occupant:
+                            occupant["house"] = house.get("number")
+                        planets.append(occupant)
+        
+        return planets
 
     def detect_all_doshas(self, d1_chart: Dict, birth_data: Dict) -> List[Dosha]:
         """
@@ -98,12 +146,13 @@ class RulesEngine:
             mars_house = None
             mars_sign = None
             
-            if "planets" in d1_chart:
-                for planet in d1_chart["planets"]:
-                    if planet.get("name") == "Mars♂" or planet.get("id") == 2:
-                        mars_house = planet.get("house")
-                        mars_sign = planet.get("house_name")
-                        break
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                if planet_name == "Mars" or planet.get("id") == 2:
+                    mars_house = planet.get("house")
+                    mars_sign = planet.get("sign")
+                    break
             
             if mars_house is None:
                 return Dosha(
@@ -180,20 +229,20 @@ class RulesEngine:
             ketu_house = None
             planet_houses = []
             
-            if "planets" in d1_chart:
-                for planet in d1_chart["planets"]:
-                    planet_name = planet.get("name", "")
-                    planet_id = planet.get("id")
-                    house = planet.get("house")
-                    
-                    # Find Rahu and Ketu
-                    if "Raagu" in planet_name or planet_id == 7:
-                        rahu_house = house
-                    elif "Kethu" in planet_name or planet_id == 8:
-                        ketu_house = house
-                    # Collect other planets (excluding Rahu and Ketu)
-                    elif planet_id not in [7, 8]:
-                        planet_houses.append(house)
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                planet_id = planet.get("id")
+                house = planet.get("house")
+                
+                # Find Rahu and Ketu
+                if planet_name == "Rahu" or planet_id == 7:
+                    rahu_house = house
+                elif planet_name == "Ketu" or planet_id == 8:
+                    ketu_house = house
+                # Collect other planets (excluding Rahu and Ketu)
+                elif planet_id not in [7, 8]:
+                    planet_houses.append(house)
             
             if rahu_house is not None and ketu_house is not None and planet_houses:
                 # Check if all planets are between Rahu and Ketu
@@ -254,18 +303,18 @@ class RulesEngine:
             saturn_house = None
             rahu_house = None
             
-            if "planets" in d1_chart:
-                for planet in d1_chart["planets"]:
-                    planet_name = planet.get("name", "")
-                    planet_id = planet.get("id")
-                    house = planet.get("house")
-                    
-                    if planet_id == 0 or "Sun" in planet_name:
-                        sun_house = house
-                    elif planet_id == 6 or "Saturn" in planet_name:
-                        saturn_house = house
-                    elif planet_id == 7 or "Raagu" in planet_name:
-                        rahu_house = house
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                planet_id = planet.get("id")
+                house = planet.get("house")
+                
+                if planet_id == 0 or planet_name == "Sun":
+                    sun_house = house
+                elif planet_id == 6 or planet_name == "Saturn":
+                    saturn_house = house
+                elif planet_id == 7 or planet_name == "Rahu":
+                    rahu_house = house
             
             # Check conditions for Pitra Dosha
             pitra_indicators = 0
@@ -312,16 +361,18 @@ class RulesEngine:
             jupiter_house = None
             rahu_house = None
             
-            if "planets" in d1_chart:
-                for planet in d1_chart["planets"]:
-                    planet_name = planet.get("name", "")
-                    planet_id = planet.get("id")
-                    house = planet.get("house")
-                    
-                    if planet_id == 4 or "Jupiter" in planet_name:
-                        jupiter_house = house
-                    elif planet_id == 7 or "Raagu" in planet_name:
-                        rahu_house = house
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                planet_id = planet.get("id")
+                house = planet.get("house")
+                
+                # Check for Jupiter (id 4 or name is "Jupiter")
+                if planet_id == 4 or planet_name == "Jupiter":
+                    jupiter_house = house
+                # Check for Rahu (id 7 or name is "Rahu")
+                elif planet_id == 7 or planet_name == "Rahu":
+                    rahu_house = house
             
             # Check if Jupiter and Rahu are in the same house
             if jupiter_house is not None and rahu_house is not None:
@@ -358,17 +409,17 @@ class RulesEngine:
             moon_house = None
             planet_houses = set()
             
-            if "planets" in d1_chart:
-                for planet in d1_chart["planets"]:
-                    planet_name = planet.get("name", "")
-                    planet_id = planet.get("id")
-                    house = planet.get("house")
-                    
-                    if planet_id == 1 or "Moon" in planet_name:
-                        moon_house = house
-                    # Collect houses of other planets (excluding Moon, Rahu, Ketu)
-                    elif planet_id not in [1, 7, 8]:
-                        planet_houses.add(house)
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                planet_id = planet.get("id")
+                house = planet.get("house")
+                
+                if planet_id == 1 or planet_name == "Moon":
+                    moon_house = house
+                # Collect houses of other planets (excluding Moon, Rahu, Ketu)
+                elif planet_id not in [1, 7, 8]:
+                    planet_houses.add(house)
             
             if moon_house is not None:
                 # Check if there are planets in 2nd and 12th from Moon
@@ -412,20 +463,20 @@ class RulesEngine:
             rahu_house = None
             ketu_house = None
             
-            if "planets" in d1_chart:
-                for planet in d1_chart["planets"]:
-                    planet_name = planet.get("name", "")
-                    planet_id = planet.get("id")
-                    house = planet.get("house")
-                    
-                    if planet_id == 0 or "Sun" in planet_name:
-                        sun_house = house
-                    elif planet_id == 1 or "Moon" in planet_name:
-                        moon_house = house
-                    elif planet_id == 7 or "Raagu" in planet_name:
-                        rahu_house = house
-                    elif planet_id == 8 or "Kethu" in planet_name:
-                        ketu_house = house
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                planet_id = planet.get("id")
+                house = planet.get("house")
+                
+                if planet_id == 0 or planet_name == "Sun":
+                    sun_house = house
+                elif planet_id == 1 or planet_name == "Moon":
+                    moon_house = house
+                elif planet_id == 7 or planet_name == "Rahu":
+                    rahu_house = house
+                elif planet_id == 8 or planet_name == "Ketu":
+                    ketu_house = house
             
             # Check if Sun or Moon are with Rahu or Ketu
             grahan_indicators = 0
@@ -475,16 +526,16 @@ class RulesEngine:
             mars_house = None
             saturn_house = None
             
-            if "planets" in d1_chart:
-                for planet in d1_chart["planets"]:
-                    planet_name = planet.get("name", "")
-                    planet_id = planet.get("id")
-                    house = planet.get("house")
-                    
-                    if planet_id == 2 or "Mars" in planet_name:
-                        mars_house = house
-                    elif planet_id == 6 or "Saturn" in planet_name:
-                        saturn_house = house
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                planet_id = planet.get("id")
+                house = planet.get("house")
+                
+                if planet_id == 2 or planet_name == "Mars":
+                    mars_house = house
+                elif planet_id == 6 or planet_name == "Saturn":
+                    saturn_house = house
             
             # Check if Mars and Saturn are in the same house
             if mars_house is not None and saturn_house is not None:

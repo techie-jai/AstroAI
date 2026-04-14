@@ -1706,8 +1706,12 @@ async def analyze_kundli_doshas(
         rules_engine = RulesEngine()
         timeline_engine = TimelineEngine()
         
-        # Get D1 chart
+        # Get D1 chart (handle multiple nested structures)
         d1_chart = kundli_data.get("d1Chart", {})
+        if not d1_chart and "horoscope_info" in kundli_data:
+            d1_chart = kundli_data.get("horoscope_info", {}).get("d1Chart", {})
+        if not d1_chart and "jyotishganit_json" in kundli_data:
+            d1_chart = kundli_data.get("jyotishganit_json", {}).get("d1Chart", {})
         birth_data = kundli_metadata.get("birth_data", {})
         
         # Detect all doshas
