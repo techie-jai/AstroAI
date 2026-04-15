@@ -139,13 +139,29 @@ class DChartAffliction(BaseModel):
 
 
 class CurrentDasha(BaseModel):
-    """Current Mahadasha/Antardasha information"""
+    """Current Mahadasha/Antardasha/Pratyantardasha information"""
     planet: str = Field(..., description="Planet ruling the dasha")
     start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
     end_date: str = Field(..., description="End date (YYYY-MM-DD)")
     duration_years: float = Field(..., description="Total duration in years")
     progress_percent: float = Field(..., ge=0, le=100, description="Percentage of dasha completed")
     days_remaining: int = Field(..., description="Days remaining in dasha")
+    pratyantardasha: Optional['CurrentDasha'] = Field(None, description="Current Pratyantardasha (sub-sub-period)")
+
+
+class DashaAlerts(BaseModel):
+    """Alert flags for current dasha periods"""
+    is_maraka_dasha: bool = Field(..., description="True if in Maraka dasha (2nd/7th lord)")
+    is_dusthana_dasha: bool = Field(..., description="True if in Dusthana dasha (6th/8th/12th lord)")
+    is_rahu_ketu_dasha: bool = Field(..., description="True if in Rahu or Ketu Mahadasha")
+    alert_description: str = Field(..., description="Human-readable description of the alert")
+
+
+class ActiveDashas(BaseModel):
+    """Active dasha periods and alerts"""
+    current_mahadasha: Optional[CurrentDasha] = Field(None, description="Current Mahadasha")
+    current_antardasha: Optional[CurrentDasha] = Field(None, description="Current Antardasha")
+    dasha_alerts: DashaAlerts = Field(..., description="Alert flags for current periods")
 
 
 class NegativePeriod(BaseModel):
@@ -182,6 +198,7 @@ class DoshaAnalysisResponse(BaseModel):
     active_timelines: Dict[str, Any] = Field(..., description="Timeline data")
     current_mahadasha: Optional[CurrentDasha] = Field(None, description="Current Mahadasha")
     current_antardasha: Optional[CurrentDasha] = Field(None, description="Current Antardasha")
+    active_dashas: ActiveDashas = Field(..., description="Active dasha periods with alerts")
     negative_periods: List[NegativePeriod] = Field(..., description="Active negative periods")
     
     summary: DoshaAnalysisSummary = Field(..., description="Analysis summary")

@@ -1724,6 +1724,12 @@ async def analyze_kundli_doshas(
         today = datetime.now()
         current_mahadasha, current_antardasha = timeline_engine.get_current_dasha(kundli_data, today)
         negative_periods = timeline_engine.get_active_negative_periods(kundli_data, today)
+        active_dashas = timeline_engine.get_active_dashas(kundli_data, today)
+        
+        # Debug logging
+        print(f"[DASHA] Current Mahadasha: {current_mahadasha.planet if current_mahadasha else 'None'}")
+        print(f"[DASHA] Current Antardasha: {current_antardasha.planet if current_antardasha else 'None'}")
+        print(f"[DASHA] Active Dashas: {active_dashas.dasha_alerts.alert_description if active_dashas else 'None'}")
         
         # Calculate summary
         total_doshas = len(major_doshas)
@@ -1755,6 +1761,7 @@ async def analyze_kundli_doshas(
             },
             current_mahadasha=current_mahadasha,
             current_antardasha=current_antardasha,
+            active_dashas=active_dashas,
             negative_periods=negative_periods,
             summary=summary
         )

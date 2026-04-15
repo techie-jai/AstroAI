@@ -11,6 +11,23 @@ interface Kundli {
   birthData: Record<string, any>
 }
 
+interface CurrentDashaData {
+  planet: string
+  start_date: string
+  end_date: string
+  duration_years: number
+  progress_percent: number
+  days_remaining: number
+  pratyantardasha?: CurrentDashaData | null
+}
+
+interface DashaAlerts {
+  is_maraka_dasha: boolean
+  is_dusthana_dasha: boolean
+  is_rahu_ketu_dasha: boolean
+  alert_description: string
+}
+
 interface DoshaAnalysis {
   kundli_id: string
   analysis_date: string
@@ -44,22 +61,13 @@ interface DoshaAnalysis {
     description: string
     planets: string[]
   }>
-  current_mahadasha: {
-    planet: string
-    start_date: string
-    end_date: string
-    duration_years: number
-    progress_percent: number
-    days_remaining: number
-  } | null
-  current_antardasha: {
-    planet: string
-    start_date: string
-    end_date: string
-    duration_years: number
-    progress_percent: number
-    days_remaining: number
-  } | null
+  current_mahadasha: CurrentDashaData | null
+  current_antardasha: CurrentDashaData | null
+  active_dashas: {
+    current_mahadasha: CurrentDashaData | null
+    current_antardasha: CurrentDashaData | null
+    dasha_alerts: DashaAlerts
+  }
   negative_periods: Array<{
     type: string
     start_date: string
@@ -162,7 +170,17 @@ const DoshDashaAnalysisPage: React.FC = () => {
   const fetchAnalysis = async (kundliId: string) => {
     try {
       setLoading(true)
+      console.log('[DOSHA] Fetching analysis for kundli:', kundliId)
       const response = await api.analyzeDoshaAndDasha(kundliId)
+      console.log('[DOSHA] Analysis response:', response.data)
+      
+      // Debug: Check if active_dashas exists
+      if (response.data.active_dashas) {
+        console.log('[DOSHA] active_dashas found:', response.data.active_dashas)
+      } else {
+        console.warn('[DOSHA] active_dashas NOT found in response')
+      }
+      
       setAnalysis(response.data)
     } catch (error) {
       console.error('Error fetching analysis:', error)
@@ -220,6 +238,53 @@ const DoshDashaAnalysisPage: React.FC = () => {
       })
     } catch {
       return dateString
+    }
+  }
+
+  const formatDateRange = (startDate: string, endDate: string) => {
+    try {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      return `${startMonth} - ${endMonth}`
+    } catch {
+      return `${startDate} - ${endDate}`
+    }
+  }
+
+  const formatCountdown = (daysRemaining: number) => {
+    if (daysRemaining <= 0) return 'Ended'
+    
+    const years = Math.floor(daysRemaining / 365)
+    const remainingDays = daysRemaining % 365
+    const months = Math.floor(remainingDays / 30)
+    const days = remainingDays % 30
+    
+    const parts = []
+    if (years > 0) parts.push(`${years} Year${years > 1 ? 's' : ''}`)
+    if (months > 0) parts.push(`${months} Month${months > 1 ? 's' : ''}`)
+    if (days > 0) parts.push(`${days} Day${days > 1 ? 's' : ''}`)
+    
+    if (parts.length === 0) return 'Less than 1 day'
+    return parts.join(', ')
+  }
+
+  const getAlertColor = (alerts: DashaAlerts) => {
+    if (alerts.is_maraka_dasha) {
+      return 'bg-red-50 border-red-200 text-red-800'
+    } else if (alerts.is_dusthana_dasha || alerts.is_rahu_ketu_dasha) {
+      return 'bg-orange-50 border-orange-200 text-orange-800'
+    } else {
+      return 'bg-green-50 border-green-200 text-green-800'
+    }
+  }
+
+  const getAlertIcon = (alerts: DashaAlerts) => {
+    if (alerts.is_maraka_dasha || alerts.is_dusthana_dasha || alerts.is_rahu_ketu_dasha) {
+      return <AlertCircle className="w-5 h-5" />
+    } else {
+      return <CheckCircle className="w-5 h-5" />
     }
   }
 
@@ -442,6 +507,144 @@ const DoshDashaAnalysisPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Current Planetary Periods (Dashas) */}
+            {analysis.active_dashas && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Dasha Cards */}
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                    <Calendar className="w-6 h-6 mr-3 text-indigo-600" />
+                    Current Planetary Periods
+                  </h2>
+
+                  {/* Mahadasha Card */}
+                  {analysis.active_dashas.current_mahadasha && (
+                    <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 rounded-lg p-6">
+                      <h3 className="text-lg font-bold text-indigo-900 mb-4">Mahadasha</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-indigo-700 font-semibold">{analysis.active_dashas.current_mahadasha.planet}</span>
+                          <span className="text-sm text-indigo-600">{formatDateRange(analysis.active_dashas.current_mahadasha.start_date, analysis.active_dashas.current_mahadasha.end_date)}</span>
+                        </div>
+                        <div className="w-full bg-indigo-200 rounded-full h-3">
+                          <div
+                            className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-3 rounded-full transition-all"
+                            style={{
+                              width: `${analysis.active_dashas.current_mahadasha.progress_percent}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-indigo-700">{analysis.active_dashas.current_mahadasha.progress_percent.toFixed(1)}% complete</span>
+                          <span className="text-indigo-600 font-semibold">Ends in {formatCountdown(analysis.active_dashas.current_mahadasha.days_remaining)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Antardasha Card */}
+                  {analysis.active_dashas.current_antardasha && (
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-6 ml-4">
+                      <h3 className="text-lg font-bold text-purple-900 mb-4">Antardasha</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-purple-700 font-semibold">{analysis.active_dashas.current_antardasha.planet}</span>
+                          <span className="text-sm text-purple-600">{formatDateRange(analysis.active_dashas.current_antardasha.start_date, analysis.active_dashas.current_antardasha.end_date)}</span>
+                        </div>
+                        <div className="w-full bg-purple-200 rounded-full h-3">
+                          <div
+                            className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all"
+                            style={{
+                              width: `${analysis.active_dashas.current_antardasha.progress_percent}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-purple-700">{analysis.active_dashas.current_antardasha.progress_percent.toFixed(1)}% complete</span>
+                          <span className="text-purple-600 font-semibold">Ends in {formatCountdown(analysis.active_dashas.current_antardasha.days_remaining)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pratyantardasha Card */}
+                  {analysis.active_dashas.current_antardasha?.pratyantardasha && (
+                    <div className="bg-gradient-to-br from-pink-50 to-pink-100 border border-pink-200 rounded-lg p-6 ml-8">
+                      <h3 className="text-lg font-bold text-pink-900 mb-4">Pratyantardasha</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-pink-700 font-semibold">{analysis.active_dashas.current_antardasha.pratyantardasha.planet}</span>
+                          <span className="text-sm text-pink-600">{formatDateRange(analysis.active_dashas.current_antardasha.pratyantardasha.start_date, analysis.active_dashas.current_antardasha.pratyantardasha.end_date)}</span>
+                        </div>
+                        <div className="w-full bg-pink-200 rounded-full h-3">
+                          <div
+                            className="bg-gradient-to-r from-pink-500 to-pink-600 h-3 rounded-full transition-all"
+                            style={{
+                              width: `${analysis.active_dashas.current_antardasha.pratyantardasha.progress_percent}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-pink-700">{analysis.active_dashas.current_antardasha.pratyantardasha.progress_percent.toFixed(1)}% complete</span>
+                          <span className="text-pink-600 font-semibold">Ends in {formatCountdown(analysis.active_dashas.current_antardasha.pratyantardasha.days_remaining)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dasha Alerts */}
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                    <AlertCircle className="w-6 h-6 mr-3 text-orange-600" />
+                    Dasha Alerts
+                  </h2>
+
+                  <div className={`border-2 rounded-lg p-6 ${getAlertColor(analysis.active_dashas.dasha_alerts)}`}>
+                    <div className="flex items-start gap-3">
+                      {getAlertIcon(analysis.active_dashas.dasha_alerts)}
+                      <div className="flex-1">
+                        <p className="font-semibold text-lg mb-2">{analysis.active_dashas.dasha_alerts.alert_description}</p>
+                        
+                        {/* Alert Details */}
+                        <div className="mt-4 space-y-2 text-sm">
+                          {analysis.active_dashas.dasha_alerts.is_maraka_dasha && (
+                            <div className="bg-red-100 bg-opacity-50 rounded p-3">
+                              <p className="font-semibold text-red-900 mb-1">Maraka Period (2nd/7th House Lord)</p>
+                              <p className="text-red-800">This period is ruled by the lord of the 2nd or 7th house. Exercise caution regarding health, relationships, and travel. Consider protective remedies.</p>
+                            </div>
+                          )}
+                          
+                          {analysis.active_dashas.dasha_alerts.is_dusthana_dasha && (
+                            <div className="bg-orange-100 bg-opacity-50 rounded p-3">
+                              <p className="font-semibold text-orange-900 mb-1">Dusthana Period (6th/8th/12th House Lord)</p>
+                              <p className="text-orange-800">This period is ruled by the lord of a dusthana (difficult) house. Be cautious with finances, health, and be aware of potential obstacles. Stay vigilant.</p>
+                            </div>
+                          )}
+                          
+                          {analysis.active_dashas.dasha_alerts.is_rahu_ketu_dasha && (
+                            <div className="bg-orange-100 bg-opacity-50 rounded p-3">
+                              <p className="font-semibold text-orange-900 mb-1">Shadow Planet Period (Rahu/Ketu)</p>
+                              <p className="text-orange-800">You are in a Rahu or Ketu Mahadasha. Expect illusions, sudden changes, and transformations. Focus on spiritual grounding and meditation. Avoid major decisions without careful consideration.</p>
+                            </div>
+                          )}
+                          
+                          {!analysis.active_dashas.dasha_alerts.is_maraka_dasha && 
+                           !analysis.active_dashas.dasha_alerts.is_dusthana_dasha && 
+                           !analysis.active_dashas.dasha_alerts.is_rahu_ketu_dasha && (
+                            <div className="bg-green-100 bg-opacity-50 rounded p-3">
+                              <p className="font-semibold text-green-900 mb-1">Supportive Period</p>
+                              <p className="text-green-800">You are running a generally supportive or neutral planetary period. This is a favorable time for growth, new initiatives, and positive endeavors. Make the most of this period.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

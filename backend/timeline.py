@@ -9,7 +9,7 @@ This module analyzes Dasha periods and transits to identify:
 
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
-from models import CurrentDasha, NegativePeriod
+from models import CurrentDasha, NegativePeriod, DashaAlerts, ActiveDashas
 
 
 class TimelineEngine:
@@ -40,7 +40,10 @@ class TimelineEngine:
         current_antardasha = None
         
         try:
-            dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
+            # Try jyotishganit_json path first, then fallback to root dashas
+            dashas = kundli_data.get("jyotishganit_json", {}).get("dashas", {}).get("all", {}).get("mahadashas", {})
+            if not dashas:
+                dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
             
             if not dashas:
                 return None, None
@@ -169,7 +172,10 @@ class TimelineEngine:
         maraka_periods = []
         
         try:
-            dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
+            # Try jyotishganit_json path first, then fallback to root dashas
+            dashas = kundli_data.get("jyotishganit_json", {}).get("dashas", {}).get("all", {}).get("mahadashas", {})
+            if not dashas:
+                dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
             d1_chart = kundli_data.get("d1Chart", {})
             
             # Identify 2nd and 7th house lords
@@ -223,7 +229,10 @@ class TimelineEngine:
         badhaka_periods = []
         
         try:
-            dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
+            # Try jyotishganit_json path first, then fallback to root dashas
+            dashas = kundli_data.get("jyotishganit_json", {}).get("dashas", {}).get("all", {}).get("mahadashas", {})
+            if not dashas:
+                dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
             d1_chart = kundli_data.get("d1Chart", {})
             
             # Identify 11th house lord
@@ -273,7 +282,10 @@ class TimelineEngine:
         shadow_periods = []
         
         try:
-            dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
+            # Try jyotishganit_json path first, then fallback to root dashas
+            dashas = kundli_data.get("jyotishganit_json", {}).get("dashas", {}).get("all", {}).get("mahadashas", {})
+            if not dashas:
+                dashas = kundli_data.get("dashas", {}).get("all", {}).get("mahadashas", {})
             
             # Check for Rahu and Ketu Mahadashas
             for planet_name, mahadasha_data in dashas.items():
@@ -418,3 +430,233 @@ class TimelineEngine:
             return "moderate"
         else:
             return "mild"
+
+    def get_current_pratyantardasha(self, kundli_data: Dict, today: datetime) -> Optional[CurrentDasha]:
+        """
+        Get current Pratyantardasha (sub-sub-period) based on today's date.
+        
+        Args:
+            kundli_data: Complete kundli data with dasha information
+            today: Current date
+            
+        Returns:
+            Current Pratyantardasha or None
+        """
+        try:
+            dashas = kundli_data.get("jyotishganit_json", {}).get("dashas", {}).get("all", {}).get("mahadashas", {})
+            
+            if not dashas:
+                return None
+            
+            # Find current Mahadasha
+            for planet_name, mahadasha_data in dashas.items():
+                start_date = self.parse_dasha_date(mahadasha_data.get("start", ""))
+                end_date = self.parse_dasha_date(mahadasha_data.get("end", ""))
+                
+                if start_date <= today <= end_date:
+                    # Find current Antardasha
+                    antardashas = mahadasha_data.get("antardashas", {})
+                    for antara_planet, antara_data in antardashas.items():
+                        antara_start = self.parse_dasha_date(antara_data.get("start", ""))
+                        antara_end = self.parse_dasha_date(antara_data.get("end", ""))
+                        
+                        if antara_start <= today <= antara_end:
+                            # Find current Pratyantardasha
+                            pratyantardashas = antara_data.get("pratyantardashas", {})
+                            for pratya_planet, pratya_data in pratyantardashas.items():
+                                pratya_start = self.parse_dasha_date(pratya_data.get("start", ""))
+                                pratya_end = self.parse_dasha_date(pratya_data.get("end", ""))
+                                
+                                if pratya_start <= today <= pratya_end:
+                                    pratya_duration = self.calculate_duration_years(pratya_start, pratya_end)
+                                    pratya_progress = self.calculate_progress_percent(pratya_start, pratya_end, today)
+                                    pratya_days_remaining = self.calculate_days_remaining(pratya_end, today)
+                                    
+                                    return CurrentDasha(
+                                        planet=pratya_planet,
+                                        start_date=pratya_start.strftime("%Y-%m-%d"),
+                                        end_date=pratya_end.strftime("%Y-%m-%d"),
+                                        duration_years=pratya_duration,
+                                        progress_percent=pratya_progress,
+                                        days_remaining=pratya_days_remaining
+                                    )
+                            break
+                    break
+        
+        except Exception as e:
+            pass
+        
+        return None
+
+    def get_house_lord_from_horoscope(self, horoscope_info: Dict, house_number: int) -> Optional[str]:
+        """
+        Extract house lord from horoscope_info.
+        
+        Args:
+            horoscope_info: Horoscope information from kundli
+            house_number: House number (2, 6, 7, 8, 12)
+            
+        Returns:
+            Planet name ruling the house, or None
+        """
+        try:
+            key = f"house_{house_number}_lord"
+            return horoscope_info.get(key)
+        except Exception:
+            return None
+
+    def check_maraka_dasha(self, kundli_data: Dict, current_mahadasha: Optional[CurrentDasha], 
+                          current_antardasha: Optional[CurrentDasha], horoscope_info: Dict) -> bool:
+        """
+        Check if current Mahadasha or Antardasha lord rules 2nd or 7th house (Maraka).
+        
+        Args:
+            kundli_data: Complete kundli data
+            current_mahadasha: Current Mahadasha
+            current_antardasha: Current Antardasha
+            horoscope_info: Horoscope information
+            
+        Returns:
+            True if in Maraka dasha, False otherwise
+        """
+        try:
+            # Get 2nd and 7th house lords
+            lord_2 = self.get_house_lord_from_horoscope(horoscope_info, 2)
+            lord_7 = self.get_house_lord_from_horoscope(horoscope_info, 7)
+            maraka_lords = [lord_2, lord_7]
+            
+            # Check Mahadasha
+            if current_mahadasha and current_mahadasha.planet in maraka_lords:
+                return True
+            
+            # Check Antardasha
+            if current_antardasha and current_antardasha.planet in maraka_lords:
+                return True
+            
+            return False
+        except Exception:
+            return False
+
+    def check_dusthana_dasha(self, kundli_data: Dict, current_mahadasha: Optional[CurrentDasha],
+                            current_antardasha: Optional[CurrentDasha], horoscope_info: Dict) -> bool:
+        """
+        Check if current lord rules 6th, 8th, or 12th house (Dusthana).
+        
+        Args:
+            kundli_data: Complete kundli data
+            current_mahadasha: Current Mahadasha
+            current_antardasha: Current Antardasha
+            horoscope_info: Horoscope information
+            
+        Returns:
+            True if in Dusthana dasha, False otherwise
+        """
+        try:
+            # Get 6th, 8th, and 12th house lords
+            lord_6 = self.get_house_lord_from_horoscope(horoscope_info, 6)
+            lord_8 = self.get_house_lord_from_horoscope(horoscope_info, 8)
+            lord_12 = self.get_house_lord_from_horoscope(horoscope_info, 12)
+            dusthana_lords = [lord_6, lord_8, lord_12]
+            
+            # Check Mahadasha
+            if current_mahadasha and current_mahadasha.planet in dusthana_lords:
+                return True
+            
+            # Check Antardasha
+            if current_antardasha and current_antardasha.planet in dusthana_lords:
+                return True
+            
+            return False
+        except Exception:
+            return False
+
+    def check_rahu_ketu_dasha(self, current_mahadasha: Optional[CurrentDasha]) -> bool:
+        """
+        Check if current Mahadasha is Rahu or Ketu.
+        
+        Args:
+            current_mahadasha: Current Mahadasha
+            
+        Returns:
+            True if Rahu or Ketu Mahadasha, False otherwise
+        """
+        try:
+            if current_mahadasha and current_mahadasha.planet in ["Rahu", "Ketu"]:
+                return True
+            return False
+        except Exception:
+            return False
+
+    def get_dasha_alerts(self, kundli_data: Dict, current_mahadasha: Optional[CurrentDasha],
+                        current_antardasha: Optional[CurrentDasha], horoscope_info: Dict) -> DashaAlerts:
+        """
+        Compile all dasha alert flags and generate description.
+        
+        Args:
+            kundli_data: Complete kundli data
+            current_mahadasha: Current Mahadasha
+            current_antardasha: Current Antardasha
+            horoscope_info: Horoscope information
+            
+        Returns:
+            DashaAlerts object with all flags and description
+        """
+        is_maraka = self.check_maraka_dasha(kundli_data, current_mahadasha, current_antardasha, horoscope_info)
+        is_dusthana = self.check_dusthana_dasha(kundli_data, current_mahadasha, current_antardasha, horoscope_info)
+        is_rahu_ketu = self.check_rahu_ketu_dasha(current_mahadasha)
+        
+        # Generate alert description
+        if is_maraka:
+            alert_description = "⚠️ Maraka Period - Exercise caution regarding health and travel during this period."
+        elif is_dusthana:
+            alert_description = "⚠️ Dusthana Period - Be cautious with expenses and health. Hidden enemies may surface."
+        elif is_rahu_ketu:
+            alert_description = "⚠️ Shadow Planet Period - Expect illusions and sudden changes. Focus on spiritual grounding."
+        else:
+            alert_description = "✓ Supportive Period - Generally favorable planetary influences. A good time for growth."
+        
+        return DashaAlerts(
+            is_maraka_dasha=is_maraka,
+            is_dusthana_dasha=is_dusthana,
+            is_rahu_ketu_dasha=is_rahu_ketu,
+            alert_description=alert_description
+        )
+
+    def get_active_dashas(self, kundli_data: Dict, today: datetime) -> ActiveDashas:
+        """
+        Get active dashas with alert flags.
+        
+        Args:
+            kundli_data: Complete kundli data
+            today: Current date
+            
+        Returns:
+            ActiveDashas object with current periods and alerts
+        """
+        try:
+            # Get current Mahadasha and Antardasha
+            current_mahadasha, current_antardasha = self.get_current_dasha(kundli_data, today)
+            
+            # Get horoscope info for house lordship checks
+            horoscope_info = kundli_data.get("horoscope_info", {})
+            
+            # Get alert flags
+            dasha_alerts = self.get_dasha_alerts(kundli_data, current_mahadasha, current_antardasha, horoscope_info)
+            
+            return ActiveDashas(
+                current_mahadasha=current_mahadasha,
+                current_antardasha=current_antardasha,
+                dasha_alerts=dasha_alerts
+            )
+        except Exception as e:
+            # Return default alerts if error occurs
+            return ActiveDashas(
+                current_mahadasha=None,
+                current_antardasha=None,
+                dasha_alerts=DashaAlerts(
+                    is_maraka_dasha=False,
+                    is_dusthana_dasha=False,
+                    is_rahu_ketu_dasha=False,
+                    alert_description="Unable to calculate dasha alerts at this time."
+                )
+            )
