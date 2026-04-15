@@ -49,6 +49,18 @@ class RulesEngine:
             "Rahu": "Gemini",
             "Ketu": "Sagittarius"
         }
+        
+        self.own_signs = {
+            "Sun": ["Leo"],
+            "Moon": ["Cancer"],
+            "Mars": ["Aries", "Scorpio"],
+            "Mercury": ["Gemini", "Virgo"],
+            "Jupiter": ["Sagittarius", "Pisces"],
+            "Venus": ["Taurus", "Libra"],
+            "Saturn": ["Capricorn", "Aquarius"],
+            "Rahu": ["Gemini"],
+            "Ketu": ["Sagittarius"]
+        }
     
     def get_planet_name(self, planet: Dict) -> str:
         """
@@ -132,7 +144,6 @@ class RulesEngine:
         Cancellation conditions:
         - Mars in own sign (Aries/Scorpio)
         - Mars in exaltation (Capricorn)
-        - Mars in 2nd house
         - Mars aspected by benefics (Jupiter, Venus)
         - Mars in Navamsha of benefic
         """
@@ -174,11 +185,6 @@ class RulesEngine:
                 
                 # Check cancellation conditions
                 is_cancelled, cancellation_reasons = self.check_mangal_dosha_bhanga(d1_chart, mars_house, mars_sign)
-                
-                # Also check Mars in 2nd house (additional cancellation)
-                if mars_house == 2:
-                    is_cancelled = True
-                    cancellation_reasons.append("Mars is in the 2nd house, which cancels Mangal Dosha")
                 
                 if not is_cancelled:
                     severity = "severe" if mars_house == 7 else "moderate"
@@ -332,8 +338,15 @@ class RulesEngine:
             if pitra_indicators >= 1:
                 is_present = True
                 severity = "moderate" if pitra_indicators >= 2 else "mild"
-                description = f"Pitra Dosha indicators detected. This suggests ancestral debt or unresolved family karma. Performing Shradh rituals and honoring ancestors is recommended."
-                remedies = self.get_remedies_for_dosha("Pitra Dosha")
+                
+                # Check for cancellation (Jupiter aspects)
+                is_cancelled, cancellation_reasons = self.check_pitra_dosha_bhanga(d1_chart)
+                
+                if not is_cancelled:
+                    description = f"Pitra Dosha indicators detected. This suggests ancestral debt or unresolved family karma. Performing Shradh rituals and honoring ancestors is recommended."
+                    remedies = self.get_remedies_for_dosha("Pitra Dosha")
+                else:
+                    description = f"Pitra Dosha indicators are present, but the dosha is mitigated by Jupiter's protective aspects."
         
         except Exception as e:
             description = f"Error analyzing Pitra Dosha: {str(e)}"
@@ -561,8 +574,8 @@ class RulesEngine:
         """
         Detect Vish Dosha (Poison combination).
         
-        Occurs when Mars and Saturn are in the same house or closely conjunct.
-        This creates a "poisonous" combination of aggressive and restrictive energies.
+        Occurs when Moon and Saturn are in the same house or closely conjunct.
+        This creates a "poisonous" combination of emotional and restrictive energies.
         """
         is_present = False
         is_cancelled = False
@@ -572,7 +585,8 @@ class RulesEngine:
         remedies = []
         
         try:
-            mars_house = None
+            moon_house = None
+            moon_sign = None
             saturn_house = None
             
             planets = self.extract_planets_from_chart(d1_chart)
@@ -581,22 +595,23 @@ class RulesEngine:
                 planet_id = planet.get("id")
                 house = planet.get("house")
                 
-                if planet_id == 2 or planet_name == "Mars":
-                    mars_house = house
+                if planet_id == 1 or planet_name == "Moon":
+                    moon_house = house
+                    moon_sign = self.get_planet_sign(planet)
                 elif planet_id == 6 or planet_name == "Saturn":
                     saturn_house = house
             
-            # Check if Mars and Saturn are in the same house
-            if mars_house is not None and saturn_house is not None:
-                if mars_house == saturn_house:
+            # Check if Moon and Saturn are in the same house
+            if moon_house is not None and saturn_house is not None:
+                if moon_house == saturn_house:
                     is_present = True
                     severity = "moderate"
                     
                     # Check for cancellation
-                    is_cancelled, cancellation_reasons = self.check_conjunction_dosha_bhanga(d1_chart, mars_house, "Mars", "Saturn")
+                    is_cancelled, cancellation_reasons = self.check_vish_dosha_bhanga(d1_chart, moon_house, moon_sign)
                     
                     if not is_cancelled:
-                        description = "Vish Dosha is present. Mars and Saturn are in conjunction, creating a 'poisonous' combination. This can indicate obstacles, accidents, and health challenges."
+                        description = "Vish Dosha is present. Moon and Saturn are in conjunction, creating a 'poisonous' combination. This can indicate emotional challenges, restrictions, and mental obstacles."
                         remedies = self.get_remedies_for_dosha("Vish Dosha")
                     else:
                         description = "Vish Dosha is present, but it is cancelled by protective yogas."
@@ -641,7 +656,7 @@ class RulesEngine:
                 if any(gm_nakshatra in nakshatra for gm_nakshatra in gandmool_nakshatras):
                     is_present = True
                     severity = "moderate"
-                    description = f"Gandmool Dosha is present. The Moon is in {nakshatra} nakshatra at birth. This requires specific remedial measures during early childhood."
+                    description = f"Gandmool Dosha is present. The Moon is in {nakshatra} nakshatra at birth. This requires specific remedial measures during early childhood. Note: Gandmool Dosha cannot be cancelled out and must be addressed through proper remedial rituals."
                     remedies = self.get_remedies_for_dosha("Gandmool Dosha")
         
         except Exception as e:
@@ -1243,6 +1258,13 @@ class RulesEngine:
                 if conjunction_sign == self.exaltation_signs.get(planet1_name):
                     is_cancelled = True
                     reasons.append(f"Conjunction is in {planet1_name}'s exalted sign of {conjunction_sign}")
+                
+                # Check if conjunction is in any of the planet's own signs (for planets with multiple own signs)
+                if planet1_name in self.own_signs:
+                    own_signs_list = self.own_signs[planet1_name]
+                    if conjunction_sign in own_signs_list and conjunction_sign != self.exaltation_signs.get(planet1_name):
+                        is_cancelled = True
+                        reasons.append(f"Conjunction is in {planet1_name}'s own sign of {conjunction_sign}")
             
             # Check if strong Jupiter aspects the conjunction
             for planet in planets:
@@ -1252,6 +1274,102 @@ class RulesEngine:
                     if self.check_aspect_between_planets(planet, planet1_house, d1_chart):
                         is_cancelled = True
                         reasons.append("Strong Jupiter aspects the conjunction, neutralizing its negative effects")
+        
+        except Exception:
+            pass
+        
+        return is_cancelled, reasons
+    
+    def check_vish_dosha_bhanga(self, d1_chart: Dict, moon_house: int, moon_sign: str) -> Tuple[bool, List[str]]:
+        """
+        Check if Vish Dosha (Moon-Saturn conjunction) is cancelled by protective yogas.
+        
+        Args:
+            d1_chart: D1 chart data
+            moon_house: House where Moon is placed
+            moon_sign: Sign where Moon is placed
+            
+        Returns:
+            Tuple of (is_cancelled: bool, cancellation_reasons: List[str])
+        """
+        is_cancelled = False
+        reasons = []
+        
+        try:
+            # Condition 1: Conjunction in Moon's own sign (Cancer)
+            if moon_sign and "Cancer" in moon_sign:
+                is_cancelled = True
+                reasons.append("Conjunction is in Moon's own sign of Cancer")
+            
+            # Condition 2: Conjunction in Moon's exalted sign (Taurus)
+            if moon_sign and "Taurus" in moon_sign:
+                is_cancelled = True
+                reasons.append("Conjunction is in Moon's exalted sign of Taurus")
+            
+            # Condition 3: Conjunction aspected by Jupiter
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                
+                if "Jupiter" in planet_name:
+                    if self.check_aspect_between_planets(planet, moon_house, d1_chart):
+                        is_cancelled = True
+                        reasons.append("Conjunction is aspected by Jupiter, neutralizing its negative effects")
+        
+        except Exception:
+            pass
+        
+        return is_cancelled, reasons
+    
+    def check_pitra_dosha_bhanga(self, d1_chart: Dict) -> Tuple[bool, List[str]]:
+        """
+        Check if Pitra Dosha is cancelled by Jupiter's protective aspects.
+        
+        Pitra Dosha is cancelled if:
+        - Jupiter aspects the 9th house (house of ancestors), OR
+        - Jupiter aspects the Sun
+        
+        Args:
+            d1_chart: D1 chart data
+            
+        Returns:
+            Tuple of (is_cancelled: bool, cancellation_reasons: List[str])
+        """
+        is_cancelled = False
+        reasons = []
+        
+        try:
+            sun_house = None
+            jupiter_house = None
+            
+            planets = self.extract_planets_from_chart(d1_chart)
+            for planet in planets:
+                planet_name = self.get_planet_name(planet)
+                planet_id = planet.get("id")
+                house = planet.get("house")
+                
+                if planet_id == 0 or planet_name == "Sun":
+                    sun_house = house
+                elif planet_id == 4 or planet_name == "Jupiter":
+                    jupiter_house = house
+            
+            # Check if Jupiter aspects the 9th house (house of ancestors)
+            if jupiter_house is not None:
+                # Check if Jupiter can aspect the 9th house
+                # Jupiter aspects 5th and 9th houses from its position
+                ninth_house_from_jupiter = (jupiter_house + 8) % 12 if jupiter_house else 0
+                if ninth_house_from_jupiter == 9 or (jupiter_house + 8) % 12 == 9:
+                    is_cancelled = True
+                    reasons.append("Jupiter aspects the 9th house (house of ancestors), mitigating Pitra Dosha")
+            
+            # Check if Jupiter aspects the Sun
+            if sun_house is not None and jupiter_house is not None:
+                for planet in planets:
+                    planet_name = self.get_planet_name(planet)
+                    if "Jupiter" in planet_name:
+                        if self.check_aspect_between_planets(planet, sun_house, d1_chart):
+                            is_cancelled = True
+                            reasons.append("Jupiter aspects the Sun, mitigating ancestral afflictions")
         
         except Exception:
             pass
