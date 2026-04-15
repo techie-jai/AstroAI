@@ -1714,8 +1714,8 @@ async def analyze_kundli_doshas(
             d1_chart = kundli_data.get("jyotishganit_json", {}).get("d1Chart", {})
         birth_data = kundli_metadata.get("birth_data", {})
         
-        # Detect all doshas
-        major_doshas = rules_engine.detect_all_doshas(d1_chart, birth_data)
+        # Detect all doshas (pass full kundli_data for access to panchanga and horoscope_info)
+        major_doshas = rules_engine.detect_all_doshas(d1_chart, birth_data, kundli_data)
         planetary_avasthas = rules_engine.detect_planetary_avasthas(d1_chart)
         dusthana_afflictions = rules_engine.detect_dusthana_afflictions(d1_chart)
         d_chart_afflictions = rules_engine.detect_d_chart_afflictions(all_d_charts)
