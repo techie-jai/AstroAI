@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, LayoutDashboard, BookOpen, Sparkles, MessageCircle, Settings, LogOut, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LayoutDashboard, BookOpen, Sparkles, MessageCircle, Settings, LogOut, AlertCircle, Heart } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 interface SidebarProps {
@@ -33,6 +33,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { path: '/kundli', label: 'Kundli', icon: BookOpen },
     { path: '/analysis', label: 'Analysis', icon: Sparkles },
     { path: '/dosh-dasha-analysis', label: 'Dosha Analysis', icon: AlertCircle },
+    { path: '/kundli-matching', label: 'Kundli Matching', icon: Heart },
     { path: '/livechat', label: 'Chat', icon: MessageCircle },
     { path: '/settings', label: 'Settings', icon: Settings },
   ]

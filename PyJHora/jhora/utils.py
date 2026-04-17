@@ -197,3 +197,25 @@ def get_house_planet_list(houses_dict):
         if house_num in houses_dict:
             planet_list.extend(houses_dict[house_num])
     return planet_list
+
+def count_stars(from_star, to_star):
+    """Count number of stars from one star to another (1-27)"""
+    if from_star < 1 or from_star > 27 or to_star < 1 or to_star > 27:
+        return 0
+    if from_star == to_star:
+        return 0
+    if to_star > from_star:
+        return to_star - from_star
+    else:
+        return (27 - from_star) + to_star
+
+def count_rasis(from_rasi, to_rasi):
+    """Count number of rasis from one rasi to another (1-12)"""
+    if from_rasi < 1 or from_rasi > 12 or to_rasi < 1 or to_rasi > 12:
+        return 0
+    if from_rasi == to_rasi:
+        return 0
+    if to_rasi > from_rasi:
+        return to_rasi - from_rasi
+    else:
+        return (12 - from_rasi) + to_rasi

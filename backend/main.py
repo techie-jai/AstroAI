@@ -30,7 +30,9 @@ from models import (
     
     DoshaAnalysisResponse, DoshaAnalysisSummary, Dosha, Avastha,
     
-    DusthanaAffliction, DChartAffliction, CurrentDasha, NegativePeriod
+    DusthanaAffliction, DChartAffliction, CurrentDasha, NegativePeriod,
+    
+    KundliMatchingRequest, KundliMatchingResponse
 
 )
 
@@ -39,6 +41,8 @@ from insights_extractor import InsightsExtractor
 from firebase_config import FirebaseConfig, FirebaseService
 
 from astrology_service import AstrologyService
+
+from kundli_matching_service import KundliMatchingService
 
 from gemini_service import GeminiService
 
@@ -3057,6 +3061,124 @@ async def get_bot_stats(platform: str = None, current_user: dict = Depends(get_c
         return {"status": "success", "data": stats}
     except Exception as e:
         print(f"[BOT] Error getting stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/kundli-matching/calculate")
+async def calculate_kundli_matching(
+    request: KundliMatchingRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Calculate kundli matching compatibility"""
+    try:
+        matching_service = KundliMatchingService()
+        
+        # Create user folder for storing kundli matching data
+        boy_name = request.boy_data.name
+        user_folder, unique_id = file_manager.create_user_folder(boy_name)
+        
+        # Calculate compatibility with user folder
+        raw_result = matching_service.calculate_compatibility(
+            boy_data=request.boy_data.dict(),
+            girl_data=request.girl_data.dict(),
+            method=request.method,
+            user_folder=user_folder
+        )
+        
+        # Format results for display
+        formatted_result = matching_service.format_results_for_display(raw_result)
+        
+        # Save result to user's kundli_matching folder
+        kundli_matching_dir = os.path.join(user_folder, 'kundli_matching')
+        os.makedirs(kundli_matching_dir, exist_ok=True)
+        
+        # Generate match ID
+        import uuid
+        match_id = str(uuid.uuid4())
+        
+        # Save results.json
+        results_file = os.path.join(kundli_matching_dir, 'results.json')
+        with open(results_file, 'w', encoding='utf-8') as f:
+            json.dump(formatted_result, f, indent=2, ensure_ascii=False)
+        
+        file_path = results_file
+        
+        # Build response
+        response = KundliMatchingResponse(
+            match_id=match_id,
+            boy_name=formatted_result['boy_name'],
+            girl_name=formatted_result['girl_name'],
+            method=formatted_result['method'],
+            total_score=formatted_result['total_score'],
+            max_score=formatted_result['max_score'],
+            timestamp=datetime.fromisoformat(formatted_result['timestamp']),
+            ashtakoota_scores=[
+                {
+                    'key': score['key'],
+                    'name': score['name'],
+                    'score': score['score'],
+                    'max_score': score['max_score'],
+                    'description': score['description'],
+                    'interpretation': score['interpretation']
+                }
+                for score in formatted_result['ashtakoota_scores']
+            ],
+            naalu_porutham_checks=[
+                {
+                    'key': check['key'],
+                    'name': check['name'],
+                    'status': check['status'],
+                    'description': check['description'],
+                    'importance': check['importance']
+                }
+                for check in formatted_result['naalu_porutham_checks']
+            ],
+            overall_verdict={
+                'verdict': formatted_result['overall_verdict']['verdict'],
+                'color': formatted_result['overall_verdict']['color'],
+                'message': formatted_result['overall_verdict']['message'],
+                'percentage': formatted_result['overall_verdict']['percentage']
+            },
+            file_path=file_path
+        )
+        
+        return response
+        
+    except ValueError as e:
+        print(f"[MATCHING] Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"[MATCHING] Error calculating compatibility: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error calculating compatibility: {str(e)}")
+
+
+@app.get("/api/kundli-matching/result/{match_id}")
+async def get_matching_result(
+    match_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a previously calculated matching result"""
+    try:
+        import os
+        results_dir = os.path.join(os.path.dirname(__file__), 'kundli_matching_results')
+        
+        # Search for file with match_id in name (simplified approach)
+        # In production, you'd want to store match_id -> file_path mapping
+        if os.path.exists(results_dir):
+            for filename in os.listdir(results_dir):
+                if filename.endswith('.json'):
+                    filepath = os.path.join(results_dir, filename)
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        # Return the first matching result found
+                        return {"status": "success", "data": data}
+        
+        raise HTTPException(status_code=404, detail="Matching result not found")
+        
+    except Exception as e:
+        print(f"[MATCHING] Error retrieving result: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

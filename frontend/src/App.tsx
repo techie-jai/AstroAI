@@ -15,6 +15,8 @@ import LiveChatPage from './pages/LiveChatPage'
 import KundliCompletionPage from './pages/KundliCompletionPage'
 import ChatWithKundliPage from './pages/ChatWithKundliPage'
 import DoshDashaAnalysisPage from './pages/DoshDashaAnalysisPage'
+import KundliMatchingPage from './pages/KundliMatchingPage'
+import KundliMatchingResultsPage from './pages/KundliMatchingResultsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -144,6 +146,26 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <DoshDashaAnalysisPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/kundli-matching"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <KundliMatchingPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/kundli-matching/results/:matchId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <KundliMatchingResultsPage />
               </Layout>
             </ProtectedRoute>
           }
