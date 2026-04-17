@@ -27,7 +27,9 @@ Write-Host ""
 Write-Host "Validating admin panel data..." -ForegroundColor Yellow
 Write-Host ""
 
-python "$BackendDir\validate_admin_data.py"
+Push-Location $BackendDir
+python validate_admin_data.py
+Pop-Location
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
