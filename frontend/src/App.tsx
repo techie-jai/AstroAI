@@ -14,6 +14,7 @@ import ChatPage from './pages/ChatPage'
 import LiveChatPage from './pages/LiveChatPage'
 import KundliCompletionPage from './pages/KundliCompletionPage'
 import ChatWithKundliPage from './pages/ChatWithKundliPage'
+import DoshDashaAnalysisPage from './pages/DoshDashaAnalysisPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -133,6 +134,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <SettingsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dosh-dasha-analysis"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <DoshDashaAnalysisPage />
               </Layout>
             </ProtectedRoute>
           }

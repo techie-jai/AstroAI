@@ -25,16 +25,19 @@ def validate_data():
     
     print_header("ADMIN PANEL DATA VALIDATION")
     
-    # Determine users path
-    if os.path.exists('/app/users'):
-        users_path = '/app/users'
-        print("✓ Using Docker path: /app/users")
-    elif os.path.exists('users'):
+    # Determine users path - check local first, then Docker
+    # Local paths (development)
+    if os.path.exists('users'):
         users_path = 'users'
         print("✓ Using local path: users/")
     elif os.path.exists('../users'):
         users_path = '../users'
         print("✓ Using parent path: ../users")
+    # Docker path (production)
+    elif os.path.exists('/app/users'):
+        users_path = '/app/users'
+        print("✓ Using Docker path: /app/users")
+    # Fallback to absolute path
     else:
         users_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'users')
         print(f"✓ Using absolute path: {users_path}")

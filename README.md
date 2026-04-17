@@ -17,13 +17,15 @@
 9. [Cloudflare Integration](#cloudflare-integration)
 10. [Generated Data & Output](#generated-data--output)
 11. [How It Works](#how-it-works)
-12. [Accuracy & Validation](#accuracy--validation)
-13. [Algorithm Improvements](#algorithm-improvements)
-14. [API Reference](#api-reference)
-15. [Project Structure](#project-structure)
-16. [Testing & Verification](#testing--verification)
-17. [Documentation](#documentation)
-18. [Credits & License](#credits--license)
+12. [Recent Updates (April 2026)](#recent-updates-april-2026)
+13. [🌟 Dosha & Dasha Analysis Feature](#-dosha--dasha-analysis-feature-new--april-2026)
+14. [Accuracy & Validation](#accuracy--validation)
+15. [Algorithm Improvements](#algorithm-improvements)
+16. [API Reference](#api-reference)
+17. [Project Structure](#project-structure)
+18. [Testing & Verification](#testing--verification)
+19. [Documentation](#documentation)
+20. [Credits & License](#credits--license)
 
 ---
 
@@ -55,6 +57,7 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 - **Special Lagnas & Upagrahas**: Advanced astrological points
 - **Ashtaka Varga & Shodhya Pinda**: Strength analysis
 - **Doshas**: Kala Sarpa, Manglik, Pitru, and others
+- **Dosha Bhanga (NEW)**: Automatic detection of dosha cancellations with detailed reasons
 - **Yogas**: 284+ yogas from classical texts
 - **Compatibility Analysis**: Marriage and relationship compatibility
 
@@ -861,6 +864,115 @@ The generated data feeds into AI models for:
 
 ## Recent Updates (April 2026)
 
+### 🎉 NEW: Dosha Bhanga (Cancellation) Implementation ✅
+
+**Status:** COMPLETE - Backend & Frontend Fully Implemented
+
+#### Overview
+Implemented comprehensive Dosha Bhanga (cancellation) detection in both backend rules engine and frontend UI. Users can now see which doshas are cancelled by protective yogas and understand why.
+
+#### Backend Implementation (rules_engine.py)
+
+**Updated Dosha Model:**
+- Added `is_present: bool` - Tracks if dosha exists
+- Added `is_cancelled: bool` - Tracks if dosha is cancelled (default=False)
+- Added `cancellation_reasons: List[str]` - Stores detailed cancellation reasons
+- Maintained `detected` field for backward compatibility
+
+**Helper Methods Added (6 new methods):**
+- `get_planet_sign()` - Extracts sign from planet object
+- `check_aspect_between_planets()` - Checks aspects using pre-calculated data
+- `is_benefic_planet()` - Identifies benefic planets (Jupiter, Venus, Mercury, Moon, Sun)
+- `get_kendra_planets()` - Gets planets in Kendra houses (1,4,7,10), excluding Sun/Rahu/Ketu
+
+**Specialized Bhanga Check Methods (4 new methods):**
+- `check_mangal_dosha_bhanga()` - Mars in own sign (Aries/Scorpio), exaltation (Capricorn), 2nd house, or aspects from Jupiter/Moon
+- `check_kemadruma_dosha_bhanga()` - Supporting planets in Kendra houses or Jupiter aspect to Moon
+- `check_kaal_sarp_dosha_bhanga()` - Ascendant or benefic planets outside Rahu-Ketu axis
+- `check_conjunction_dosha_bhanga()` - Conjunction in ruling planet's own/exalted sign or Jupiter aspect
+
+**Updated All 8 Dosha Detection Methods:**
+Each method now performs two-step check:
+1. Detect if dosha is present (`is_present`)
+2. If present, run bhanga check and populate `cancellation_reasons`
+3. Return complete Dosha object with all fields
+
+Doshas updated:
+- ✅ Mangal Dosha (Mars affliction)
+- ✅ Kaal Sarp Dosha (Rahu-Ketu axis)
+- ✅ Pitra Dosha (Ancestral debt)
+- ✅ Guru Chandal Dosha (Jupiter-Rahu conjunction)
+- ✅ Kemadruma Dosha (Moon without support)
+- ✅ Grahan Dosha (Eclipse point affliction)
+- ✅ Vish Dosha (Mars-Saturn poison)
+- ✅ Gandmool Dosha (Root affliction)
+
+#### Frontend Implementation (DoshDashaAnalysisPage.tsx)
+
+**Updated Dosha Interface:**
+```typescript
+major_doshas: Array<{
+  name: string
+  is_present: boolean
+  is_cancelled: boolean
+  severity: string
+  description: string
+  cancellation_reasons: string[]
+  remedies: string[]
+  detected?: boolean  // backward compatibility
+}>
+```
+
+**Enhanced Color Functions:**
+- `getSeverityColor()` - Returns green styling (bg-green-50, text-green-600) when cancelled
+- `getSeverityBadgeColor()` - Returns green badge (bg-green-100, text-green-800) when cancelled
+
+**Updated Major Doshas Section:**
+- **Transparent Display**: Doshas remain visible even when cancelled (user knows they were checked)
+- **Green "Good News" Message**: Prominent green box with CheckCircle icon
+- **Bulleted Reasons**: All cancellation reasons displayed in green text
+- **Status Badge**: Shows "CANCELLED" instead of severity level
+- **Conditional Remedies**: Only displays remedies if dosha is active (not cancelled)
+
+#### Cancellation Rules Implemented
+
+**Mangal Dosha:**
+- Mars in own sign (Aries/Scorpio)
+- Mars in exaltation (Capricorn)
+- Mars in 2nd house
+- Mars aspected by Jupiter or Moon
+
+**Kemadruma Dosha:**
+- Supporting planets in Kendra houses from Moon (Mars, Mercury, Jupiter, Venus, Saturn only)
+- Moon aspected by Jupiter
+
+**Kaal Sarp Dosha:**
+- Ascendant outside Rahu-Ketu axis
+- Benefic planets (Jupiter, Venus, Mercury) outside axis
+
+**Guru Chandal, Vish, Grahan Doshas:**
+- Conjunction in ruling planet's own sign
+- Conjunction in exaltation sign
+- Strong Jupiter aspect to conjunction
+
+#### Files Modified
+- `backend/models.py` - Updated Dosha model with 3 new fields
+- `backend/rules_engine.py` - Added 10 new methods (6 helpers + 4 bhanga checks), updated 8 dosha detection methods
+- `frontend/src/pages/DoshDashaAnalysisPage.tsx` - Updated interface, color functions, and dosha rendering
+
+#### Key Features
+✅ **Vedic Accuracy** - Implements classical Vedic astrology cancellation rules
+✅ **Transparent Design** - Cancelled doshas remain visible for transparency
+✅ **Clear Messaging** - "Good News" message with green styling and checkmark
+✅ **Detailed Explanations** - All cancellation reasons listed
+✅ **User-Friendly** - Easy to understand why a dosha is cancelled
+✅ **Backward Compatible** - Old `detected` field still supported
+✅ **Responsive UI** - Works on all screen sizes
+
+**Commit:** `v32-dosh-cancellation` - "dosh cancellation working as expected"
+
+---
+
 ### Critical Fixes & Improvements (Past 7 Days)
 
 #### 1. **Data Isolation & Security Fix** ✅
@@ -991,6 +1103,424 @@ The generated data feeds into AI models for:
 | Analysis Count Wrong | Hardcoded has_analysis | Check actual analysis files | Dashboard shows correct count |
 | Missing Data Display | Firebase vs Local FS | Dual-fetch with localStorage | Data displays correctly |
 | No Results Navigation | Missing button | Added View Results button | Easy access to results |
+
+---
+
+## 🌟 Dosha & Dasha Analysis Feature (NEW - April 2026)
+
+### Overview
+
+The **Dosha & Dasha Analysis** page provides comprehensive astrological analysis of afflictions (doshas), their cancellations (bhanga), and current planetary periods (dashas). This feature combines Vedic astrology principles with modern UI to help users understand their astrological challenges and timelines.
+
+**Access:** Navigate to `/dosh-dasha-analysis` or click "Dosha Analysis" in the sidebar menu.
+
+### How It Works
+
+#### 1. **Data Flow**
+
+```
+User selects Kundli
+    ↓
+Frontend requests analysis via POST /api/analysis/{kundli_id}
+    ↓
+Backend loads kundli data + all D-charts (D1, D9, D6, D8, D30, D60)
+    ↓
+RulesEngine detects 8 major doshas + avasthas + afflictions
+    ↓
+TimelineEngine calculates current dasha periods + negative periods
+    ↓
+Response includes complete analysis with cancellation reasons
+    ↓
+Frontend displays results with color-coded severity + interactive sections
+```
+
+#### 2. **Backend Architecture**
+
+**Three Core Modules:**
+
+##### A. **RulesEngine** (`backend/rules_engine.py` - 850+ lines)
+
+Detects astrological afflictions using strict Vedic rules:
+
+**8 Major Doshas Detected:**
+1. **Mangal Dosha** - Mars affliction in marriage houses
+   - Checks: Mars in houses 1, 4, 7, 8, 12
+   - Severity: Severe (7th house), Moderate (other houses)
+   - Method: `detect_mangal_dosha()`
+
+2. **Kaal Sarp Dosha** - Rahu-Ketu axis affliction
+   - Checks: All planets between Rahu and Ketu
+   - Severity: Severe
+   - Method: `detect_kaal_sarp_dosha()`
+
+3. **Pitra Dosha** - Ancestral debt
+   - Checks: Sun/Saturn/Rahu in 8th/9th/12th houses
+   - Severity: Moderate to Severe
+   - Method: `detect_pitra_dosha()`
+
+4. **Guru Chandal Dosha** - Jupiter-Rahu conjunction
+   - Checks: Jupiter and Rahu in same house
+   - Severity: Moderate
+   - Method: `detect_guru_chandal_dosha()`
+
+5. **Kemadruma Dosha** - Moon without support
+   - Checks: Moon lacks planets in 2nd/12th houses
+   - Severity: Moderate
+   - Method: `detect_kemadruma_dosha()`
+
+6. **Grahan Dosha** - Eclipse point affliction
+   - Checks: Sun/Moon conjunct with Rahu/Ketu
+   - Severity: Moderate to Severe
+   - Method: `detect_grahan_dosha()`
+
+7. **Vish Dosha** - Poison combination
+   - Checks: Mars and Saturn conjunction
+   - Severity: Moderate
+   - Method: `detect_vish_dosha()`
+
+8. **Gandmool Dosha** - Root affliction
+   - Checks: Moon in specific nakshatras (Ashwini, Aslesha, Magha, Jyeshtha, Moola, Revati)
+   - Severity: Moderate
+   - Method: `detect_gandmool_dosha()`
+
+**Planetary Avasthas Detected:**
+- **Neecha** (Debilitation): Planet in debilitation sign
+- **Asta** (Combustion): Planet within 8° of Sun
+- **Retrograde**: Retrograde malefics detection
+- Method: `detect_planetary_avasthas()`
+
+**Dusthana Afflictions Detected:**
+- **6th House** (Enemies, Debts, Health)
+- **8th House** (Longevity, Sudden Events)
+- **12th House** (Losses, Foreign Lands)
+- Method: `detect_dusthana_afflictions()`
+
+**D-Chart Afflictions Detected:**
+- **D9 (Navamsha)**: Marriage/partnership debilitations
+- **D6 (Shashtamsha)**: Health afflictions
+- **D8 (Ashtamsha)**: Longevity concerns
+- **D30 (Trimshamsha)**: Misfortune indicators
+- **D60 (Shashtiamsha)**: Past-life Shrapas (Matru, Pitru, Brahma, Stri)
+- Method: `detect_d_chart_afflictions()`
+
+**Key Methods:**
+```python
+detect_mangal_dosha()              # Mars affliction detection
+detect_kaal_sarp_dosha()           # Rahu-Ketu axis check
+detect_pitra_dosha()               # Ancestral debt check
+detect_guru_chandal_dosha()        # Jupiter-Rahu conjunction
+detect_kemadruma_dosha()           # Moon support check
+detect_grahan_dosha()              # Eclipse point affliction
+detect_vish_dosha()                # Mars-Saturn poison
+detect_gandmool_dosha()            # Moon nakshatra check
+detect_planetary_avasthas()        # Planetary states
+detect_dusthana_afflictions()      # 6th/8th/12th house check
+detect_d_chart_afflictions()       # D-chart specific checks
+```
+
+##### B. **Dosha Bhanga (Cancellation)** - NEW Feature
+
+**4 Specialized Bhanga Check Methods:**
+
+1. **`check_mangal_dosha_bhanga()`**
+   - Mars in own sign (Aries/Scorpio)
+   - Mars in exaltation (Capricorn)
+   - Mars in 2nd house
+   - Mars aspected by Jupiter or Moon
+
+2. **`check_kemadruma_dosha_bhanga()`**
+   - Supporting planets in Kendra houses (1,4,7,10)
+   - Excludes Sun, Rahu, Ketu (only Mars, Mercury, Jupiter, Venus, Saturn count)
+   - Moon aspected by Jupiter
+
+3. **`check_kaal_sarp_dosha_bhanga()`**
+   - Ascendant outside Rahu-Ketu axis
+   - Benefic planets (Jupiter, Venus, Mercury) outside axis
+
+4. **`check_conjunction_dosha_bhanga()`**
+   - Conjunction in ruling planet's own sign
+   - Conjunction in exaltation sign
+   - Strong Jupiter aspects the conjunction
+
+**Helper Methods (6 new):**
+- `get_planet_sign()` - Extract sign from planet object
+- `check_aspect_between_planets()` - Check aspects using pre-calculated data
+- `is_benefic_planet()` - Identify benefic planets
+- `get_kendra_planets()` - Get planets in Kendra houses
+
+**How It Works:**
+1. Detect if dosha is present (`is_present`)
+2. If present, run bhanga check
+3. Populate `cancellation_reasons` array with detailed explanations
+4. Return Dosha object with `is_cancelled` flag
+
+##### C. **TimelineEngine** (`backend/timeline.py` - 350+ lines)
+
+Calculates current dasha periods and negative timelines:
+
+**Current Dasha Calculation:**
+- Parses Dasha data from Kundli JSON
+- Finds current Mahadasha (main period)
+- Finds current Antardasha (sub-period)
+- Finds current Pratyantardasha (sub-sub-period)
+- Calculates progress percentage and days remaining
+- Method: `get_active_dashas()`
+
+**Negative Period Detection:**
+1. **Sade Sati** - Saturn's 7.5-year transit (requires transit data)
+2. **Maraka Dashas** - Lords of 2nd/7th houses (death-inflicting)
+3. **Badhaka Dashas** - 11th house lord periods (obstruction)
+4. **Rahu/Ketu Mahadashas** - Shadow planet periods
+- Method: `get_negative_periods()`
+
+**Helper Methods:**
+- `parse_dasha_date()` - Parse YYYY-MM-DD format
+- `calculate_days_remaining()` - Days until period ends
+- `calculate_progress_percent()` - Percentage of period completed
+- `calculate_duration_years()` - Duration in years
+- `format_countdown()` - Human-readable countdown (e.g., "8 Months, 12 Days")
+- `determine_severity()` - Severity based on period type
+
+**Key Methods:**
+```python
+get_current_pratyantardasha()       # Extract current Pratyantardasha
+get_house_lord_from_horoscope()    # Extract house lordship
+check_maraka_dasha()               # Detect Maraka periods
+check_dusthana_dasha()             # Detect Dusthana periods
+check_rahu_ketu_dasha()            # Detect Rahu/Ketu Mahadashas
+get_dasha_alerts()                 # Compile all alert flags
+get_active_dashas()                # Main method returning all data
+```
+
+#### 3. **API Endpoint**
+
+**Endpoint:** `POST /api/analysis/{kundli_id}`
+
+**Request:**
+```
+Authorization: Bearer {firebase_token}
+```
+
+**Response:**
+```json
+{
+  "kundli_id": "string",
+  "analysis_date": "2026-04-17T10:44:00Z",
+  "birth_data": { ... },
+  "major_doshas": [
+    {
+      "name": "Mangal Dosha",
+      "is_present": true,
+      "is_cancelled": false,
+      "severity": "moderate",
+      "description": "Mars in 7th house...",
+      "cancellation_reasons": [],
+      "remedies": ["Recite Hanuman Chalisa...", ...]
+    },
+    ...
+  ],
+  "planetary_avasthas": [ ... ],
+  "dusthana_afflictions": [ ... ],
+  "d_chart_afflictions": [ ... ],
+  "active_dashas": {
+    "current_mahadasha": {
+      "planet": "Jupiter",
+      "start_date": "2024-01-15",
+      "end_date": "2027-03-20",
+      "progress_percent": 45.2,
+      "days_remaining": 520
+    },
+    "current_antardasha": { ... },
+    "current_pratyantardasha": { ... },
+    "dasha_alerts": {
+      "is_maraka_dasha": false,
+      "is_dusthana_dasha": true,
+      "is_rahu_ketu_dasha": false,
+      "alert_description": "Dusthana Dasha..."
+    }
+  },
+  "negative_periods": [ ... ],
+  "summary": {
+    "total_doshas": 3,
+    "severe_doshas": 1,
+    "moderate_doshas": 2,
+    "mild_doshas": 0,
+    "active_alerts": 2
+  }
+}
+```
+
+### Frontend Implementation
+
+#### 1. **DoshDashaAnalysisPage Component** (`frontend/src/pages/DoshDashaAnalysisPage.tsx`)
+
+**Features:**
+
+**Kundli Selector Dropdown:**
+- Fetches user's kundlis on mount
+- Displays kundli name and birth date
+- Auto-selects first kundli
+- Updates analysis when selection changes
+
+**Summary Cards (4 KPIs):**
+- Total Doshas Count
+- Severe Doshas Count
+- Moderate Doshas Count
+- Mild Doshas Count
+
+**Active Alerts Section:**
+- Displays active negative periods count
+- Red alert styling for visibility
+
+**Current Planetary Periods Section:**
+- **Mahadasha Card**: Main period with progress bar
+- **Antardasha Card**: Sub-period with progress bar
+- **Pratyantardasha Card**: Sub-sub-period with progress bar
+- Each shows: planet name, date range, progress %, countdown
+
+**Dasha Alerts Section:**
+- Color-coded based on alert type (red/orange/green)
+- Main alert description with icon
+- Detailed explanations for each alert type:
+  - Maraka: Health/travel caution
+  - Dusthana: Finance/health/obstacles caution
+  - Rahu/Ketu: Illusions/changes/spiritual focus
+  - Neutral: Supportive period message
+
+**Major Doshas Section:**
+- All 8 doshas with severity badges
+- Detailed descriptions
+- Remedies list (first 3 shown)
+- Color-coded by severity (red/orange/yellow)
+- **NEW:** Green "Good News" message when cancelled
+- **NEW:** Cancellation reasons listed in bulleted format
+
+**Negative Periods Section:**
+- Lists all active negative periods
+- Type, end date, days remaining
+- Severity badges
+- Detailed descriptions
+
+**Collapsible Sections:**
+- Expandable/collapsible sections for better UX
+- Toggle headers to show/hide content
+- Smooth transitions with chevron icons
+
+#### 2. **Color Coding**
+
+**Severity Levels:**
+- **Severe**: Red (bg-red-50, text-red-600)
+- **Moderate**: Orange (bg-orange-50, text-orange-600)
+- **Mild**: Yellow (bg-yellow-50, text-yellow-600)
+- **Cancelled**: Green (bg-green-50, text-green-600) ✨ NEW
+
+**Dasha Alerts:**
+- **Maraka**: Red (danger)
+- **Dusthana**: Orange (warning)
+- **Rahu/Ketu**: Orange (warning)
+- **Neutral**: Green (safe)
+
+#### 3. **Helper Functions**
+
+```typescript
+formatDateRange(startDate, endDate)    // "Oct 2024 - Mar 2027"
+formatCountdown(daysRemaining)         // "8 Months, 12 Days"
+getSeverityColor(severity, isCancelled) // Returns color classes
+getSeverityBadgeColor(severity)        // Returns badge color
+getAlertColor(alertType)               // Returns alert color
+getAlertIcon(alertType)                // Returns appropriate icon
+```
+
+#### 4. **Navigation Integration**
+
+**Sidebar Menu Item:**
+- Added "Dosha Analysis" menu item in `frontend/src/components/Sidebar.tsx`
+- Uses `AlertCircle` icon from lucide-react
+- Positioned between Analysis and Chat
+- Responsive to sidebar collapse/expand
+
+**Route Configuration:**
+- Protected route at `/dosh-dasha-analysis`
+- Wrapped in Layout component
+- Requires authentication
+
+### Files & Methods Summary
+
+#### Backend Files
+
+| File | Lines | Key Methods | Purpose |
+|------|-------|-------------|---------|
+| `backend/rules_engine.py` | 850+ | 8 dosha detection + 4 bhanga checks + 6 helpers | Detects all doshas and cancellations |
+| `backend/timeline.py` | 350+ | 7 dasha calculation + 6 helpers | Calculates dasha periods and negative timelines |
+| `backend/models.py` | Updated | 8 new Pydantic models | Data structures for analysis response |
+| `backend/main.py` | Updated | `POST /api/analysis/{kundli_id}` | API endpoint for analysis |
+
+#### Frontend Files
+
+| File | Lines | Key Components | Purpose |
+|------|-------|-----------------|---------|
+| `frontend/src/pages/DoshDashaAnalysisPage.tsx` | 500+ | Kundli selector, summary cards, dosha sections | Main analysis page |
+| `frontend/src/components/Sidebar.tsx` | Updated | Navigation menu item | Access to analysis page |
+| `frontend/src/App.tsx` | Updated | Protected route | Route configuration |
+| `frontend/src/services/api.ts` | Updated | `analyzeDoshaAndDasha()` | API integration |
+
+### Key Features
+
+✅ **8 Major Doshas** - Comprehensive affliction detection
+✅ **Dosha Bhanga** - Automatic cancellation detection with reasons
+✅ **Planetary Avasthas** - Neecha, Asta, Retrograde detection
+✅ **Dusthana Afflictions** - 6th/8th/12th house analysis
+✅ **D-Chart Analysis** - D9, D6, D8, D30, D60 afflictions
+✅ **Current Dashas** - Mahadasha, Antardasha, Pratyantardasha
+✅ **Negative Periods** - Maraka, Badhaka, Rahu/Ketu detection
+✅ **Progress Tracking** - Visual progress bars with countdowns
+✅ **Severity Indicators** - Color-coded severity levels
+✅ **Cancellation Reasons** - Detailed explanations for cancelled doshas
+✅ **Error Handling** - Graceful error messages
+✅ **Responsive Design** - Works on all screen sizes
+✅ **Type Safety** - Full TypeScript support
+
+### Testing the Feature
+
+1. **Navigate to Analysis Page:**
+   ```
+   http://localhost:5173/dosh-dasha-analysis
+   ```
+
+2. **Select a Kundli:**
+   - Click dropdown to see available kundlis
+   - Select one to load analysis
+
+3. **View Analysis Results:**
+   - Summary cards show dosha counts
+   - Current dasha section shows active periods
+   - Major doshas section shows all 8 doshas
+   - Negative periods section shows active timelines
+
+4. **Check Cancellations:**
+   - Look for green "Good News" messages
+   - Read cancellation reasons
+   - Verify remedies are hidden for cancelled doshas
+
+### Performance Considerations
+
+- Analysis computed on-demand (not cached)
+- D-charts loaded from filesystem
+- No external API calls (except Firebase auth)
+- Response time: ~1-2 seconds per analysis
+- Suitable for real-time use
+
+### Future Enhancements
+
+- Gantt chart for dasha timeline visualization
+- Remedy recommendations section with detailed upayas
+- Export analysis as PDF
+- Share analysis with astrologer
+- Historical analysis comparison
+- Remedies progress tracking
+- Notifications for period changes
+- Sade Sati transit calculations
+- Advanced dasha predictions
 
 ---
 
@@ -1630,6 +2160,7 @@ Custom languages can be added by creating language files in the `lang/` director
 - ✅ Panchanga calculations
 - ✅ Doshas and Yogas
 - ✅ Strength analysis (Shadbala)
+- ✅ **NEW:** Dosha Bhanga (Cancellation) Detection with detailed reasons
 
 **Desktop Application:**
 - ✅ PyQt6 UI with auto-complete

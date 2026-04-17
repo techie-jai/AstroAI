@@ -26,7 +26,11 @@ from models import (
 
     BirthData, GenerateKundliRequest, GenerateAnalysisRequest,
 
-    KundliResponse, AnalysisResponse, ErrorResponse, CreateProfileRequest
+    KundliResponse, AnalysisResponse, ErrorResponse, CreateProfileRequest,
+    
+    DoshaAnalysisResponse, DoshaAnalysisSummary, Dosha, Avastha,
+    
+    DusthanaAffliction, DChartAffliction, CurrentDasha, NegativePeriod
 
 )
 
@@ -1638,7 +1642,137 @@ async def generate_analysis(
 
         )
 
-
+@app.post("/api/analysis/{kundli_id}")
+async def analyze_kundli_doshas(
+    kundli_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Perform comprehensive dosha and timeline analysis on a kundli.
+    
+    Analyzes:
+    - 8 Major Doshas (Mangal, Kaal Sarp, Pitra, Guru Chandal, Kemadruma, Grahan, Vish, Gandmool)
+    - Planetary Avasthas (Neecha, Asta, Yuddha, Retrograde)
+    - Dusthana Afflictions (6th, 8th, 12th houses)
+    - D-Chart Afflictions (D9, D6, D8, D30, D60)
+    - Current Dasha periods with progress
+    - Active negative periods (Sade Sati, Maraka, Badhaka, Rahu/Ketu)
+    
+    Args:
+        kundli_id: ID of the kundli to analyze
+        current_user: Current authenticated user
+        
+    Returns:
+        DoshaAnalysisResponse with complete analysis
+    """
+    try:
+        from rules_engine import RulesEngine
+        from timeline import TimelineEngine
+        from datetime import datetime
+        
+        # Verify user owns this kundli
+        kundli_metadata = file_manager.lookup_kundli(kundli_id)
+        if not kundli_metadata:
+            raise HTTPException(status_code=404, detail="Kundli not found")
+        
+        if kundli_metadata.get("uid") != current_user.get("uid"):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Load kundli data
+        kundli_file_path = kundli_metadata.get("file_path")
+        if not kundli_file_path or not os.path.exists(kundli_file_path):
+            raise HTTPException(status_code=404, detail="Kundli file not found")
+        
+        with open(kundli_file_path, 'r') as f:
+            kundli_data = json.load(f)
+        
+        # Load D-charts
+        user_folder = os.path.dirname(os.path.dirname(kundli_file_path))
+        charts_folder = os.path.join(user_folder, "charts", "json")
+        
+        all_d_charts = {}
+        if os.path.exists(charts_folder):
+            for chart_file in os.listdir(charts_folder):
+                if chart_file.endswith(".json"):
+                    chart_type = chart_file.replace(".json", "")
+                    chart_path = os.path.join(charts_folder, chart_file)
+                    try:
+                        with open(chart_path, 'r') as f:
+                            all_d_charts[chart_type] = json.load(f)
+                    except:
+                        pass
+        
+        # Initialize engines
+        rules_engine = RulesEngine()
+        timeline_engine = TimelineEngine()
+        
+        # Get D1 chart (handle multiple nested structures)
+        d1_chart = kundli_data.get("d1Chart", {})
+        if not d1_chart and "horoscope_info" in kundli_data:
+            d1_chart = kundli_data.get("horoscope_info", {}).get("d1Chart", {})
+        if not d1_chart and "jyotishganit_json" in kundli_data:
+            d1_chart = kundli_data.get("jyotishganit_json", {}).get("d1Chart", {})
+        birth_data = kundli_metadata.get("birth_data", {})
+        
+        # Detect all doshas (pass full kundli_data for access to panchanga and horoscope_info)
+        major_doshas = rules_engine.detect_all_doshas(d1_chart, birth_data, kundli_data)
+        planetary_avasthas = rules_engine.detect_planetary_avasthas(d1_chart)
+        dusthana_afflictions = rules_engine.detect_dusthana_afflictions(d1_chart)
+        d_chart_afflictions = rules_engine.detect_d_chart_afflictions(all_d_charts)
+        
+        # Get timeline information
+        today = datetime.now()
+        current_mahadasha, current_antardasha = timeline_engine.get_current_dasha(kundli_data, today)
+        negative_periods = timeline_engine.get_active_negative_periods(kundli_data, today)
+        active_dashas = timeline_engine.get_active_dashas(kundli_data, today)
+        
+        # Debug logging
+        print(f"[DASHA] Current Mahadasha: {current_mahadasha.planet if current_mahadasha else 'None'}")
+        print(f"[DASHA] Current Antardasha: {current_antardasha.planet if current_antardasha else 'None'}")
+        print(f"[DASHA] Active Dashas: {active_dashas.dasha_alerts.alert_description if active_dashas else 'None'}")
+        
+        # Calculate summary
+        total_doshas = len(major_doshas)
+        severe_count = sum(1 for d in major_doshas if d.severity == "severe")
+        moderate_count = sum(1 for d in major_doshas if d.severity == "moderate")
+        mild_count = sum(1 for d in major_doshas if d.severity == "mild")
+        
+        summary = DoshaAnalysisSummary(
+            total_doshas=total_doshas,
+            severe_count=severe_count,
+            moderate_count=moderate_count,
+            mild_count=mild_count,
+            active_negative_periods=len(negative_periods)
+        )
+        
+        # Build response
+        response = DoshaAnalysisResponse(
+            kundli_id=kundli_id,
+            analysis_date=datetime.now(),
+            birth_data=birth_data,
+            doshas={"major_doshas": major_doshas},
+            major_doshas=major_doshas,
+            planetary_avasthas=planetary_avasthas,
+            dusthana_afflictions=dusthana_afflictions,
+            d_chart_afflictions=d_chart_afflictions,
+            active_timelines={
+                "current_mahadasha": current_mahadasha,
+                "current_antardasha": current_antardasha
+            },
+            current_mahadasha=current_mahadasha,
+            current_antardasha=current_antardasha,
+            active_dashas=active_dashas,
+            negative_periods=negative_periods,
+            summary=summary
+        )
+        
+        return response
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Dosha analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
 
