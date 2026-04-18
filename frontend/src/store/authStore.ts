@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { initializeApp } from 'firebase/app'
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth'
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'firebase/auth'
 import { api } from '../services/api'
 
 const firebaseConfig = {
@@ -15,6 +15,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const googleProvider = new GoogleAuthProvider()
+
+// Helper function to detect if browser is a secure/compliant browser
+const isSecureBrowser = (): boolean => {
+  const ua = navigator.userAgent.toLowerCase()
+  
+  // List of known insecure/non-compliant in-app browsers
+  const insecureBrowsers = [
+    'fban', // Facebook app
+    'fbav', // Facebook app
+    'messenger', // Facebook Messenger
+    'instagram', // Instagram app
+    'whatsapp', // WhatsApp
+    'line', // LINE app
+    'telegram', // Telegram
+    'viber', // Viber
+    'snapchat', // Snapchat
+    'tiktok', // TikTok
+  ]
+  
+  return !insecureBrowsers.some(browser => ua.includes(browser))
+}
+
+// Helper function to get appropriate OAuth method
+const getOAuthMethod = (): 'popup' | 'redirect' => {
+  return isSecureBrowser() ? 'popup' : 'redirect'
+}
 
 interface User {
   uid: string
@@ -40,12 +66,28 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   initializeAuth: () => {
     console.log('[AUTH] Initializing auth...')
+    console.log('[AUTH] Browser type:', isSecureBrowser() ? 'Secure' : 'In-app (non-compliant)')
     
     // Check if token exists in localStorage (for new tabs/windows)
     const existingToken = localStorage.getItem('firebaseToken')
     if (existingToken) {
       console.log('[AUTH] Found existing token in localStorage, waiting for auth state...')
     }
+    
+    // Handle redirect result from OAuth flow
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          console.log('[AUTH] Redirect result received, user logged in')
+          result.user.getIdToken().then((token) => {
+            localStorage.setItem('firebaseToken', token)
+            console.log('[AUTH] Token stored from redirect result')
+          })
+        }
+      })
+      .catch((error) => {
+        console.error('[AUTH] Error getting redirect result:', error)
+      })
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('[AUTH] Auth state changed, firebaseUser:', firebaseUser?.email || 'null')
@@ -84,7 +126,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ error: null })
       console.log('[AUTH] Starting Google sign-in...')
       
-      const result = await signInWithPopup(auth, googleProvider)
+      const oauthMethod = getOAuthMethod()
+      console.log('[AUTH] Using OAuth method:', oauthMethod)
+      
+      let result
+      if (oauthMethod === 'popup') {
+        result = await signInWithPopup(auth, googleProvider)
+      } else {
+        await signInWithRedirect(auth, googleProvider)
+        console.log('[AUTH] Redirecting to Google OAuth...')
+        return
+      }
+      
       console.log('[AUTH] Google sign-in successful, getting token...')
       
       const token = await result.user.getIdToken()

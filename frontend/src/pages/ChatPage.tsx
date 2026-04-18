@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Send, Loader, ArrowLeft } from 'lucide-react'
 import { api } from '../services/api'
+import apiClient from '../services/api'
 import toast from 'react-hot-toast'
 
 interface Message {
@@ -26,6 +27,7 @@ interface Calculation {
 
 export default function ChatPage() {
   const { kundliId } = useParams<{ kundliId: string }>()
+  const location = useLocation()
   const navigate = useNavigate()
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -52,17 +54,56 @@ export default function ChatPage() {
             setError('Select a kundli to start chatting.')
           }
         } else {
-          // Has kundliId - fetch kundli info
-          const response = await api.getKundli(kundliId)
-          const fullKundliData = response.data
-          setKundliData(fullKundliData) // Store full kundli data for chat
-          const birthData = fullKundliData.birth_data || {}
-          setKundliInfo({
-            name: birthData.name || 'Unknown',
-            birth_date: birthData.date || `${birthData.year || 'N/A'}-${birthData.month || 'N/A'}-${birthData.day || 'N/A'}`,
-            birth_time: birthData.time || `${birthData.hour || 'N/A'}:${birthData.minute || 'N/A'}`,
-            place: birthData.place || 'Unknown',
-          })
+          // Check if this is a kundli matching result (passed via location state)
+          const matchData = (location.state as any)?.matchData
+          const type = (location.state as any)?.type
+          
+          // Also check if the data structure indicates it's a matching result
+          // (has boy_kundli and girl_kundli fields)
+          const isMatching = type === 'kundli_matching' || 
+                           (matchData && 'boy_kundli' in matchData && 'girl_kundli' in matchData)
+          
+          if (isMatching && matchData) {
+            // This is a matching result, use the passed data
+            console.log('[ChatPage] Detected matching result, using passed data')
+            setKundliData(matchData)
+            setKundliInfo({
+              name: `${matchData.boy_name} & ${matchData.girl_name}`,
+              birth_date: 'Matching Result',
+              birth_time: '',
+              place: 'Compatibility Analysis',
+            })
+          } else {
+            // Regular kundli - fetch from API
+            console.log('[ChatPage] Fetching regular kundli:', kundliId)
+            try {
+              const response = await api.getKundli(kundliId)
+              const fullKundliData = response.data
+              setKundliData(fullKundliData) // Store full kundli data for chat
+              const birthData = fullKundliData.birth_data || {}
+              setKundliInfo({
+                name: birthData.name || 'Unknown',
+                birth_date: birthData.date || `${birthData.year || 'N/A'}-${birthData.month || 'N/A'}-${birthData.day || 'N/A'}`,
+                birth_time: birthData.time || `${birthData.hour || 'N/A'}:${birthData.minute || 'N/A'}`,
+                place: birthData.place || 'Unknown',
+              })
+            } catch (fetchErr: any) {
+              // If regular kundli fetch fails, check if this might be a matching result
+              console.log('[ChatPage] Regular kundli fetch failed, checking if matching result...')
+              if (matchData && ('boy_kundli' in matchData || 'boy_name' in matchData)) {
+                console.log('[ChatPage] Using as matching result')
+                setKundliData(matchData)
+                setKundliInfo({
+                  name: `${matchData.boy_name || 'Boy'} & ${matchData.girl_name || 'Girl'}`,
+                  birth_date: 'Matching Result',
+                  birth_time: '',
+                  place: 'Compatibility Analysis',
+                })
+              } else {
+                throw fetchErr
+              }
+            }
+          }
         }
       } catch (err: any) {
         const errorMsg = err.response?.data?.detail || err.message || 'Failed to load data'
@@ -73,7 +114,7 @@ export default function ChatPage() {
     }
     
     init()
-  }, [kundliId])
+  }, [kundliId, location.state])
 
   // Auto-scroll to latest message
   useEffect(() => {

@@ -202,3 +202,54 @@ class DoshaAnalysisResponse(BaseModel):
     negative_periods: List[NegativePeriod] = Field(..., description="Active negative periods")
     
     summary: DoshaAnalysisSummary = Field(..., description="Analysis summary")
+
+
+class KundliMatchingRequest(BaseModel):
+    """Request to calculate kundli matching"""
+    boy_data: BirthData = Field(..., description="Boy's birth data")
+    girl_data: BirthData = Field(..., description="Girl's birth data")
+    method: str = Field(default="North", description="Matching method: North or South")
+
+
+class AshtakootaScore(BaseModel):
+    """Individual Ashtakoota score"""
+    key: str = Field(..., description="Score key identifier")
+    name: str = Field(..., description="Score name")
+    score: float = Field(..., description="Score value")
+    max_score: float = Field(..., description="Maximum possible score")
+    description: str = Field(..., description="What this score measures")
+    interpretation: str = Field(..., description="Interpretation of the score")
+
+
+class NaaluPoruthamCheck(BaseModel):
+    """Naalu Porutham (4 additional checks) result"""
+    key: str = Field(..., description="Check key identifier")
+    name: str = Field(..., description="Check name")
+    status: bool = Field(..., description="Whether check passed")
+    description: str = Field(..., description="What this check measures")
+    importance: str = Field(..., description="Importance of this check")
+
+
+class OverallVerdict(BaseModel):
+    """Overall compatibility verdict"""
+    verdict: str = Field(..., description="Verdict: Excellent, Good, Average, or Poor")
+    color: str = Field(..., description="Color code: green, blue, yellow, or red")
+    message: str = Field(..., description="Human-readable verdict message")
+    percentage: int = Field(..., ge=0, le=100, description="Compatibility percentage")
+
+
+class KundliMatchingResponse(BaseModel):
+    """Complete kundli matching response"""
+    match_id: str = Field(..., description="Unique ID for this matching result")
+    boy_name: str = Field(..., description="Boy's name")
+    girl_name: str = Field(..., description="Girl's name")
+    method: str = Field(..., description="Matching method used")
+    total_score: float = Field(..., description="Total compatibility score")
+    max_score: int = Field(..., description="Maximum possible score (36 for North, 10 for South)")
+    timestamp: datetime = Field(..., description="When matching was calculated")
+    ashtakoota_scores: List[AshtakootaScore] = Field(..., description="8 Ashtakoota scores")
+    naalu_porutham_checks: List[NaaluPoruthamCheck] = Field(..., description="4 Naalu Porutham checks")
+    overall_verdict: OverallVerdict = Field(..., description="Overall compatibility verdict")
+    file_path: Optional[str] = Field(None, description="Path to saved result file")
+    boy_kundli: Optional[dict] = Field(None, description="Boy's generated kundli data")
+    girl_kundli: Optional[dict] = Field(None, description="Girl's generated kundli data")

@@ -30,7 +30,9 @@ from models import (
     
     DoshaAnalysisResponse, DoshaAnalysisSummary, Dosha, Avastha,
     
-    DusthanaAffliction, DChartAffliction, CurrentDasha, NegativePeriod
+    DusthanaAffliction, DChartAffliction, CurrentDasha, NegativePeriod,
+    
+    KundliMatchingRequest, KundliMatchingResponse
 
 )
 
@@ -39,6 +41,8 @@ from insights_extractor import InsightsExtractor
 from firebase_config import FirebaseConfig, FirebaseService
 
 from astrology_service import AstrologyService
+
+from kundli_matching_service import KundliMatchingService
 
 from gemini_service import GeminiService
 
@@ -2697,33 +2701,89 @@ async def unified_chat_endpoint(
                 detail="Gemini API key not configured. Please set GEMINI_API_KEY in environment variables."
             )
         
-        # Extract comprehensive Kundli data
-        print(f"[UNIFIED_CHAT] Extracting comprehensive Kundli data...")
-        comprehensive_data = KundliDataExtractor.extract_comprehensive_kundli_data(kundli_data)
+        # Check if this is a kundli matching analysis
+        is_matching = 'boy_kundli' in kundli_data and 'girl_kundli' in kundli_data
         
-        # Log data extraction summary
-        print(f"[UNIFIED_CHAT] Extracted data summary:")
-        print(f"  - Basic info: {len(comprehensive_data['basic_info'])} fields")
-        print(f"  - Horoscope analysis: {len(comprehensive_data['horoscope_analysis'])} sections")
-        print(f"  - Divisional charts: {comprehensive_data['divisional_charts'].get('total_charts', 0)} charts")
-        print(f"  - Ashtakavarga: {'Present' if comprehensive_data['ashtakavarga'] else 'Not present'}")
-        print(f"  - Dashas: {'Present' if comprehensive_data['dashas'] else 'Not present'}")
-        print(f"  - Advanced analysis: {len(comprehensive_data['advanced_analysis'])} sections")
-        
-        # Build chat context
-        chat_context = ""
-        if chat_history:
-            chat_context = "\n=== PREVIOUS CONVERSATION ===\n"
-            for msg in chat_history[-3:]:  # Last 3 messages for context
-                role = msg.get('role', 'user').upper()
-                content = msg.get('content', '')
-                chat_context += f"{role}: {content}\n"
-            chat_context += "=== END PREVIOUS CONVERSATION ===\n"
-        
-        # Create comprehensive prompt for Gemini
-        import json
-        
-        prompt = f"""You are an expert Vedic astrologer with deep knowledge of all aspects of Jyotish. 
+        if is_matching:
+            # Handle kundli matching analysis
+            print(f"[UNIFIED_CHAT] Detected kundli matching analysis")
+            boy_kundli = kundli_data.get('boy_kundli', {})
+            girl_kundli = kundli_data.get('girl_kundli', {})
+            boy_name = kundli_data.get('boy_name', 'Boy')
+            girl_name = kundli_data.get('girl_name', 'Girl')
+            
+            # Extract data for both kundlis
+            boy_data = KundliDataExtractor.extract_comprehensive_kundli_data(boy_kundli) if boy_kundli else {}
+            girl_data = KundliDataExtractor.extract_comprehensive_kundli_data(girl_kundli) if girl_kundli else {}
+            
+            # Build matching analysis prompt
+            import json
+            
+            prompt = f"""You are an expert Vedic astrologer specializing in kundli matching and marriage compatibility analysis.
+Analyze the comprehensive kundli data for both individuals and the matching results provided below.
+
+=== BOY'S KUNDLI DATA ===
+Name: {boy_name}
+{json.dumps(boy_data, indent=2, default=str)}
+
+=== GIRL'S KUNDLI DATA ===
+Name: {girl_name}
+{json.dumps(girl_data, indent=2, default=str)}
+
+=== MATCHING RESULTS ===
+{json.dumps(kundli_data, indent=2, default=str)}
+
+=== USER'S QUESTION ===
+{user_message}
+
+=== INSTRUCTIONS FOR MATCHING ANALYSIS ===
+1. Provide a comprehensive analysis of both individual kundlis
+2. Analyze the compatibility based on:
+   - Nakshatra compatibility (Guna Milan)
+   - Planetary positions and aspects
+   - House placements and their significance
+   - Dasha periods and their impact on marriage
+   - Doshas (Mangal Dosha, Nadi Dosha, etc.) if present
+3. Discuss the marriage prospects based on the matching scores
+4. Provide insights into:
+   - Emotional compatibility
+   - Financial stability
+   - Health and longevity
+   - Children and progeny
+   - Overall marital happiness
+5. Give practical advice for a successful marriage
+6. Mention any remedies or precautions if needed
+7. Maintain a professional, empathetic, and hopeful tone
+
+Please provide a thorough, detailed response covering all aspects of the matching analysis."""
+        else:
+            # Handle regular kundli analysis
+            print(f"[UNIFIED_CHAT] Extracting comprehensive Kundli data...")
+            comprehensive_data = KundliDataExtractor.extract_comprehensive_kundli_data(kundli_data)
+            
+            # Log data extraction summary
+            print(f"[UNIFIED_CHAT] Extracted data summary:")
+            print(f"  - Basic info: {len(comprehensive_data['basic_info'])} fields")
+            print(f"  - Horoscope analysis: {len(comprehensive_data['horoscope_analysis'])} sections")
+            print(f"  - Divisional charts: {comprehensive_data['divisional_charts'].get('total_charts', 0)} charts")
+            print(f"  - Ashtakavarga: {'Present' if comprehensive_data['ashtakavarga'] else 'Not present'}")
+            print(f"  - Dashas: {'Present' if comprehensive_data['dashas'] else 'Not present'}")
+            print(f"  - Advanced analysis: {len(comprehensive_data['advanced_analysis'])} sections")
+            
+            # Build chat context
+            chat_context = ""
+            if chat_history:
+                chat_context = "\n=== PREVIOUS CONVERSATION ===\n"
+                for msg in chat_history[-3:]:  # Last 3 messages for context
+                    role = msg.get('role', 'user').upper()
+                    content = msg.get('content', '')
+                    chat_context += f"{role}: {content}\n"
+                chat_context += "=== END PREVIOUS CONVERSATION ===\n"
+            
+            # Create comprehensive prompt for Gemini
+            import json
+            
+            prompt = f"""You are an expert Vedic astrologer with deep knowledge of all aspects of Jyotish. 
 Analyze the comprehensive Kundli data provided below and give a detailed, accurate response.
 
 === COMPREHENSIVE KUNDLI DATA ===
@@ -3058,6 +3118,286 @@ async def get_bot_stats(platform: str = None, current_user: dict = Depends(get_c
     except Exception as e:
         print(f"[BOT] Error getting stats: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/kundli-matching/calculate")
+async def calculate_kundli_matching(
+    request: KundliMatchingRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Calculate kundli matching compatibility"""
+    try:
+        matching_service = KundliMatchingService()
+        
+        # Create user folder for storing kundli matching data
+        boy_name = request.boy_data.name
+        user_folder, unique_id = file_manager.create_user_folder(boy_name)
+        
+        # Calculate compatibility with user folder
+        raw_result = matching_service.calculate_compatibility(
+            boy_data=request.boy_data.model_dump(),
+            girl_data=request.girl_data.model_dump(),
+            method=request.method,
+            user_folder=user_folder
+        )
+        
+        # Format results for display
+        formatted_result = matching_service.format_results_for_display(raw_result)
+        
+        # Save result to user's kundli_matching folder
+        kundli_matching_dir = os.path.join(user_folder, 'kundli_matching')
+        os.makedirs(kundli_matching_dir, exist_ok=True)
+        
+        # Generate match ID
+        import uuid
+        match_id = str(uuid.uuid4())
+        
+        # Save results.json
+        results_file = os.path.join(kundli_matching_dir, 'results.json')
+        with open(results_file, 'w', encoding='utf-8') as f:
+            json.dump(formatted_result, f, indent=2, ensure_ascii=False)
+        
+        file_path = results_file
+        
+        # Build response
+        response = KundliMatchingResponse(
+            match_id=match_id,
+            boy_name=formatted_result['boy_name'],
+            girl_name=formatted_result['girl_name'],
+            method=formatted_result['method'],
+            total_score=formatted_result['total_score'],
+            max_score=formatted_result['max_score'],
+            timestamp=datetime.fromisoformat(formatted_result['timestamp']),
+            ashtakoota_scores=[
+                {
+                    'key': score['key'],
+                    'name': score['name'],
+                    'score': score['score'],
+                    'max_score': score['max_score'],
+                    'description': score['description'],
+                    'interpretation': score['interpretation']
+                }
+                for score in formatted_result['ashtakoota_scores']
+            ],
+            naalu_porutham_checks=[
+                {
+                    'key': check['key'],
+                    'name': check['name'],
+                    'status': check['status'],
+                    'description': check['description'],
+                    'importance': check['importance']
+                }
+                for check in formatted_result['naalu_porutham_checks']
+            ],
+            overall_verdict={
+                'verdict': formatted_result['overall_verdict']['verdict'],
+                'color': formatted_result['overall_verdict']['color'],
+                'message': formatted_result['overall_verdict']['message'],
+                'percentage': formatted_result['overall_verdict']['percentage']
+            },
+            file_path=file_path,
+            boy_kundli=raw_result.get('boy_kundli'),
+            girl_kundli=raw_result.get('girl_kundli')
+        )
+        
+        return response
+        
+    except ValueError as e:
+        print(f"[MATCHING] Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"[MATCHING] Error calculating compatibility: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error calculating compatibility: {str(e)}")
+
+
+@app.get("/api/kundli-matching/result/{match_id}")
+async def get_matching_result(
+    match_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a previously calculated matching result"""
+    try:
+        import os
+        results_dir = os.path.join(os.path.dirname(__file__), 'kundli_matching_results')
+        
+        # Search for file with match_id in name (simplified approach)
+        # In production, you'd want to store match_id -> file_path mapping
+        if os.path.exists(results_dir):
+            for filename in os.listdir(results_dir):
+                if filename.endswith('.json'):
+                    filepath = os.path.join(results_dir, filename)
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        # Return the first matching result found
+                        return {"status": "success", "data": data}
+        
+        raise HTTPException(status_code=404, detail="Matching result not found")
+        
+    except Exception as e:
+        print(f"[MATCHING] Error retrieving result: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/kundli-matching/generate-pdf")
+async def generate_matching_pdf(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate PDF report for kundli matching analysis with AI insights"""
+    try:
+        from pdf_generator import PDFGenerator
+        
+        print(f"[MATCHING_PDF] Generating PDF for user: {current_user.get('uid')}")
+        
+        # Extract data from request
+        boy_name = request_data.get('boy_name', 'Boy')
+        girl_name = request_data.get('girl_name', 'Girl')
+        matching_data = request_data.get('matching_data', {})
+        ai_analysis = request_data.get('ai_analysis', '')
+        boy_kundli = request_data.get('boy_kundli', {})
+        girl_kundli = request_data.get('girl_kundli', {})
+        
+        # Create comprehensive PDF content
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+        from io import BytesIO
+        
+        pdf_buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            pdf_buffer,
+            pagesize=A4,
+            rightMargin=0.75*inch,
+            leftMargin=0.75*inch,
+            topMargin=0.75*inch,
+            bottomMargin=0.75*inch
+        )
+        
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Title style
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#1a3a52'),
+            spaceAfter=6,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Heading style
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#2c5aa0'),
+            spaceAfter=12,
+            spaceBefore=12,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Body style
+        body_style = ParagraphStyle(
+            'CustomBody',
+            parent=styles['BodyText'],
+            fontSize=11,
+            alignment=TA_JUSTIFY,
+            spaceAfter=12,
+            leading=16
+        )
+        
+        # Title
+        elements.append(Paragraph("Kundli Matching Report", title_style))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Names and basic info
+        names_text = f"<b>{boy_name}</b> & <b>{girl_name}</b>"
+        elements.append(Paragraph(names_text, heading_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Matching scores
+        elements.append(Paragraph("Compatibility Scores", heading_style))
+        total_score = matching_data.get('total_score', 0)
+        max_score = matching_data.get('max_score', 36)
+        percentage = (total_score / max_score * 100) if max_score > 0 else 0
+        
+        score_text = f"""
+        <b>Total Score:</b> {total_score} / {max_score}<br/>
+        <b>Compatibility Percentage:</b> {percentage:.1f}%<br/>
+        <b>Overall Verdict:</b> {matching_data.get('overall_verdict', {}).get('verdict', 'Not Available')}<br/>
+        """
+        elements.append(Paragraph(score_text, body_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Ashtakoota scores table
+        if matching_data.get('ashtakoota_scores'):
+            elements.append(Paragraph("Ashtakoota Scores (8 Factors)", heading_style))
+            
+            table_data = [['Factor', 'Score', 'Max', 'Description']]
+            for score in matching_data.get('ashtakoota_scores', []):
+                table_data.append([
+                    score.get('name', ''),
+                    str(score.get('score', 0)),
+                    str(score.get('max_score', 0)),
+                    score.get('description', '')[:50] + '...' if len(score.get('description', '')) > 50 else score.get('description', '')
+                ])
+            
+            table = Table(table_data, colWidths=[2*inch, 0.8*inch, 0.8*inch, 2*inch])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elements.append(table)
+            elements.append(Spacer(1, 0.2*inch))
+        
+        # AI Analysis
+        if ai_analysis:
+            elements.append(PageBreak())
+            elements.append(Paragraph("Detailed Analysis & Insights", heading_style))
+            elements.append(Spacer(1, 0.1*inch))
+            elements.append(Paragraph(ai_analysis, body_style))
+        
+        # Footer
+        elements.append(Spacer(1, 0.3*inch))
+        footer_text = f"<i>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</i>"
+        elements.append(Paragraph(footer_text, ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.grey,
+            alignment=TA_CENTER
+        )))
+        
+        # Build PDF
+        doc.build(elements)
+        pdf_content = pdf_buffer.getvalue()
+        
+        print(f"[MATCHING_PDF] PDF generated successfully, size: {len(pdf_content)} bytes")
+        
+        return {
+            "status": "success",
+            "pdf_size": len(pdf_content),
+            "filename": f"kundli_matching_{boy_name}_{girl_name}.pdf"
+        }
+        
+    except Exception as e:
+        print(f"[MATCHING_PDF] Error generating PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
 
 
 @app.exception_handler(HTTPException)
