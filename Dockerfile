@@ -50,6 +50,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
+COPY PyJHora/ ./PyJHora/
 COPY jyotishganit_chart_api.py .
 COPY test_jyotishganit*.py .
 COPY world_cities_with_tz.csv .

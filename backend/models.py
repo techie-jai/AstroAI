@@ -251,3 +251,5 @@ class KundliMatchingResponse(BaseModel):
     naalu_porutham_checks: List[NaaluPoruthamCheck] = Field(..., description="4 Naalu Porutham checks")
     overall_verdict: OverallVerdict = Field(..., description="Overall compatibility verdict")
     file_path: Optional[str] = Field(None, description="Path to saved result file")
+    boy_kundli: Optional[dict] = Field(None, description="Boy's generated kundli data")
+    girl_kundli: Optional[dict] = Field(None, description="Girl's generated kundli data")

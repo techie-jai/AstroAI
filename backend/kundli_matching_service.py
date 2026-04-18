@@ -347,7 +347,7 @@ class KundliMatchingService:
             user_folder: Optional user folder path to save kundlis
             
         Returns:
-            Dictionary with complete compatibility results
+            Dictionary with complete compatibility results including kundli data
         """
         try:
             # Generate kundlis using Jyotishganit
@@ -418,6 +418,18 @@ class KundliMatchingService:
             result['boy_name'] = boy_data.get('name', 'Boy')
             result['girl_name'] = girl_data.get('name', 'Girl')
             result['timestamp'] = datetime.now().isoformat()
+            
+            # Include full kundli data for AI analysis
+            result['boy_kundli'] = boy_kundli
+            result['girl_kundli'] = girl_kundli
+            
+            # Store file paths for later retrieval
+            if user_folder:
+                kundli_dir = os.path.join(user_folder, 'kundli_matching')
+                boy_name_safe = boy_data.get('name', 'boy').replace(' ', '_').lower()
+                girl_name_safe = girl_data.get('name', 'girl').replace(' ', '_').lower()
+                result['boy_kundli_path'] = os.path.join(kundli_dir, f"{boy_name_safe}.json")
+                result['girl_kundli_path'] = os.path.join(kundli_dir, f"{girl_name_safe}.json")
             
             return result
             
