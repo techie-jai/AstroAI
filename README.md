@@ -59,6 +59,7 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 - **Doshas**: Kala Sarpa, Manglik, Pitru, and others
 - **Dosha Bhanga (NEW)**: Automatic detection of dosha cancellations with detailed reasons
 - **Yogas**: 284+ yogas from classical texts
+- **Kundli Matching (NEW)**: Ashtakoota 8-fold compatibility analysis for marriage matching
 - **Compatibility Analysis**: Marriage and relationship compatibility
 
 ### 🤖 AI Integration
@@ -970,6 +971,148 @@ major_doshas: Array<{
 ✅ **Responsive UI** - Works on all screen sizes
 
 **Commit:** `v32-dosh-cancellation` - "dosh cancellation working as expected"
+
+---
+
+### 🎉 NEW: Kundli Matching Implementation ✅
+
+**Status:** COMPLETE - Backend Fully Implemented & Integrated with Docker
+
+#### Overview
+Implemented comprehensive kundli matching system using PyJHora's Ashtakoota (8-fold compatibility) method. Users can now match birth charts of two individuals and get detailed compatibility scores with interpretations.
+
+#### Backend Implementation (kundli_matching_service.py)
+
+**New Service Class: KundliMatchingService**
+- Handles complete kundli matching workflow
+- Uses PyJHora's Ashtakoota for authentic Vedic calculations
+- Generates minimal kundlis for matching (only necessary fields)
+- Stores results persistently in user folders
+
+**Key Methods:**
+- `generate_kundli_for_matching()` - Generates kundlis using JyotishganitChartAPI
+  - Extracts minimal fields: nakshatra, paadham, panchanga, planets
+  - Saves to `users/{user_id}/kundli_matching/{person_name}.json`
+  - Returns data compatible with PyJHora calculations
+  
+- `calculate_compatibility()` - Performs Ashtakoota matching
+  - Accepts boy and girl birth data
+  - Generates kundlis for both individuals
+  - Extracts nakshatra/paadham from generated data
+  - Feeds into PyJHora Ashtakoota for scoring
+  - Returns detailed compatibility results
+
+**Ashtakoota Scoring (8 Compatibility Factors):**
+1. **Varna Porutham** (Caste/Varna) - Max 1 point
+2. **Vasya Porutham** (Control) - Max 2 points
+3. **Tara Porutham** (Stars/Longevity) - Max 3 points
+4. **Yoni Porutham** (Nature/Temperament) - Max 4 points
+5. **Graha Maitram** (Planetary Friendship) - Max 5 points
+6. **Gana Porutham** (Temperament Groups) - Max 6 points
+7. **Bhakoot Porutham** (Emotional Compatibility) - Max 7 points
+8. **Nadi Porutham** (Health/Progeny) - Max 8 points
+
+**Total Score:** 36 points (North Indian method)
+
+#### API Endpoint
+
+**POST /api/kundli-matching/calculate**
+
+Request:
+```json
+{
+  "boy_name": "John",
+  "boy_dob": "1990-06-15",
+  "boy_tob": "10:30",
+  "boy_place": "Chennai",
+  "boy_latitude": 13.0827,
+  "boy_longitude": 80.2707,
+  "boy_timezone": 5.5,
+  "girl_name": "Jane",
+  "girl_dob": "1992-08-20",
+  "girl_tob": "14:45",
+  "girl_place": "Delhi",
+  "girl_latitude": 28.7041,
+  "girl_longitude": 77.1025,
+  "girl_timezone": 5.5
+}
+```
+
+Response:
+```json
+{
+  "match_id": "unique-id",
+  "boy_name": "John",
+  "girl_name": "Jane",
+  "total_score": 28,
+  "max_score": 36,
+  "percentage": 77.78,
+  "interpretation": "Good match with strong compatibility",
+  "compatibility_factors": [
+    {
+      "name": "Varna Porutham",
+      "score": 1,
+      "max_score": 1,
+      "status": "Compatible"
+    },
+    ...
+  ]
+}
+```
+
+#### Data Flow
+
+```
+Frontend (boy_data, girl_data)
+    ↓
+/api/kundli-matching/calculate
+    ↓
+create_user_folder() → users/{user_id}/
+    ↓
+generate_kundli_for_matching(boy_data) → boy.json
+generate_kundli_for_matching(girl_data) → girl.json
+    ↓
+Extract nakshatra/paadham from both
+    ↓
+PyJHora Ashtakoota.compatibility_score()
+    ↓
+format_results_for_display()
+    ↓
+Save to results.json
+    ↓
+Return KundliMatchingResponse to Frontend
+```
+
+#### Folder Structure
+
+```
+users/{user_id}/
+├── kundli/
+├── analysis/
+├── kundli_matching/
+│   ├── boy_name.json
+│   ├── girl_name.json
+│   └── results.json
+└── user_info.json
+```
+
+#### Docker Integration
+
+**Fixed:** PyJHora module missing in Docker container
+- Added `COPY PyJHora/ ./PyJHora/` to Dockerfile
+- Backend can now import `from jhora.horoscope.match.compatibility import Ashtakoota`
+- Kundli matching works seamlessly in Docker deployment
+
+#### Key Features
+✅ **Vedic Accuracy** - Uses authentic PyJHora Ashtakoota calculations
+✅ **Minimal Kundlis** - Only generates necessary data for matching
+✅ **Persistent Storage** - Results saved in user's folder
+✅ **Docker Compatible** - Works in containerized deployment
+✅ **Comprehensive Results** - 8-factor compatibility with interpretations
+✅ **User Isolation** - Each user's matches stored separately
+✅ **Scalable** - Efficient calculation and storage
+
+**Commit:** `v34-matching` - "kundli matching working"
 
 ---
 
