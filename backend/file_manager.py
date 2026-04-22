@@ -130,8 +130,17 @@ class FileManager:
         filename = f"{safe_name}_comprehensive_kundli.json"
         file_path = os.path.join(folder_path, "kundli", filename)
         
+        # Ensure D10 data is included in the comprehensive kundli
+        kundli_to_save = comprehensive_kundli.copy()
+        
+        # Add D10 data if not already present (for LLM analysis)
+        if 'd10_chart' not in kundli_to_save and 'd10_chart' in comprehensive_kundli:
+            kundli_to_save['d10_chart'] = comprehensive_kundli['d10_chart']
+        if 'd10_raw' not in kundli_to_save and 'd10_raw' in comprehensive_kundli:
+            kundli_to_save['d10_raw'] = comprehensive_kundli['d10_raw']
+        
         with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(comprehensive_kundli, f, indent=2, ensure_ascii=False)
+            json.dump(kundli_to_save, f, indent=2, ensure_ascii=False)
         
         return file_path
     

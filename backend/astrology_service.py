@@ -8,6 +8,7 @@ import json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from jyotishganit_chart_api import JyotishganitChartAPI
+from jyotishyamitra_d10_service import generate_d10_json
 
 
 class AstrologyService:
@@ -41,6 +42,42 @@ class AstrologyService:
                 return repr(obj)
         else:
             return obj
+    
+    @staticmethod
+    def _remove_d10_from_comprehensive_json(jyotishganit_json: Dict) -> Dict:
+        """
+        Remove D10 chart data from comprehensive jyotishganit JSON
+        to ensure LLM uses only accurate jyotishyamitra D10 data
+        
+        Args:
+            jyotishganit_json: Original comprehensive JSON from jyotishganit
+        
+        Returns:
+            Filtered JSON without D10 data
+        """
+        filtered_json = jyotishganit_json.copy()
+        
+        # Remove D10 from divisionalCharts if present
+        if 'divisionalCharts' in filtered_json:
+            divisional_charts = filtered_json['divisionalCharts'].copy()
+            # Remove D10/d10 entries (handle both cases)
+            removed_d10 = divisional_charts.pop('D10', None)
+            removed_d10_lower = divisional_charts.pop('d10', None)
+            removed_dasamsa = divisional_charts.pop('dasamsa', None)
+            removed_dasamsa_upper = divisional_charts.pop('Dasamsa', None)
+            filtered_json['divisionalCharts'] = divisional_charts
+            
+            print(f"[ASTROLOGY] Removed D10 entries: D10={removed_d10 is not None}, d10={removed_d10_lower is not None}")
+        
+        # Remove any other D10 related data
+        filtered_json.pop('d10Chart', None)
+        filtered_json.pop('D10Chart', None)
+        filtered_json.pop('dasamsaChart', None)
+        filtered_json.pop('DasamsaChart', None)
+        filtered_json.pop('d10', None)
+        filtered_json.pop('D10', None)
+        
+        return filtered_json
     
     def generate_kundli(self, birth_data: Dict) -> Dict:
         """
@@ -129,23 +166,57 @@ class AstrologyService:
                 if 'dashas' in kundli_data:
                     horoscope_info['dashas'] = kundli_data['dashas']
             
+            # Generate separate D10 chart using jyotishyamitra
+            d10_birth_data = {
+                'name': birth_data.get('name', 'User'),
+                'gender': birth_data.get('gender', 'male'),
+                'year': str(birth_data.get('year', '2001')),
+                'month': str(birth_data.get('month', '1')),
+                'day': str(birth_data.get('day', '1')),
+                'hour': str(birth_data.get('hour', '12')),
+                'min': str(birth_data.get('minute', '0')),
+                'sec': str(birth_data.get('second', 0)),
+                'place': birth_data.get('place_name') or 'Unknown Location',
+                'longitude': str(birth_data.get('longitude', '0')),
+                'latitude': str(birth_data.get('latitude', '0')),
+                'timezone': str(birth_data.get('timezone_offset', '5.5'))
+            }
+            
+            print(f"[ASTROLOGY] Generating D10 chart using jyotishyamitra...")
+            d10_result = generate_d10_json(d10_birth_data)
+            
+            # Filter out D10 data from comprehensive jyotishganit JSON
+            original_jyotishganit_json = kundli_data.get('jyotishganit_json', {})
+            filtered_jyotishganit_json = self._remove_d10_from_comprehensive_json(original_jyotishganit_json)
+            
             # Create the final kundli data structure
             final_kundli_data = {
                 'horoscope_info': horoscope_info,
                 'birth_details': kundli_data.get('birth_details', {}),
                 'metadata': kundli_data.get('metadata', {}),
-                'jyotishganit_json': kundli_data.get('jyotishganit_json', {})
+                'jyotishganit_json': filtered_jyotishganit_json,  # Filtered JSON without D10
+                'd10_chart': d10_result.get('d10_chart', {}) if d10_result.get('success') else {},
+                'd10_raw': d10_result.get('raw_data', {}) if d10_result.get('success') else {}
             }
             
-            # Debug: Log the structure of horoscope_info
+            # Debug: Log the structure and D10 filtering
             print(f"[ASTROLOGY] Kundli data keys: {list(final_kundli_data.keys())}")
             print(f"[ASTROLOGY] horoscope_info keys: {list(horoscope_info.keys())}")
             print(f"[ASTROLOGY] horoscope_info data points: {sum(len(v) if isinstance(v, (list, dict)) else 1 for v in horoscope_info.values())}")
+            print(f"[ASTROLOGY] D10 chart generation: {'Success' if d10_result.get('success') else 'Failed'}")
+            
+            # Log D10 filtering
+            original_div_charts = original_jyotishganit_json.get('divisionalCharts', {})
+            filtered_div_charts = filtered_jyotishganit_json.get('divisionalCharts', {})
+            print(f"[ASTROLOGY] Original divisional charts: {list(original_div_charts.keys())}")
+            print(f"[ASTROLOGY] Filtered divisional charts: {list(filtered_div_charts.keys())}")
+            print(f"[ASTROLOGY] D10 removed from comprehensive JSON: {'D10' in original_div_charts and 'D10' not in filtered_div_charts}")
             
             return {
                 'success': True,
                 'kundli_id': self._generate_kundli_id(birth_data),
                 'data': final_kundli_data,
+                'd10_chart': d10_result,
                 'generated_at': datetime.now().isoformat()
             }
         except Exception as e:

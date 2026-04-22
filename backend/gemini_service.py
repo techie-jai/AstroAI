@@ -102,10 +102,28 @@ class GeminiService:
         Returns:
             Formatted prompt for Gemini
         """
+        # Check if D10 data is available and add explicit instructions
+        d10_chart = kundli_data.get('d10_chart', {})
+        d10_instructions = ""
+        
+        if d10_chart:
+            d10_instructions = """
+
+IMPORTANT D10 (DASAMSA) CHART INFORMATION:
+The kundli data includes a separate 'd10_chart' object that contains the D10 (Dasamsa) divisional chart data. This D10 chart is crucial for career and professional life analysis. When the user asks about D10 or career-related questions, please use the data from the 'd10_chart' object, NOT from the 'divisionalCharts' in jyotishganit_json (which has D10 removed to avoid conflicts).
+
+The 'd10_chart' object contains:
+- chart_info: Source and chart details
+- ascendant: D10 ascendant sign and details
+- planets: Planet positions in D10 chart
+- houses: House structure in D10 chart
+
+DO NOT say that D10 data is not available when 'd10_chart' object is present."""
+        
         prompt = f"""You are an expert Vedic astrologer. Provide a detailed {analysis_type} astrological analysis for {user_name} based on the following kundli (birth chart) data:
 
 Kundli Data:
-{json.dumps(kundli_data, indent=2, default=str)}
+{json.dumps(kundli_data, indent=2, default=str)}{d10_instructions}
 
 Please provide:
 1. A comprehensive overview of the person's astrological profile

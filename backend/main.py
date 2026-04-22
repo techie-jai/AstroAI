@@ -665,6 +665,10 @@ async def generate_kundli(
 
             "comprehensive_kundli": comprehensive_kundli_data,
 
+            "d10_chart": kundli_data.get('d10_chart', {}),
+
+            "d10_raw": kundli_data.get('d10_raw', {}),
+
             "generated_at": result['generated_at'],
 
             "horoscope_info_keys": list(kundli_data.get('horoscope_info', {}).keys())[:10]
@@ -2467,6 +2471,10 @@ async def livechat_generate_kundli(
 
             "comprehensive_kundli": comprehensive_kundli_data,
 
+            "d10_chart": kundli_data.get('d10_chart', {}),
+
+            "d10_raw": kundli_data.get('d10_raw', {}),
+
             "generated_at": result['generated_at']
 
         }
@@ -2591,11 +2599,25 @@ class KundliDataExtractor:
                 }
         
         # Extract divisional charts
-        divisional_charts = kundli_data.get('divisionalCharts', {})
+        comprehensive_kundli = kundli_data.get('comprehensive_kundli', {})
+        divisional_charts = comprehensive_kundli.get('jyotishganit_json', {}).get('divisionalCharts', {})
         if divisional_charts:
             extracted_data["divisional_charts"] = divisional_charts
             extracted_data["divisional_charts"]["available_charts"] = list(divisional_charts.keys())
             extracted_data["divisional_charts"]["total_charts"] = len(divisional_charts)
+        else:
+            # Initialize empty divisional charts if none found
+            extracted_data["divisional_charts"] = {}
+            extracted_data["divisional_charts"]["available_charts"] = []
+            extracted_data["divisional_charts"]["total_charts"] = 0
+        
+        # Extract D10 chart data if available
+        d10_chart = kundli_data.get('d10_chart', {})
+        if d10_chart:
+            extracted_data["divisional_charts"]["d10_chart"] = d10_chart
+            extracted_data["divisional_charts"]["available_charts"].append("D10")
+            extracted_data["divisional_charts"]["total_charts"] += 1
+            print(f"[KUNDLI_EXTRACTOR] D10 chart found and added to divisional charts")
         
         # Extract ashtakavarga
         if 'ashtakavarga' in horoscope_info:
@@ -2783,11 +2805,21 @@ Please provide a thorough, detailed response covering all aspects of the matchin
             # Create comprehensive prompt for Gemini
             import json
             
+            # Add D10 instructions if D10 data is available
+            d10_instructions = ""
+            if comprehensive_data.get('divisional_charts', {}).get('d10_chart'):
+                d10_instructions = """
+
+IMPORTANT D10 (DASAMSA) CHART INFORMATION:
+The data includes D10 (Dasamsa) chart data in the 'd10_chart' object within divisional_charts. This D10 chart is crucial for career and professional life analysis. When the user asks about D10 or career-related questions, please use the data from the 'd10_chart' object.
+
+DO NOT say that D10 data is not available when 'd10_chart' object is present in the data."""
+            
             prompt = f"""You are an expert Vedic astrologer with deep knowledge of all aspects of Jyotish. 
 Analyze the comprehensive Kundli data provided below and give a detailed, accurate response.
 
 === COMPREHENSIVE KUNDLI DATA ===
-{json.dumps(comprehensive_data, indent=2, default=str)}
+{json.dumps(comprehensive_data, indent=2, default=str)}{d10_instructions}
 
 === USER INFORMATION ===
 Name: {comprehensive_data['basic_info'].get('name', 'Unknown')}
