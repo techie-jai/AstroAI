@@ -2599,8 +2599,14 @@ class KundliDataExtractor:
                 }
         
         # Extract divisional charts
-        comprehensive_kundli = kundli_data.get('comprehensive_kundli', {})
-        divisional_charts = comprehensive_kundli.get('jyotishganit_json', {}).get('divisionalCharts', {})
+        # First try to get from jyotishganit_json directly (new structure)
+        divisional_charts = kundli_data.get('jyotishganit_json', {}).get('divisionalCharts', {})
+        
+        # If not found, try comprehensive_kundli (old structure)
+        if not divisional_charts:
+            comprehensive_kundli = kundli_data.get('comprehensive_kundli', {})
+            divisional_charts = comprehensive_kundli.get('jyotishganit_json', {}).get('divisionalCharts', {})
+        
         if divisional_charts:
             extracted_data["divisional_charts"] = divisional_charts
             extracted_data["divisional_charts"]["available_charts"] = list(divisional_charts.keys())
