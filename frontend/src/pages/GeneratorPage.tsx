@@ -56,7 +56,7 @@ export default function GeneratorPage() {
     if (name !== 'place_name') {
       setFormData(prev => ({
         ...prev,
-        [name]: isNaN(Number(value)) ? value : Number(value)
+        [name]: value === '' ? '' : isNaN(Number(value)) ? value : Number(value)
       }))
     }
   }
