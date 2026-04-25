@@ -80,6 +80,7 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 - **PDF Generation**: Professional AI analysis reports with download capability
 - **Responsive Design**: Mobile-friendly React interface with Tailwind CSS
 - **Real-time Updates**: WebSocket support for live progress tracking
+- **Google Maps Integration (NEW)**: Real-time location autocomplete with automatic coordinate and timezone lookup
 
 ### 📊 Data Export
 - JSON format for programmatic access
@@ -448,6 +449,45 @@ After kundli generation, buttons appear sequentially:
 - Shows important aspects, good times, challenges, and interesting facts
 - Refresh button to regenerate insights
 - Integrated with AI analysis
+
+#### Google Maps Integration (NEW - April 2026)
+
+**Place of Birth Autocomplete:**
+- Real-time location search powered by Google Maps API
+- Automatic coordinate lookup (latitude, longitude)
+- Timezone detection from location
+- Fallback to CSV database for offline/backup search
+- Supports cities, hospitals, landmarks, and exact addresses
+- High-precision coordinates for accurate calculations
+
+**How It Works:**
+1. User types location in "Place of Birth" field
+2. Frontend queries Google Maps Autocomplete API
+3. Results display with full formatted addresses
+4. Selection auto-fills latitude, longitude, and timezone
+5. Falls back to CSV database if Google Maps unavailable
+6. Coordinates used for precise astrological calculations
+
+**Features:**
+- ✅ Real-time suggestions as user types
+- ✅ Full address display (street, city, state, country, postal code)
+- ✅ Automatic timezone calculation
+- ✅ Fallback CSV search for reliability
+- ✅ Session tokens for API efficiency
+- ✅ Error handling with user-friendly messages
+- ✅ Works offline with CSV database backup
+
+**Configuration:**
+Add Google Maps API key to `frontend/.env.local`:
+```env
+VITE_GOOGLE_MAPS_API_KEY=your-api-key-here
+```
+
+Get your API key from [Google Cloud Console](https://console.cloud.google.com/):
+1. Create a new project
+2. Enable Maps JavaScript API
+3. Create an API key (Restrict to browser)
+4. Add to .env.local
 
 ### Setup Backend
 
@@ -864,6 +904,46 @@ The generated data feeds into AI models for:
 ---
 
 ## Recent Updates (April 2026)
+
+### 🔧 FIXED: Google Maps Autocomplete Dropdown Display ✅
+
+**Status:** COMPLETE - Frontend Fix Applied
+
+#### Problem
+Google Maps autocomplete dropdown was showing empty buttons even though the backend was returning location data correctly. Users could see results in the browser console but not in the UI.
+
+#### Root Cause
+In `frontend/src/components/GooglePlacesAutocomplete.tsx` line 235, the code was rendering `prediction.main_text` which was empty for Google Maps results. The actual location data was in the `prediction.description` field.
+
+Google Maps API returns:
+- `description`: Full formatted address (e.g., "Nyaya Marg, Canton, Cantonment, Prayagraj, Uttar Pradesh 211017, India")
+- `main_text`: Main part (often empty/undefined)
+- `secondary_text`: Additional info
+
+#### Solution Applied
+Changed line 235 from:
+```tsx
+<div className="font-medium text-gray-900">{prediction.main_text}</div>
+```
+
+To:
+```tsx
+<div className="font-medium text-gray-900">{prediction.main_text || prediction.description}</div>
+```
+
+This provides a fallback to `description` when `main_text` is empty, displaying the full address from Google Maps.
+
+#### Result
+✅ Dropdown now displays full addresses from Google Maps
+✅ Both CSV and Google Maps results show properly
+✅ Users can see location options and select them
+✅ Coordinates populate correctly after selection
+✅ Timezone detection works seamlessly
+
+#### Files Modified
+- `frontend/src/components/GooglePlacesAutocomplete.tsx` - Line 235 updated with fallback rendering
+
+---
 
 ### 🎉 NEW: Dosha Bhanga (Cancellation) Implementation ✅
 
