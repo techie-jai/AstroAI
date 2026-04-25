@@ -8,6 +8,7 @@ import json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from jyotishganit_chart_api import JyotishganitChartAPI
+from jyotishyamitra_d10_service import JyotishyamitraD10Service
 
 
 class AstrologyService:
@@ -165,24 +166,54 @@ class AstrologyService:
                 if 'dashas' in kundli_data:
                     horoscope_info['dashas'] = kundli_data['dashas']
             
-            # Generate D10 chart using JyotishganitChartAPI
-            print(f"[ASTROLOGY] Generating D10 chart using JyotishganitChartAPI...")
+            # Generate D10 chart using jyotishyamitra_d10_service
+            print(f"[ASTROLOGY] Generating D10 chart using jyotishyamitra_d10_service...")
             try:
-                d10_chart_data = api.get_chart('D10')
+                # Map birth_data fields to jyotishyamitra format
+                jyotishyamitra_birth_data = {
+                    'name': birth_data.get('name', 'Unknown'),
+                    'gender': birth_data.get('gender', 'M'),  # Default to Male if not provided
+                    'year': str(birth_data.get('year', '')),
+                    'month': str(birth_data.get('month', '')),
+                    'day': str(birth_data.get('day', '')),
+                    'hour': str(birth_data.get('hour', '0')),
+                    'min': str(birth_data.get('minute', '0')),
+                    'sec': str(birth_data.get('second', '0')),
+                    'place': birth_data.get('place_name', 'Unknown'),
+                    'longitude': str(birth_data.get('longitude', '0')),
+                    'latitude': str(birth_data.get('latitude', '0')),
+                    'timezone': str(birth_data.get('timezone_offset', '0'))
+                }
+                
+                d10_service = JyotishyamitraD10Service()
+                d10_chart_data = d10_service.generate_d10_chart(jyotishyamitra_birth_data)
                 d10_chart_data = self._make_serializable(d10_chart_data)
                 d10_result = {
                     'success': True,
                     'd10_chart': d10_chart_data,
                     'raw_data': d10_chart_data
                 }
+                print(f"[ASTROLOGY] D10 chart generated successfully using jyotishyamitra")
             except Exception as d10_error:
-                print(f"[ASTROLOGY] D10 generation failed: {str(d10_error)}")
-                d10_result = {
-                    'success': False,
-                    'error': str(d10_error),
-                    'd10_chart': {},
-                    'raw_data': {}
-                }
+                print(f"[ASTROLOGY] D10 generation failed with jyotishyamitra: {str(d10_error)}")
+                print(f"[ASTROLOGY] Falling back to JyotishganitChartAPI...")
+                try:
+                    d10_chart_data = api.get_chart('D10')
+                    d10_chart_data = self._make_serializable(d10_chart_data)
+                    d10_result = {
+                        'success': True,
+                        'd10_chart': d10_chart_data,
+                        'raw_data': d10_chart_data
+                    }
+                    print(f"[ASTROLOGY] D10 chart generated successfully using JyotishganitChartAPI fallback")
+                except Exception as fallback_error:
+                    print(f"[ASTROLOGY] D10 generation failed with fallback: {str(fallback_error)}")
+                    d10_result = {
+                        'success': False,
+                        'error': str(fallback_error),
+                        'd10_chart': {},
+                        'raw_data': {}
+                    }
             
             # Filter out D10 data from comprehensive jyotishganit JSON
             original_jyotishganit_json = kundli_data.get('jyotishganit_json', {})
