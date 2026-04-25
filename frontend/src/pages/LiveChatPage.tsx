@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import { Send, Loader, MapPin, Calendar, Clock, Sparkles, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
+import { GooglePlacesAutocomplete } from '../components/GooglePlacesAutocomplete'
+import { CityData } from '../data/cities'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -40,9 +42,6 @@ export default function LiveChatPage() {
   const [loading, setLoading] = useState(false)
   const [generatingKundli, setGeneratingKundli] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [citySuggestions, setCitySuggestions] = useState<CityOption[]>([])
-  const [showCitySuggestions, setShowCitySuggestions] = useState(false)
-  const [searchingCities, setSearchingCities] = useState(false)
 
   const [birthData, setBirthData] = useState<BirthData>({
     name: '',
@@ -127,38 +126,18 @@ export default function LiveChatPage() {
     }
   }, [searchParams])
 
-  const handleCitySearch = async (query: string) => {
-    setBirthData(prev => ({ ...prev, place: query }))
-    
-    if (query.length < 2) {
-      setCitySuggestions([])
-      setShowCitySuggestions(false)
-      return
-    }
-
-    setSearchingCities(true)
-    try {
-      const response = await api.searchCities(query)
-      setCitySuggestions(response.data)
-      setShowCitySuggestions(true)
-    } catch (error) {
-      console.error('Failed to search cities:', error)
-      setCitySuggestions([])
-    } finally {
-      setSearchingCities(false)
-    }
+  const handlePlaceChange = (value: string) => {
+    setBirthData(prev => ({ ...prev, place: value }))
   }
 
-  const handleCitySelect = (city: CityOption) => {
+  const handlePlaceSelect = (place: CityData) => {
     setBirthData(prev => ({
       ...prev,
-      place: city.name,
-      latitude: city.latitude,
-      longitude: city.longitude,
-      timezone_offset: city.timezone,
+      place: place.name,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      timezone_offset: place.timezone,
     }))
-    setShowCitySuggestions(false)
-    setCitySuggestions([])
   }
 
   const handleGenerateKundli = async (e: React.FormEvent) => {
@@ -342,40 +321,17 @@ export default function LiveChatPage() {
               </div>
 
               {/* Place of Birth */}
-              <div className="relative">
+              <div>
                 <label className="block text-sm font-medium text-indigo-200 mb-2">Place of Birth</label>
-                <div className="relative">
-                  <input
-                    type="text"
+                <div className="[&_input]:bg-gray-700 [&_input]:border-indigo-600 [&_input]:text-white [&_input]:placeholder-gray-400 [&_input]:focus:ring-indigo-500 [&_button]:bg-gray-700 [&_button]:text-white [&_button]:hover:bg-indigo-600">
+                  <GooglePlacesAutocomplete
                     value={birthData.place}
-                    onChange={(e) => handleCitySearch(e.target.value)}
-                    onFocus={() => birthData.place.length >= 2 && setShowCitySuggestions(true)}
-                    placeholder="Type city name (e.g., Delhi, Mumbai, London)"
-                    className="w-full px-4 py-3 bg-gray-700 border border-indigo-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                    onChange={handlePlaceChange}
+                    onSelect={handlePlaceSelect}
+                    placeholder="Search for a city, hospital, landmark..."
                     disabled={generatingKundli}
-                    autoComplete="off"
                   />
-                  {searchingCities && (
-                    <Loader size={18} className="absolute right-3 top-3 animate-spin text-indigo-400" />
-                  )}
                 </div>
-
-                {showCitySuggestions && citySuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-gray-700 border border-indigo-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                    {citySuggestions.slice(0, 10).map((city, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleCitySelect(city)}
-                        className="w-full text-left px-4 py-2 hover:bg-indigo-600 transition text-white text-sm"
-                      >
-                        <div className="font-medium">{city.city}, {city.country}</div>
-                        <div className="text-xs text-indigo-200">UTC {city.timezone > 0 ? '+' : ''}{city.timezone}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
                 <p className="text-xs text-indigo-300 mt-2">
                   Timezone: UTC {birthData.timezone_offset > 0 ? '+' : ''}{birthData.timezone_offset}
                 </p>
