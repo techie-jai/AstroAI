@@ -6,7 +6,7 @@ from datetime import datetime
 class BirthData(BaseModel):
     """Birth data input model"""
     name: str = Field(..., min_length=1, max_length=100)
-    place_name: str = Field(..., min_length=1, max_length=100)
+    place_name: str = Field(..., min_length=1, max_length=500)
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
     timezone_offset: float = Field(..., ge=-12, le=14)

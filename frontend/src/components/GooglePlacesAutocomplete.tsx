@@ -11,6 +11,11 @@ interface GooglePlacesAutocompleteProps {
   disabled?: boolean
 }
 
+const truncateText = (text: string, maxLength: number = 80): string => {
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
+}
+
 interface AutocompletePrediction {
   place_id: string
   description: string
@@ -191,7 +196,7 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
 
   return (
     <div className="relative" ref={containerRef}>
-      <div className="relative">
+      <div className="relative" title={value}>
         <Search className="absolute left-3 top-3 text-gray-400 h-5 w-5" />
         <input
           ref={inputRef}
@@ -202,7 +207,8 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
           disabled={disabled}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed overflow-hidden text-ellipsis"
+          title={value}
         />
         {loading && (
           <div className="absolute right-3 top-3">
