@@ -441,3 +441,63 @@ class FileManager:
         
         print(f"[FILE_MANAGER] Analysis PDF saved: {file_path}")
         return file_path
+    
+    def get_user_folder(self, uid: str) -> Optional[str]:
+        """
+        Get user folder path from Firebase UID
+        
+        Args:
+            uid: Firebase user ID
+            
+        Returns:
+            User folder name if found, None otherwise
+        """
+        try:
+            index = self._read_index()
+            
+            # Search through kundlis to find one with matching uid
+            for kundli_id, kundli_data in index.items():
+                if kundli_data.get('uid') == uid:
+                    # Extract folder name from file_path
+                    file_path = kundli_data.get('file_path', '')
+                    if file_path:
+                        # file_path is like: users/20260411_224143_a6adaac1-Shreya_Rao/kundli/...
+                        parts = file_path.split(os.sep)
+                        if len(parts) >= 2 and parts[0] == 'users':
+                            folder_name = parts[1]
+                            print(f"[FILE_MANAGER] Found user folder by uid in index: {folder_name}")
+                            return folder_name
+            
+            # If not found in index (old kundlis), search user folders directly
+            print(f"[FILE_MANAGER] UID not found in index, searching user folders...")
+            if os.path.exists(self.base_dir):
+                # Sort folders to ensure consistent order
+                folders = sorted(os.listdir(self.base_dir))
+                for folder_name in folders:
+                    folder_path = os.path.join(self.base_dir, folder_name)
+                    if not os.path.isdir(folder_path):
+                        continue
+                    
+                    # Check user_info.json in the folder
+                    user_info_path = os.path.join(folder_path, 'user_info.json')
+                    if os.path.exists(user_info_path):
+                        try:
+                            with open(user_info_path, 'r', encoding='utf-8') as f:
+                                user_info = json.load(f)
+                                folder_uid = user_info.get('uid')
+                                if folder_uid == uid:
+                                    print(f"[FILE_MANAGER] Found user folder by uid in user_info.json: {folder_name} (uid: {uid})")
+                                    # Verify by checking if any kundlis in this folder match
+                                    kundli_folder = os.path.join(folder_path, 'kundli')
+                                    if os.path.exists(kundli_folder):
+                                        print(f"[FILE_MANAGER] Verified: Found kundli folder in {folder_name}")
+                                        return folder_name
+                        except Exception as e:
+                            print(f"[FILE_MANAGER] Error reading user_info.json in {folder_name}: {e}")
+                            continue
+            
+            print(f"[FILE_MANAGER] WARNING: No user folder found for uid: {uid}")
+            return None
+        except Exception as e:
+            print(f"[FILE_MANAGER] Error getting user folder for uid {uid}: {e}")
+            return None

@@ -253,3 +253,44 @@ class KundliMatchingResponse(BaseModel):
     file_path: Optional[str] = Field(None, description="Path to saved result file")
     boy_kundli: Optional[dict] = Field(None, description="Boy's generated kundli data")
     girl_kundli: Optional[dict] = Field(None, description="Girl's generated kundli data")
+
+
+class ChatMessage(BaseModel):
+    """Single chat message"""
+    role: str = Field(..., description="Role: 'user' or 'assistant'")
+    content: str = Field(..., description="Message content")
+    timestamp: datetime = Field(..., description="When message was created")
+    tokens_used: int = Field(default=0, description="Tokens used for this message")
+
+
+class ContextSummary(BaseModel):
+    """Conversation context summary (flow/trajectory)"""
+    summary: str = Field(..., description="Summarized conversation flow")
+    key_topics: List[str] = Field(default_factory=list, description="Key topics discussed")
+    generated_at: datetime = Field(..., description="When summary was generated")
+    message_count_at_generation: int = Field(..., description="Total messages when summary was generated")
+    next_summary_at_message: int = Field(..., description="Message count at which next summary should trigger")
+
+
+class KundliFacts(BaseModel):
+    """Immutable astrological facts extracted from kundli"""
+    mahadasha: Optional[str] = Field(None, description="Current Mahadasha")
+    antardasha: Optional[str] = Field(None, description="Current Antardasha")
+    doshas_present: List[str] = Field(default_factory=list, description="List of doshas present")
+    sun_sign: Optional[str] = Field(None, description="Sun sign")
+    moon_sign: Optional[str] = Field(None, description="Moon sign")
+    major_planets: Dict[str, str] = Field(default_factory=dict, description="Major planet positions")
+    extracted_at: datetime = Field(..., description="When facts were extracted")
+    extracted_from_messages: int = Field(default=0, description="Message count when extracted")
+
+
+class ConversationMetadata(BaseModel):
+    """Conversation metadata and statistics"""
+    kundli_id: str = Field(..., description="Associated kundli ID")
+    user_id: str = Field(..., description="User ID")
+    created_at: datetime = Field(..., description="When conversation started")
+    last_activity: datetime = Field(..., description="Last message timestamp")
+    total_messages: int = Field(default=0, description="Total messages in conversation")
+    total_tokens_used: int = Field(default=0, description="Total tokens used")
+    status: str = Field(default="active", description="Status: active or archived")
+    summary_version: int = Field(default=0, description="Version of context summary")

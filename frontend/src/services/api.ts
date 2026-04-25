@@ -219,6 +219,21 @@ export const api = {
     }),
   getChatHistory: (kundliId: string) =>
     apiClient.get(`/chat/history/${kundliId}`),
+  
+  // Chat History (Persistent)
+  loadChatHistory: (kundliId: string) =>
+    apiClient.get(`/chat/history/${kundliId}`),
+  saveChatMessage: (kundliId: string, role: 'user' | 'assistant', content: string, tokensUsed?: number) =>
+    apiClient.post('/chat/save-message', {
+      kundli_id: kundliId,
+      role,
+      content,
+      tokens_used: tokensUsed || 0,
+    }),
+  getChatContext: (kundliId: string) =>
+    apiClient.get(`/chat/context/${kundliId}`),
+  clearChatHistory: (kundliId: string) =>
+    apiClient.delete(`/chat/history/${kundliId}`),
 
   // LiveChat
   generateLivechatKundli: (birthData: Record<string, any>) =>

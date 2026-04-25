@@ -4,6 +4,8 @@ import csv
 
 import json
 
+import asyncio
+
 from datetime import datetime
 
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -32,7 +34,9 @@ from models import (
     
     DusthanaAffliction, DChartAffliction, CurrentDasha, NegativePeriod,
     
-    KundliMatchingRequest, KundliMatchingResponse
+    KundliMatchingRequest, KundliMatchingResponse,
+    
+    ChatMessage, ContextSummary, KundliFacts, ConversationMetadata
 
 )
 
@@ -47,6 +51,14 @@ from kundli_matching_service import KundliMatchingService
 from gemini_service import GeminiService
 
 from auth import verify_token, get_current_user
+
+from chat_history_manager import ChatHistoryManager
+
+from context_summary_generator import ContextSummaryGenerator
+
+from kundli_facts_extractor import KundliFactsExtractor
+
+from chat_service import ChatService
 
 from file_manager import FileManager
 
@@ -166,6 +178,23 @@ except ValueError as e:
     gemini_service = None
 
 
+# Initialize Chat History Services
+
+users_path = os.path.join(os.path.dirname(__file__), '..', 'users')
+
+chat_history_manager = ChatHistoryManager(users_path=users_path)
+
+context_summary_generator = ContextSummaryGenerator(gemini_service=gemini_service)
+
+kundli_facts_extractor = KundliFactsExtractor()
+
+chat_service = ChatService(
+    chat_manager=chat_history_manager,
+    summary_generator=context_summary_generator,
+    facts_extractor=kundli_facts_extractor
+)
+
+print("[CHAT_SERVICE] Chat history services initialized successfully")
 
 
 
@@ -2703,7 +2732,7 @@ async def unified_chat_endpoint(
         # Validate request data
         user_message = request_data.get('user_message', '').strip()
         kundli_data = request_data.get('kundli_data', {})
-        chat_history = request_data.get('chat_history', [])
+        kundli_id = kundli_data.get('kundli_id', '')
         
         if not user_message:
             raise HTTPException(
@@ -2719,9 +2748,86 @@ async def unified_chat_endpoint(
         
         # Log request details
         print(f"[UNIFIED_CHAT] User message: {user_message[:100]}...")
-        print(f"[UNIFIED_CHAT] Chat history length: {len(chat_history)}")
-        print(f"[UNIFIED_CHAT] Kundli ID: {kundli_data.get('kundli_id', 'NOT PROVIDED')}")
+        print(f"[UNIFIED_CHAT] Kundli ID: {kundli_id}")
         print(f"[UNIFIED_CHAT] Birth name: {kundli_data.get('birth_data', {}).get('name', 'NOT PROVIDED')}")
+        
+        # Get user folder for persistent chat history
+        # IMPORTANT: Use kundli_id to find the correct folder, not just uid
+        # This prevents picking the wrong user's folder when multiple users exist
+        user_folder = None
+        try:
+            # First, try to get folder from kundli_index (most reliable)
+            kundli_metadata = file_manager.lookup_kundli(kundli_id)
+            if kundli_metadata and kundli_metadata.get('uid') == current_user['uid']:
+                # Extract folder from file_path
+                file_path = kundli_metadata.get('file_path', '')
+                if file_path:
+                    parts = file_path.split(os.sep)
+                    if len(parts) >= 2:
+                        # Find the users folder index
+                        try:
+                            users_idx = parts.index('users')
+                            if users_idx + 1 < len(parts):
+                                user_folder = parts[users_idx + 1]
+                                print(f"[UNIFIED_CHAT] Found user folder from kundli_index: {user_folder}")
+                        except ValueError:
+                            pass
+        except Exception as e:
+            print(f"[UNIFIED_CHAT] Error looking up kundli in index: {e}")
+        
+        if not user_folder:
+            print(f"[UNIFIED_CHAT] WARNING: User folder not found, chat history will not be persisted")
+            user_folder = None
+        
+        # Load persistent chat context if available
+        persistent_context = ""
+        if user_folder and kundli_id:
+            try:
+                chat_context_data = chat_service.get_chat_context(user_folder, kundli_id, sliding_window=10)
+                
+                # Build context from facts + summary + recent messages
+                if chat_context_data.get('facts'):
+                    facts = chat_context_data['facts']
+                    persistent_context += "\n=== KUNDLI FACTS (From Previous Conversations) ===\n"
+                    if facts.get('mahadasha'):
+                        persistent_context += f"Current Mahadasha: {facts['mahadasha']}\n"
+                    if facts.get('antardasha'):
+                        persistent_context += f"Current Antardasha: {facts['antardasha']}\n"
+                    if facts.get('doshas_present'):
+                        persistent_context += f"Doshas Present: {', '.join(facts['doshas_present'])}\n"
+                    if facts.get('sun_sign'):
+                        persistent_context += f"Sun Sign: {facts['sun_sign']}\n"
+                    if facts.get('moon_sign'):
+                        persistent_context += f"Moon Sign: {facts['moon_sign']}\n"
+                
+                if chat_context_data.get('summary'):
+                    persistent_context += "\n=== CONVERSATION CONTEXT (From Previous Discussions) ===\n"
+                    persistent_context += chat_context_data['summary'] + "\n"
+                
+                if chat_context_data.get('recent_messages'):
+                    persistent_context += "\n=== RECENT CONVERSATION ===\n"
+                    for msg in chat_context_data['recent_messages'][-3:]:
+                        role = msg.get('role', 'user').upper()
+                        content = msg.get('content', '')[:150]
+                        persistent_context += f"{role}: {content}...\n"
+                
+                print(f"[UNIFIED_CHAT] Loaded persistent chat context")
+            except Exception as e:
+                print(f"[UNIFIED_CHAT] WARNING: Could not load persistent context: {str(e)}")
+        
+        # Use persistent context if available, otherwise use request chat_history
+        chat_history = request_data.get('chat_history', [])
+        if persistent_context:
+            chat_context = persistent_context
+        else:
+            chat_context = ""
+            if chat_history:
+                chat_context = "\n=== PREVIOUS CONVERSATION ===\n"
+                for msg in chat_history[-3:]:
+                    role = msg.get('role', 'user').upper()
+                    content = msg.get('content', '')
+                    chat_context += f"{role}: {content}\n"
+                chat_context += "=== END PREVIOUS CONVERSATION ===\n"
         
         # Check Gemini service availability
         if not gemini_service:
@@ -2857,6 +2963,32 @@ Please provide a thorough response incorporating all relevant astrological facto
         
         print(f"[UNIFIED_CHAT] Response generated successfully")
         print(f"[UNIFIED_CHAT] Response length: {len(ai_response)} characters")
+        
+        # Save messages to persistent storage (async, non-blocking)
+        if user_folder and kundli_id:
+            try:
+                # Save user message
+                asyncio.create_task(
+                    chat_service.save_user_message(user_folder, kundli_id, user_message, tokens_used=0)
+                )
+                
+                # Save assistant message
+                asyncio.create_task(
+                    chat_service.save_assistant_message(user_folder, kundli_id, ai_response, tokens_used=0)
+                )
+                
+                # Trigger async background tasks
+                asyncio.create_task(
+                    chat_service.trigger_rolling_summary(user_folder, kundli_id, kundli_data)
+                )
+                
+                asyncio.create_task(
+                    chat_service.trigger_facts_extraction(user_folder, kundli_id, ai_response, kundli_data)
+                )
+                
+                print(f"[UNIFIED_CHAT] Queued message saving and background tasks")
+            except Exception as e:
+                print(f"[UNIFIED_CHAT] WARNING: Could not save messages: {str(e)}")
         
         return {
             "status": "success",
@@ -3438,6 +3570,208 @@ async def generate_matching_pdf(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
+
+
+@app.get("/api/chat/history/{kundli_id}")
+async def get_chat_history(
+    kundli_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Load full chat history for a kundli.
+    
+    Args:
+        kundli_id: Kundli ID
+        current_user: Authenticated user
+        
+    Returns:
+        Chat history with metadata
+    """
+    try:
+        print(f"[CHAT_API] Loading chat history for {kundli_id}")
+        
+        # Get user folder from file_manager
+        user_folder = file_manager.get_user_folder(current_user['uid'])
+        if not user_folder:
+            raise HTTPException(status_code=404, detail="User folder not found")
+        
+        # Get messages
+        messages = chat_service.get_chat_history(user_folder, kundli_id)
+        
+        # Get metadata
+        metadata = chat_service.get_conversation_metadata(user_folder, kundli_id)
+        
+        return {
+            "status": "success",
+            "kundli_id": kundli_id,
+            "messages": messages,
+            "metadata": metadata or {}
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[CHAT_API] Error loading chat history: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat/save-message")
+async def save_chat_message(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Save a single chat message (user or assistant).
+    
+    Args:
+        request_data: Contains kundli_id, role, content, tokens_used
+        current_user: Authenticated user
+        
+    Returns:
+        Saved message
+    """
+    try:
+        kundli_id = request_data.get("kundli_id")
+        role = request_data.get("role")  # "user" or "assistant"
+        content = request_data.get("content")
+        tokens_used = request_data.get("tokens_used", 0)
+        
+        if not all([kundli_id, role, content]):
+            raise HTTPException(status_code=400, detail="Missing required fields")
+        
+        if role not in ["user", "assistant"]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        
+        print(f"[CHAT_API] Saving {role} message for {kundli_id}")
+        
+        # Get user folder using kundli_id (not just uid) to ensure correct folder
+        user_folder = None
+        try:
+            kundli_metadata = file_manager.lookup_kundli(kundli_id)
+            if kundli_metadata and kundli_metadata.get('uid') == current_user['uid']:
+                file_path = kundli_metadata.get('file_path', '')
+                if file_path:
+                    parts = file_path.split(os.sep)
+                    if len(parts) >= 2:
+                        try:
+                            users_idx = parts.index('users')
+                            if users_idx + 1 < len(parts):
+                                user_folder = parts[users_idx + 1]
+                                print(f"[CHAT_API] Found user folder: {user_folder}")
+                        except ValueError:
+                            pass
+        except Exception as e:
+            print(f"[CHAT_API] Error looking up kundli: {e}")
+        
+        if not user_folder:
+            raise HTTPException(status_code=404, detail="User folder not found")
+        
+        # Save message
+        if role == "user":
+            message = await chat_service.save_user_message(
+                user_folder, kundli_id, content, tokens_used
+            )
+        else:
+            message = await chat_service.save_assistant_message(
+                user_folder, kundli_id, content, tokens_used
+            )
+        
+        # Trigger async tasks (don't wait)
+        asyncio.create_task(
+            chat_service.trigger_rolling_summary(user_folder, kundli_id)
+        )
+        
+        if role == "assistant":
+            asyncio.create_task(
+                chat_service.trigger_facts_extraction(user_folder, kundli_id, content)
+            )
+        
+        return {
+            "status": "success",
+            "message": message
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[CHAT_API] Error saving message: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/chat/context/{kundli_id}")
+async def get_chat_context(
+    kundli_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get chat context for next message (facts + summary + recent messages).
+    
+    Args:
+        kundli_id: Kundli ID
+        current_user: Authenticated user
+        
+    Returns:
+        Chat context with facts, summary, and recent messages
+    """
+    try:
+        print(f"[CHAT_API] Getting chat context for {kundli_id}")
+        
+        # Get user folder
+        user_folder = file_manager.get_user_folder(current_user['uid'])
+        if not user_folder:
+            raise HTTPException(status_code=404, detail="User folder not found")
+        
+        # Get context
+        context = chat_service.get_chat_context(user_folder, kundli_id, sliding_window=10)
+        
+        return {
+            "status": "success",
+            "context": context
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[CHAT_API] Error getting context: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/chat/history/{kundli_id}")
+async def clear_chat_history(
+    kundli_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Clear chat history for a kundli (archive and reinitialize).
+    
+    Args:
+        kundli_id: Kundli ID
+        current_user: Authenticated user
+        
+    Returns:
+        Success status
+    """
+    try:
+        print(f"[CHAT_API] Clearing chat history for {kundli_id}")
+        
+        # Get user folder
+        user_folder = file_manager.get_user_folder(current_user['uid'])
+        if not user_folder:
+            raise HTTPException(status_code=404, detail="User folder not found")
+        
+        # Clear conversation
+        await chat_service.clear_conversation(user_folder, kundli_id)
+        
+        return {
+            "status": "success",
+            "message": "Chat history cleared"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[CHAT_API] Error clearing history: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(HTTPException)

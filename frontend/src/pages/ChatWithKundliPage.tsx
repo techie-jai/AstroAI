@@ -77,13 +77,38 @@ export default function ChatWithKundliPage() {
           }
         }
 
-        // Send welcome message
-        const welcomeMessage: Message = {
-          role: 'assistant',
-          content: `Namaste! 🙏 I'm your personal Vedic astrology guide. I've loaded your kundli and I'm ready to answer any questions about your astrological profile. Ask me anything about your personality, career, relationships, or life path!`,
-          timestamp: new Date(),
+        // Load persistent chat history
+        console.log('[CHAT] Loading persistent chat history...')
+        try {
+          const historyResponse = await api.loadChatHistory(kundliId)
+          if (historyResponse.data.messages && historyResponse.data.messages.length > 0) {
+            console.log('[CHAT] Loaded', historyResponse.data.messages.length, 'messages from persistent storage')
+            const loadedMessages: Message[] = historyResponse.data.messages.map((msg: any) => ({
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(msg.timestamp)
+            }))
+            setMessages(loadedMessages)
+          } else {
+            // No previous messages, send welcome message
+            console.log('[CHAT] No previous messages found, showing welcome message')
+            const welcomeMessage: Message = {
+              role: 'assistant',
+              content: `Namaste! 🙏 I'm your personal Vedic astrology guide. I've loaded your kundli and I'm ready to answer any questions about your astrological profile. Ask me anything about your personality, career, relationships, or life path!`,
+              timestamp: new Date(),
+            }
+            setMessages([welcomeMessage])
+          }
+        } catch (error: any) {
+          console.warn('[CHAT] Could not load chat history, showing welcome message:', error.message)
+          // Graceful fallback: show welcome message if history loading fails
+          const welcomeMessage: Message = {
+            role: 'assistant',
+            content: `Namaste! 🙏 I'm your personal Vedic astrology guide. I've loaded your kundli and I'm ready to answer any questions about your astrological profile. Ask me anything about your personality, career, relationships, or life path!`,
+            timestamp: new Date(),
+          }
+          setMessages([welcomeMessage])
         }
-        setMessages([welcomeMessage])
       } catch (error: any) {
         console.error('[CHAT] Error loading kundli:', error)
         console.error('[CHAT] Error details:', {
@@ -119,6 +144,12 @@ export default function ChatWithKundliPage() {
 
     try {
       console.log('[CHAT] Sending message:', inputValue)
+      
+      // Save user message to persistent storage (don't wait)
+      api.saveChatMessage(kundli.kundli_id, 'user', inputValue).catch(err => {
+        console.warn('[CHAT] Failed to save user message:', err.message)
+      })
+      
       const response = await api.sendKundliChatMessage(
         kundli,
         inputValue,
@@ -133,6 +164,11 @@ export default function ChatWithKundliPage() {
       }
 
       setMessages(prev => [...prev, assistantMessage])
+      
+      // Save assistant message to persistent storage (don't wait)
+      api.saveChatMessage(kundli.kundli_id, 'assistant', assistantMessage.content).catch(err => {
+        console.warn('[CHAT] Failed to save assistant message:', err.message)
+      })
     } catch (error: any) {
       console.error('[CHAT] Failed to send message:', error)
       const errorMsg = error.response?.data?.detail || error.message || 'Failed to send message'
