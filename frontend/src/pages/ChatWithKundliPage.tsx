@@ -195,10 +195,8 @@ export default function ChatWithKundliPage() {
     try {
       console.log('[CHAT] Sending message:', inputValue)
       
-      // Save user message to persistent storage (don't wait)
-      api.saveChatMessage(kundli.kundli_id, 'user', inputValue).catch(err => {
-        console.warn('[CHAT] Failed to save user message:', err.message)
-      })
+      // Note: Backend unified_chat_endpoint saves both user and assistant messages
+      // No need to save them again here to avoid duplicates
       
       const response = await api.sendKundliChatMessage(
         kundli,
@@ -214,11 +212,6 @@ export default function ChatWithKundliPage() {
       }
 
       setMessages(prev => [...prev, assistantMessage])
-      
-      // Save assistant message to persistent storage (don't wait)
-      api.saveChatMessage(kundli.kundli_id, 'assistant', assistantMessage.content).catch(err => {
-        console.warn('[CHAT] Failed to save assistant message:', err.message)
-      })
     } catch (error: any) {
       console.error('[CHAT] Failed to send message:', error)
       const errorMsg = error.response?.data?.detail || error.message || 'Failed to send message'
