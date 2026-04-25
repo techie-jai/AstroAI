@@ -2639,14 +2639,18 @@ class KundliDataExtractor:
             divisional_charts = comprehensive_kundli.get('jyotishganit_json', {}).get('divisionalCharts', {})
         
         if divisional_charts:
+            # Extract chart names (exclude metadata keys)
+            chart_names = [k for k in divisional_charts.keys() if not k.startswith('_') and k not in ['available_charts', 'total_charts']]
             extracted_data["divisional_charts"] = divisional_charts
-            extracted_data["divisional_charts"]["available_charts"] = list(divisional_charts.keys())
-            extracted_data["divisional_charts"]["total_charts"] = len(divisional_charts)
+            extracted_data["divisional_charts"]["available_charts"] = chart_names
+            extracted_data["divisional_charts"]["total_charts"] = len(chart_names)
+            print(f"[KUNDLI_EXTRACTOR] Found {len(chart_names)} divisional charts: {chart_names}")
         else:
             # Initialize empty divisional charts if none found
             extracted_data["divisional_charts"] = {}
             extracted_data["divisional_charts"]["available_charts"] = []
             extracted_data["divisional_charts"]["total_charts"] = 0
+            print(f"[KUNDLI_EXTRACTOR] No divisional charts found")
         
         # Extract D10 chart data if available
         d10_chart = kundli_data.get('d10_chart', {})
@@ -3590,8 +3594,32 @@ async def get_chat_history(
     try:
         print(f"[CHAT_API] Loading chat history for {kundli_id}")
         
-        # Get user folder from file_manager
-        user_folder = file_manager.get_user_folder(current_user['uid'])
+        # Get user folder from kundli_id (most reliable method)
+        # This ensures we get the correct folder even if user has multiple kundlis
+        user_folder = None
+        try:
+            kundli_metadata = file_manager.lookup_kundli(kundli_id)
+            if kundli_metadata and kundli_metadata.get('uid') == current_user['uid']:
+                # Extract folder from file_path
+                file_path = kundli_metadata.get('file_path', '')
+                if file_path:
+                    parts = file_path.split(os.sep)
+                    if len(parts) >= 2:
+                        try:
+                            users_idx = parts.index('users')
+                            if users_idx + 1 < len(parts):
+                                user_folder = parts[users_idx + 1]
+                                print(f"[CHAT_API] Found user folder from kundli_index: {user_folder}")
+                        except ValueError:
+                            pass
+        except Exception as e:
+            print(f"[CHAT_API] Error looking up kundli in index: {e}")
+        
+        # Fallback to get_user_folder if not found
+        if not user_folder:
+            user_folder = file_manager.get_user_folder(current_user['uid'])
+            print(f"[CHAT_API] Using fallback user folder: {user_folder}")
+        
         if not user_folder:
             raise HTTPException(status_code=404, detail="User folder not found")
         
@@ -3600,6 +3628,8 @@ async def get_chat_history(
         
         # Get metadata
         metadata = chat_service.get_conversation_metadata(user_folder, kundli_id)
+        
+        print(f"[CHAT_API] Loaded {len(messages)} messages for {kundli_id}")
         
         return {
             "status": "success",
@@ -3716,8 +3746,28 @@ async def get_chat_context(
     try:
         print(f"[CHAT_API] Getting chat context for {kundli_id}")
         
-        # Get user folder
-        user_folder = file_manager.get_user_folder(current_user['uid'])
+        # Get user folder from kundli_id (most reliable method)
+        user_folder = None
+        try:
+            kundli_metadata = file_manager.lookup_kundli(kundli_id)
+            if kundli_metadata and kundli_metadata.get('uid') == current_user['uid']:
+                file_path = kundli_metadata.get('file_path', '')
+                if file_path:
+                    parts = file_path.split(os.sep)
+                    if len(parts) >= 2:
+                        try:
+                            users_idx = parts.index('users')
+                            if users_idx + 1 < len(parts):
+                                user_folder = parts[users_idx + 1]
+                        except ValueError:
+                            pass
+        except Exception as e:
+            print(f"[CHAT_API] Error looking up kundli: {e}")
+        
+        # Fallback to get_user_folder if not found
+        if not user_folder:
+            user_folder = file_manager.get_user_folder(current_user['uid'])
+        
         if not user_folder:
             raise HTTPException(status_code=404, detail="User folder not found")
         
@@ -3754,8 +3804,28 @@ async def clear_chat_history(
     try:
         print(f"[CHAT_API] Clearing chat history for {kundli_id}")
         
-        # Get user folder
-        user_folder = file_manager.get_user_folder(current_user['uid'])
+        # Get user folder from kundli_id (most reliable method)
+        user_folder = None
+        try:
+            kundli_metadata = file_manager.lookup_kundli(kundli_id)
+            if kundli_metadata and kundli_metadata.get('uid') == current_user['uid']:
+                file_path = kundli_metadata.get('file_path', '')
+                if file_path:
+                    parts = file_path.split(os.sep)
+                    if len(parts) >= 2:
+                        try:
+                            users_idx = parts.index('users')
+                            if users_idx + 1 < len(parts):
+                                user_folder = parts[users_idx + 1]
+                        except ValueError:
+                            pass
+        except Exception as e:
+            print(f"[CHAT_API] Error looking up kundli: {e}")
+        
+        # Fallback to get_user_folder if not found
+        if not user_folder:
+            user_folder = file_manager.get_user_folder(current_user['uid'])
+        
         if not user_folder:
             raise HTTPException(status_code=404, detail="User folder not found")
         

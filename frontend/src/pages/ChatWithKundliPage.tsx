@@ -11,6 +11,13 @@ interface Message {
   timestamp: Date
 }
 
+interface ChatSession {
+  kundli_id: string
+  kundli_name: string
+  last_message_time: string
+  message_count: number
+}
+
 interface KundliData {
   kundli_id: string
   birth_data: {
@@ -35,6 +42,8 @@ export default function ChatWithKundliPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [kundli, setKundli] = useState<KundliData | null>(null)
   const [showKundliInfo, setShowKundliInfo] = useState(true)
+  const [userKundlis, setUserKundlis] = useState<any[]>([])
+  const [previousChats, setPreviousChats] = useState<ChatSession[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -125,6 +134,47 @@ export default function ChatWithKundliPage() {
     loadKundli()
   }, [kundliId])
 
+  // Load user's kundlis and previous chats
+  useEffect(() => {
+    const loadUserKundlis = async () => {
+      try {
+        const response = await api.getUserCalculations()
+        if (response.data && response.data.calculations) {
+          setUserKundlis(response.data.calculations)
+          
+          // Build previous chats list from kundlis that have chat history
+          const chats: ChatSession[] = response.data.calculations.map((k: any) => ({
+            kundli_id: k.kundli_id,
+            kundli_name: k.birth_data?.name || 'Unnamed Kundli',
+            last_message_time: k.generation_date || new Date().toISOString(),
+            message_count: 0
+          }))
+          setPreviousChats(chats)
+          console.log('[CHAT] Loaded previous chats:', chats)
+        }
+      } catch (error) {
+        console.warn('[CHAT] Failed to load user kundlis:', error)
+      }
+    }
+    
+    loadUserKundlis()
+  }, [])
+
+  const handleNewChat = () => {
+    navigate('/generate')
+  }
+
+  const handleSelectChat = (selectedKundliId: string) => {
+    console.log('[CHAT] Selecting chat:', selectedKundliId, 'Current:', kundliId)
+    if (selectedKundliId && selectedKundliId !== kundliId) {
+      console.log('[CHAT] Navigating to chat:', `/chat/${selectedKundliId}`)
+      navigate(`/chat/${selectedKundliId}`)
+    } else if (!selectedKundliId) {
+      console.error('[CHAT] ERROR: selectedKundliId is empty or undefined')
+      toast.error('Invalid kundli ID')
+    }
+  }
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -210,6 +260,15 @@ export default function ChatWithKundliPage() {
     <div className="fixed inset-0 flex bg-gray-900">
       {/* Left Panel - Kundli Info */}
       <div className={`${showKundliInfo ? 'w-64' : 'w-0'} bg-gradient-to-b from-indigo-900 to-purple-900 text-white transition-all duration-300 overflow-hidden border-r border-indigo-800 flex flex-col`}>
+        <div className="p-4 border-b border-indigo-700">
+          <button
+            onClick={handleNewChat}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-lg transition text-sm font-semibold text-white"
+          >
+            <Sparkles size={16} />
+            <span>New Chat</span>
+          </button>
+        </div>
         <div className="p-6 flex-1 overflow-y-auto">
           <h2 className="text-2xl font-bold mb-6">Your Kundli</h2>
 
@@ -253,6 +312,30 @@ export default function ChatWithKundliPage() {
                 ))}
               </div>
             </div>
+
+            {previousChats.length > 1 && (
+              <div className="pt-6 border-t border-indigo-700">
+                <p className="text-indigo-200 text-sm mb-3">Previous Chats</p>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {previousChats.map((chat) => (
+                    <button
+                      key={chat.kundli_id}
+                      onClick={() => handleSelectChat(chat.kundli_id)}
+                      className={`w-full text-left text-sm p-2 rounded transition ${
+                        kundliId === chat.kundli_id
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-indigo-800 hover:bg-indigo-700 text-indigo-100'
+                      }`}
+                    >
+                      <p className="font-medium truncate">{chat.kundli_name}</p>
+                      <p className="text-xs opacity-75">
+                        {new Date(chat.last_message_time).toLocaleDateString()}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
