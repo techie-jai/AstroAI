@@ -54,6 +54,8 @@ from pdf_generator import PDFGenerator
 
 from analysis_formatter import AnalysisFormatter
 
+from jyotishyamitra_d10_service import generate_d10_json
+
 from fastapi.responses import FileResponse, StreamingResponse
 
 from admin_routes import router as admin_router
