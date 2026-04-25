@@ -54,6 +54,8 @@ from pdf_generator import PDFGenerator
 
 from analysis_formatter import AnalysisFormatter
 
+from jyotishyamitra_d10_service import generate_d10_json
+
 from fastapi.responses import FileResponse, StreamingResponse
 
 from admin_routes import router as admin_router
@@ -2599,8 +2601,14 @@ class KundliDataExtractor:
                 }
         
         # Extract divisional charts
-        comprehensive_kundli = kundli_data.get('comprehensive_kundli', {})
-        divisional_charts = comprehensive_kundli.get('jyotishganit_json', {}).get('divisionalCharts', {})
+        # First try to get from jyotishganit_json directly (new structure)
+        divisional_charts = kundli_data.get('jyotishganit_json', {}).get('divisionalCharts', {})
+        
+        # If not found, try comprehensive_kundli (old structure)
+        if not divisional_charts:
+            comprehensive_kundli = kundli_data.get('comprehensive_kundli', {})
+            divisional_charts = comprehensive_kundli.get('jyotishganit_json', {}).get('divisionalCharts', {})
+        
         if divisional_charts:
             extracted_data["divisional_charts"] = divisional_charts
             extracted_data["divisional_charts"]["available_charts"] = list(divisional_charts.keys())

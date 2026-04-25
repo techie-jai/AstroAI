@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps API Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #e9ecef;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+        
+        .output-line {
+            margin: 5px 0;
+        }
+        
+        .success {
+            color: #4ec9b0;
+        }
+        
+        .error {
+            color: #f48771;
+        }
+        
+        .warning {
+            color: #dcdcaa;
+        }
+        
+        .info {
+            color: #9cdcfe;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .status.passed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.running {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .summary {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .summary h3 {
+            color: #004085;
+            margin-bottom: 10px;
+        }
+        
+        .summary-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .summary-item::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #dc3545;
+        }
+        
+        .summary-item.passed::before {
+            background: #28a745;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 1px solid #dee2e6;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ Google Maps API Test Suite</h1>
+            <p>Test if Google Maps API is working correctly</p>
+        </div>
+        
+        <div class="content">
+            <!-- Quick Test -->
+            <div class="test-section">
+                <h2>⚡ Quick Test (All Tests)</h2>
+                <div class="button-group">
+                    <button class="btn-success" onclick="runAllTests()">Run All Tests</button>
+                    <button class="btn-secondary" onclick="clearOutput()">Clear Output</button>
+                </div>
+                <div id="output" class="output"></div>
+                <div id="summary" style="display: none;" class="summary">
+                    <h3>Test Summary</h3>
+                    <div id="summary-content"></div>
+                </div>
+            </div>
+            
+            <!-- Individual Tests -->
+            <div class="test-section">
+                <h2>🧪 Individual Tests</h2>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="testAPIKey()">Test API Key</button>
+                    <button class="btn-primary" onclick="testGoogleMapsLoaded()">Test SDK Loaded</button>
+                    <button class="btn-primary" onclick="testAutocompleteService()">Test Service</button>
+                    <button class="btn-primary" onclick="testMumbaiPredictions()">Test Mumbai</button>
+                    <button class="btn-primary" onclick="testHospitalPredictions()">Test Hospital</button>
+                    <button class="btn-primary" onclick="testPlaceDetails()">Test Details</button>
+                    <button class="btn-primary" onclick="testCSVEndpoint()">Test CSV</button>
+                </div>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="test-section">
+                <h2>📋 Instructions</h2>
+                <ol style="margin-left: 20px; line-height: 1.8;">
+                    <li>Click "Run All Tests" to test everything at once</li>
+                    <li>Or click individual test buttons to test specific features</li>
+                    <li>Check the output for results</li>
+                    <li>All tests should show ✅ PASSED</li>
+                    <li>If any test fails, check the error message</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>💡 Tip: Open browser DevTools (F12) to see detailed console logs</p>
+            <p>📝 For more details, see: GOOGLE_MAPS_TESTING_GUIDE.md</p>
+        </div>
+    </div>
+    
+    <script>
+        const outputDiv = document.getElementById('output')
+        const summaryDiv = document.getElementById('summary')
+        const summaryContent = document.getElementById('summary-content')
+        
+        function log(message, type = 'info') {
+            const line = document.createElement('div')
+            line.className = `output-line ${type}`
+            line.textContent = message
+            outputDiv.appendChild(line)
+            outputDiv.scrollTop = outputDiv.scrollHeight
+            console.log(message)
+        }
+        
+        function clearOutput() {
+            outputDiv.innerHTML = ''
+            summaryDiv.style.display = 'none'
+        }
+        
+        async function runAllTests() {
+            clearOutput()
+            log('=== GOOGLE MAPS API TEST SUITE ===', 'info')
+            log('Starting tests...', 'info')
+            log('', 'info')
+            
+            const results = {}
+            
+            // Test 1
+            log('TEST 1: API Key', 'info')
+            results.apiKey = testAPIKeyInternal()
+            log('', 'info')
+            
+            // Test 2
+            log('TEST 2: Google Maps SDK', 'info')
+            results.googleMapsLoaded = testGoogleMapsLoadedInternal()
+            log('', 'info')
+            
+            // Test 3
+            log('TEST 3: AutocompleteService', 'info')
+            results.autocompleteService = testAutocompleteServiceInternal()
+            log('', 'info')
+            
+            // Test 4
+            log('TEST 4: Mumbai Predictions', 'info')
+            results.mumbaiPredictions = await testMumbaiPredictionsInternal()
+            log('', 'info')
+            
+            // Test 5
+            log('TEST 5: Hospital Predictions', 'info')
+            results.hospitalPredictions = await testHospitalPredictionsInternal()
+            log('', 'info')
+            
+            // Test 6
+            log('TEST 6: Place Details', 'info')
+            results.placeDetails = await testPlaceDetailsInternal()
+            log('', 'info')
+            
+            // Test 7
+            log('TEST 7: CSV Endpoint', 'info')
+            results.csvEndpoint = await testCSVEndpointInternal()
+            log('', 'info')
+            
+            // Summary
+            showSummary(results)
+        }
+        
+        function testAPIKey() {
+            clearOutput()
+            log('=== TEST: API Key ===', 'info')
+            testAPIKeyInternal()
+        }
+        
+        function testAPIKeyInternal() {
+            const apiKey = import.meta?.env?.VITE_GOOGLE_MAPS_API_KEY
+            log(`API Key present: ${!!apiKey}`, apiKey ? 'success' : 'error')
+            if (apiKey) {
+                log(`API Key (first 15 chars): ${apiKey.substring(0, 15)}...`, 'success')
+                log(`API Key length: ${apiKey.length}`, 'success')
+                log('✅ PASSED: API key is available', 'success')
+                return true
+            } else {
+                log('❌ FAILED: API key not found', 'error')
+                return false
+            }
+        }
+        
+        function testGoogleMapsLoaded() {
+            clearOutput()
+            log('=== TEST: Google Maps SDK ===', 'info')
+            testGoogleMapsLoadedInternal()
+        }
+        
+        function testGoogleMapsLoadedInternal() {
+            const googleAvailable = typeof window !== 'undefined' && !!window.google
+            log(`window.google available: ${googleAvailable}`, googleAvailable ? 'success' : 'error')
+            log(`window.google.maps available: ${!!window.google?.maps}`, window.google?.maps ? 'success' : 'error')
+            log(`window.google.maps.places available: ${!!window.google?.maps?.places}`, window.google?.maps?.places ? 'success' : 'error')
+            
+            if (googleAvailable) {
+                log('✅ PASSED: Google Maps SDK is loaded', 'success')
+                return true
+            } else {
+                log('❌ FAILED: Google Maps SDK not loaded', 'error')
+                return false
+            }
+        }
+        
+        function testAutocompleteService() {
+            clearOutput()
+            log('=== TEST: AutocompleteService ===', 'info')
+            testAutocompleteServiceInternal()
+        }
+        
+        function testAutocompleteServiceInternal() {
+            if (!window.google?.maps?.places) {
+                log('❌ FAILED: Google Maps not loaded', 'error')
+                return false
+            }
+            
+            try {
+                const service = new window.google.maps.places.AutocompleteService()
+                log('AutocompleteService created: true', 'success')
+                log('✅ PASSED: AutocompleteService is available', 'success')
+                return true
+            } catch (error) {
+                log(`❌ FAILED: ${error.message}`, 'error')
+                return false
+            }
+        }
+        
+        async function testMumbaiPredictions() {
+            clearOutput()
+            log('=== TEST: Mumbai Predictions ===', 'info')
+            await testMumbaiPredictionsInternal()
+        }
+        
+        async function testMumbaiPredictionsInternal() {
+            if (!window.google?.maps?.places) {
+                log('❌ FAILED: Google Maps not loaded', 'error')
+                return false
+            }
+            
+            try {
+                const service = new window.google.maps.places.AutocompleteService()
+                const sessionToken = new window.google.maps.places.AutocompleteSessionToken()
+                
+                log('Requesting predictions for "Mumbai"...', 'info')
+                const response = await service.getPlacePredictions({
+                    input: 'Mumbai',
+                    sessionToken: sessionToken,
+                    types: ['geocode', 'establishment'],
+                })
+                
+                const count = response.predictions?.length || 0
+                log(`Predictions returned: ${count}`, count > 0 ? 'success' : 'warning')
+                
+                if (response.predictions && response.predictions.length > 0) {
+                    log('First 3 predictions:', 'info')
+                    response.predictions.slice(0, 3).forEach((pred, idx) => {
+                        log(`  ${idx + 1}. ${pred.description}`, 'success')
+                    })
+                    log('✅ PASSED: Got predictions for "Mumbai"', 'success')
+                    return true
+                } else {
+                    log('❌ FAILED: No predictions returned', 'error')
+                    return false
+                }
+            } catch (error) {
+                log(`❌ FAILED: ${error.message}`, 'error')
+                return false
+            }
+        }
+        
+        async function testHospitalPredictions() {
+            clearOutput()
+            log('=== TEST: Hospital Predictions ===', 'info')
+            await testHospitalPredictionsInternal()
+        }
+        
+        async function testHospitalPredictionsInternal() {
+            if (!window.google?.maps?.places) {
+                log('❌ FAILED: Google Maps not loaded', 'error')
+                return false
+            }
+            
+            try {
+                const service = new window.google.maps.places.AutocompleteService()
+                const sessionToken = new window.google.maps.places.AutocompleteSessionToken()
+                
+                log('Requesting predictions for "Hospital"...', 'info')
+                const response = await service.getPlacePredictions({
+                    input: 'Hospital',
+                    sessionToken: sessionToken,
+                    types: ['geocode', 'establishment'],
+                })
+                
+                const count = response.predictions?.length || 0
+                log(`Predictions returned: ${count}`, count > 0 ? 'success' : 'warning')
+                
+                if (response.predictions && response.predictions.length > 0) {
+                    log('First 3 predictions:', 'info')
+                    response.predictions.slice(0, 3).forEach((pred, idx) => {
+                        log(`  ${idx + 1}. ${pred.description}`, 'success')
+                    })
+                    log('✅ PASSED: Got predictions for "Hospital"', 'success')
+                    return true
+                } else {
+                    log('❌ FAILED: No predictions returned', 'error')
+                    return false
+                }
+            } catch (error) {
+                log(`❌ FAILED: ${error.message}`, 'error')
+                return false
+            }
+        }
+        
+        async function testPlaceDetails() {
+            clearOutput()
+            log('=== TEST: Place Details ===', 'info')
+            await testPlaceDetailsInternal()
+        }
+        
+        async function testPlaceDetailsInternal() {
+            if (!window.google?.maps?.places) {
+                log('❌ FAILED: Google Maps not loaded', 'error')
+                return false
+            }
+            
+            try {
+                const service = new window.google.maps.places.AutocompleteService()
+                const sessionToken = new window.google.maps.places.AutocompleteSessionToken()
+                
+                log('Getting prediction...', 'info')
+                const response = await service.getPlacePredictions({
+                    input: 'Mumbai',
+                    sessionToken: sessionToken,
+                    types: ['geocode', 'establishment'],
+                })
+                
+                if (!response.predictions || response.predictions.length === 0) {
+                    log('❌ FAILED: No predictions to get details for', 'error')
+                    return false
+                }
+                
+                const placeId = response.predictions[0].place_id
+                log(`Got place ID: ${placeId}`, 'info')
+                
+                const detailsService = new window.google.maps.places.PlacesService(document.createElement('div'))
+                
+                return new Promise((resolve) => {
+                    detailsService.getDetails(
+                        {
+                            placeId,
+                            fields: ['formatted_address', 'geometry', 'name'],
+                        },
+                        (place, status) => {
+                            if (status === 'OK' && place) {
+                                log('Place details:', 'info')
+                                log(`  Name: ${place.name}`, 'success')
+                                log(`  Address: ${place.formatted_address}`, 'success')
+                                log(`  Latitude: ${place.geometry?.location?.lat()}`, 'success')
+                                log(`  Longitude: ${place.geometry?.location?.lng()}`, 'success')
+                                log('✅ PASSED: Got place details', 'success')
+                                resolve(true)
+                            } else {
+                                log(`❌ FAILED: ${status}`, 'error')
+                                resolve(false)
+                            }
+                        }
+                    )
+                })
+            } catch (error) {
+                log(`❌ FAILED: ${error.message}`, 'error')
+                return false
+            }
+        }
+        
+        async function testCSVEndpoint() {
+            clearOutput()
+            log('=== TEST: CSV Endpoint ===', 'info')
+            await testCSVEndpointInternal()
+        }
+        
+        async function testCSVEndpointInternal() {
+            try {
+                log('Testing /api/cities/search?query=Mumbai', 'info')
+                const response = await fetch('/api/cities/search?query=Mumbai')
+                
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error')
+                
+                if (!response.ok) {
+                    log(`❌ FAILED: Status ${response.status}`, 'error')
+                    return false
+                }
+                
+                const data = await response.json()
+                const count = data?.length || 0
+                log(`Results returned: ${count}`, count > 0 ? 'success' : 'warning')
+                
+                if (data && data.length > 0) {
+                    log('First 3 results:', 'info')
+                    data.slice(0, 3).forEach((city, idx) => {
+                        log(`  ${idx + 1}. ${city.name} (${city.city}, ${city.country})`, 'success')
+                        log(`     Lat: ${city.latitude}, Lng: ${city.longitude}`, 'success')
+                    })
+                    log('✅ PASSED: CSV endpoint working', 'success')
+                    return true
+                } else {
+                    log('❌ FAILED: No results', 'error')
+                    return false
+                }
+            } catch (error) {
+                log(`❌ FAILED: ${error.message}`, 'error')
+                return false
+            }
+        }
+        
+        function showSummary(results) {
+            const passed = Object.values(results).filter(r => r === true).length
+            const total = Object.keys(results).length
+            
+            let html = ''
+            Object.entries(results).forEach(([test, passed]) => {
+                const className = passed ? 'passed' : ''
+                const status = passed ? '✅ PASSED' : '❌ FAILED'
+                html += `<div class="summary-item ${className}">${status}: ${test}</div>`
+            })
+            
+            summaryContent.innerHTML = html
+            summaryDiv.style.display = 'block'
+            
+            log('', 'info')
+            log(`=== SUMMARY: ${passed}/${total} tests passed ===`, passed === total ? 'success' : 'error')
+            if (passed === total) {
+                log('🎉 ALL TESTS PASSED!', 'success')
+            } else {
+                log('⚠️  SOME TESTS FAILED', 'warning')
+            }
+        }
+    </script>
+</body>
+</html>
