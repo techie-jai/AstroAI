@@ -2457,7 +2457,8 @@ async def livechat_generate_kundli(
             birth_data=birth_data_dict,
             generated_at=result['generated_at'],
             hash_value=kundli_hash,
-            counter=counter
+            counter=counter,
+            uid=current_user['uid']
         )
         print(f"[LIVECHAT] Step 7: Added to local index")
 

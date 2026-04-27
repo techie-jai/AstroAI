@@ -428,10 +428,13 @@ export default function ChatWithKundliPage() {
             >
               <ChevronDown size={20} className={`text-indigo-400 transition-transform ${showKundliInfo ? 'rotate-180' : ''}`} />
             </button>
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200"
+            >
               <Sparkles className="text-indigo-400" size={24} />
               <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Kendraa.ai</h1>
-            </div>
+            </button>
           </div>
         </div>
 
