@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Send, Loader, MapPin, Calendar, Clock, Sparkles, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
@@ -36,6 +36,7 @@ interface CityOption {
 
 export default function LiveChatPage() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [step, setStep] = useState<'form' | 'chat'>('form')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
@@ -157,19 +158,17 @@ export default function LiveChatPage() {
 
       // Store kundli data for chat context
       const generatedKundliData = response.data
-      setKundliData(generatedKundliData)
+      const kundliId = generatedKundliData.kundli_id
       
-      setKundliGenerated(true)
-      setStep('chat')
-
-      const welcomeMessage: Message = {
-        role: 'assistant',
-        content: `Namaste ${birthData.name}! 🙏 I'm your personal Vedic astrology guide. I've analyzed your birth chart and I'm ready to answer any questions about your astrological profile. Ask me anything about your personality, career, relationships, or life path!`,
-        timestamp: new Date(),
-      }
-      setMessages([welcomeMessage])
-
-      toast.success('Kundli generated successfully!')
+      // Store in sessionStorage for the new chat page
+      sessionStorage.setItem('kundli_data', JSON.stringify(generatedKundliData))
+      
+      toast.success('Kundli generated successfully! Redirecting to chat...')
+      
+      // Redirect to the new chat UI with the kundli ID
+      setTimeout(() => {
+        navigate(`/chat/${kundliId}`)
+      }, 500)
     } catch (error: any) {
       console.error('[LiveChat] Failed to generate kundli:', error)
       const errorMsg = error.response?.data?.detail || error.message || 'Failed to generate kundli'

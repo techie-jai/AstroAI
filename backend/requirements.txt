@@ -16,4 +16,6 @@ setuptools>=69.0.2
 timezonefinder>=6.5.0
 cors==1.0.1
 jyotishganit==0.1.2
+jyotishyamitra==1.4.0
 python-telegram-bot==20.3
+filelock>=3.13.0

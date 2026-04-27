@@ -52,35 +52,45 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 ### 🔢 Core Astrology Calculations
 - **Birth Charts & Divisional Charts**: D1 (Rasi), D2 (Hora), D3 (Drekkana), D9 (Navamsa), D10 (Dasamsa), and 15 more
 - **Planetary Positions & Aspects**: Accurate positions of all 9 planets across all divisional charts
-- **Dasha Systems**: Vimsottari, Ashtottari, and 30+ other dasha variations
+- **Dasha Systems**: Vimsottari, Ashtottari, and 30+ other dasha variations with current period tracking
 - **Panchanga Calculations**: Tithi, Nakshatra, Yoga, Karana, Vaara
 - **Special Lagnas & Upagrahas**: Advanced astrological points
 - **Ashtaka Varga & Shodhya Pinda**: Strength analysis
-- **Doshas**: Kala Sarpa, Manglik, Pitru, and others
+- **Doshas**: Kala Sarpa, Manglik, Pitru, and others with Bhanga (cancellation) detection
 - **Dosha Bhanga (NEW)**: Automatic detection of dosha cancellations with detailed reasons
 - **Yogas**: 284+ yogas from classical texts
 - **Kundli Matching (NEW)**: Ashtakoota 8-fold compatibility analysis for marriage matching
 - **Compatibility Analysis**: Marriage and relationship compatibility
+- **Divisional Charts Extraction**: All D1-D60 charts properly extracted and fed into chat context
 
 ### 🤖 AI Integration
-- Intelligent chart analysis and interpretation
-- Natural language question answering about charts
-- Automated predictions and insights
-- Pattern recognition across multiple charts
-- Contextual analysis considering multiple divisional charts
+- **Intelligent Chart Analysis**: Context-aware interpretation using all divisional charts
+- **Natural Language Q&A**: Answer questions about charts, doshas, dashas, and predictions
+- **Persistent Chat History**: Messages saved immediately, rolling summaries every 10 messages
+- **Chat Context Management**: Facts extraction, context summaries, and sliding window context
+- **Pattern Recognition**: Across multiple charts and dasha periods
+- **Contextual Analysis**: Considers multiple divisional charts and current dasha periods
 
 ### 💻 User Interfaces
 - **New Simple UI** (Recommended): Clean, modern PyQt6 interface for quick chart generation
 - **Advanced UI**: Multi-tab interface with comprehensive visualization and PDF export
 - **Web Platform**: React-based frontend with FastAPI backend for cloud deployment
+- **Chat Interface**: Conversational AI with persistent history and previous chat access
 
 ### 🌐 Web Platform Features
-- **User Authentication**: Firebase Google Sign-In and Email/Password
+- **User Authentication**: Firebase Google Sign-In and Email/Password with UID-based isolation
 - **Cloud Storage**: Firebase Firestore for user data and calculations
+- **Local File Storage**: Persistent kundli data with kundli_index.json tracking
 - **PDF Generation**: Professional AI analysis reports with download capability
 - **Responsive Design**: Mobile-friendly React interface with Tailwind CSS
 - **Real-time Updates**: WebSocket support for live progress tracking
-- **Google Maps Integration (NEW)**: Real-time location autocomplete with automatic coordinate and timezone lookup
+- **Google Maps Integration**: Real-time location autocomplete with automatic coordinate and timezone lookup
+- **Chat Features (NEW)**: 
+  - Previous chat history with kundli titles
+  - "New Chat" button for quick kundli generation
+  - Persistent message storage with atomic writes
+  - Rolling summaries and facts extraction
+  - Multi-kundli chat support with correct folder routing
 
 ### 📊 Data Export
 - JSON format for programmatic access
@@ -222,12 +232,14 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 - Local desktop applications (PyQt6-based)
 - Web browser interface (React + TypeScript)
 - Real-time progress tracking and notifications
+- Chat interface with persistent history
 
 **API Layer:**
 - AstroChartAPI for local chart generation
 - FastAPI backend for web platform
 - RESTful endpoints for all operations
 - Firebase authentication middleware
+- Chat endpoints with multi-kundli support
 
 **Core Calculation Layer:**
 - Jyotishganit library (Vedic astrology engine)
@@ -239,14 +251,123 @@ AstroAI is built on **Jyotishganit**, a comprehensive Python package implementin
 **Storage Layer:**
 - Firebase Firestore (user data, calculations metadata)
 - Firebase Storage (PDF reports)
-- Local file system (new-ui application)
+- Local file system (kundli data, chat history)
 - Swiss Ephemeris database
+- Chat history with atomic writes and file locking
 
 **Infrastructure:**
 - Docker containerization for backend
 - Cloudflare Tunnel for secure remote access
 - HTTPS/SSL encryption
 - Zero-trust security model
+
+### Chat System Architecture (NEW - April 2026)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    CHAT SYSTEM ARCHITECTURE                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              FRONTEND (React/TypeScript)                 │   │
+│  ├──────────────────────────────────────────────────────────┤   │
+│  │  ┌─────────────────────────────────────────────────────┐ │   │
+│  │  │ ChatWithKundliPage Component                        │ │   │
+│  │  │ - Message display and input                         │ │   │
+│  │  │ - Previous chats sidebar                            │ │   │
+│  │  │ - New Chat button                                   │ │   │
+│  │  │ - Kundli info panel                                 │ │   │
+│  │  └─────────────────────────────────────────────────────┘ │   │
+│  │                                                            │   │
+│  │  ┌─────────────────────────────────────────────────────┐ │   │
+│  │  │ Previous Chats List (Sidebar)                       │ │   │
+│  │  │ - Kundli names with dates                           │ │   │
+│  │  │ - Click to resume conversation                      │ │   │
+│  │  │ - Highlights current chat                           │ │   │
+│  │  └─────────────────────────────────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                           │                                      │
+│                           ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              API LAYER (FastAPI)                         │   │
+│  ├──────────────────────────────────────────────────────────┤   │
+│  │  ┌─────────────────────────────────────────────────────┐ │   │
+│  │  │ Chat Endpoints                                      │ │   │
+│  │  │ - GET  /api/chat/history/{kundli_id}               │ │   │
+│  │  │ - POST /api/chat/save-message                       │ │   │
+│  │  │ - GET  /api/chat/context/{kundli_id}               │ │   │
+│  │  │ - DELETE /api/chat/history/{kundli_id}             │ │   │
+│  │  └─────────────────────────────────────────────────────┘ │   │
+│  │                                                            │   │
+│  │  ┌─────────────────────────────────────────────────────┐ │   │
+│  │  │ Kundli Lookup (Multi-kundli Support)                │ │   │
+│  │  │ - lookup_kundli(kundli_id) from kundli_index.json   │ │   │
+│  │  │ - Extract correct user folder from file_path        │ │   │
+│  │  │ - Verify UID matches current user                   │ │   │
+│  │  │ - Fallback to get_user_folder() if needed           │ │   │
+│  │  └─────────────────────────────────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                           │                                      │
+│                           ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │         CHAT SERVICE LAYER (Python)                      │   │
+│  ├──────────────────────────────────────────────────────────┤   │
+│  │  ┌─────────────────────────────────────────────────────┐ │   │
+│  │  │ ChatHistoryManager                                  │ │   │
+│  │  │ - Atomic file writes (.tmp + rename)                │ │   │
+│  │  │ - File locking with filelock library                │ │   │
+│  │  │ - Message persistence                               │ │   │
+│  │  │ - Metadata tracking                                 │ │   │
+│  │  └─────────────────────────────────────────────────────┘ │   │
+│  │                                                            │   │
+│  │  ┌─────────────────────────────────────────────────────┐ │   │
+│  │  │ ContextSummaryGenerator                             │ │   │
+│  │  │ - Rolling summaries every 10 messages               │ │   │
+│  │  │ - Gemini integration for incremental updates        │ │   │
+│  │  │ - Key topics extraction                             │ │   │
+│  │  │ - Async background task                             │ │   │
+│  │  └─────────────────────────────────────────────────────┘ │   │
+│  │                                                            │   │
+│  │  ┌─────────────────────────────────────────────────────┐ │   │
+│  │  │ KundliFactsExtractor                                │ │   │
+│  │  │ - Extract facts from kundli data                    │ │   │
+│  │  │ - Parse AI responses for astrological facts         │ │   │
+│  │  │ - Merge facts without duplicates                    │ │   │
+│  │  │ - Async background task                             │ │   │
+│  │  └─────────────────────────────────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                           │                                      │
+│                           ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │         STORAGE LAYER (File System)                      │   │
+│  ├──────────────────────────────────────────────────────────┤   │
+│  │  users/                                                  │   │
+│  │  ├── kundli_index.json (UID tracking)                   │   │
+│  │  └── {timestamp}-{uid}-{name}/                          │   │
+│  │      ├── chat/                                           │   │
+│  │      │   └── {kundli_id}/                               │   │
+│  │      │       ├── messages.json (all messages)            │   │
+│  │      │       ├── context_summary.json (rolling summary)  │   │
+│  │      │       ├── kundli_facts.json (extracted facts)     │   │
+│  │      │       └── metadata.json (conversation stats)      │   │
+│  │      └── kundli/                                         │   │
+│  │          └── {kundli_id}.json (kundli data)              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                   │
+└─────────────────────────────────────────────────────────────────┘
+
+Data Flow:
+1. User sends message → ChatWithKundliPage
+2. Frontend calls POST /api/chat/save-message
+3. Backend looks up correct user folder using kundli_id
+4. ChatService saves message atomically with file locking
+5. Async tasks trigger:
+   - Rolling summary generation (every 10 messages)
+   - Facts extraction from AI response
+6. Frontend loads chat history with GET /api/chat/history/{kundli_id}
+7. Backend retrieves messages from correct folder
+8. Messages displayed in UI with context
+```
 
 ---
 
@@ -904,6 +1025,158 @@ The generated data feeds into AI models for:
 ---
 
 ## Recent Updates (April 2026)
+
+### Chat Functionality Enhancements
+**New Features:**
+- ✅ **Previous Chat History**: Display list of all previous kundli chats in sidebar
+- ✅ **New Chat Button**: Quick access to generate new kundlis from chat page
+- ✅ **Chat History Loading**: Fixed multi-kundli support with correct folder routing
+- ✅ **Message Persistence**: All messages saved immediately with atomic writes
+- ✅ **Rolling Summaries**: Automatic context summaries every 10 messages
+- ✅ **Facts Extraction**: Astrological facts extracted from AI responses
+
+**Bug Fixes:**
+- Fixed divisional charts extraction showing "0 charts" (now correctly shows D2-D60 count)
+- Fixed chat history not loading for users with multiple kundlis
+- Fixed "New Chat" button redirecting to blank page
+- Improved kundli_id lookup using kundli_index instead of just UID
+
+**Architecture Improvements:**
+- Multi-kundli support with correct user folder routing
+- Atomic file writes with file locking to prevent corruption
+- Dual-layer memory (context_summary.json + kundli_facts.json)
+- Async background tasks for summary generation and facts extraction
+
+### Data Isolation & Security Fixes
+- ✅ UID-based data filtering on all endpoints
+- ✅ Permission checks for direct kundli access
+- ✅ User folder verification before data access
+- ✅ Proper handling of multiple kundlis per user
+
+### Divisional Charts Fix
+- Fixed extraction logic to properly count D1-D60 charts
+- Charts now correctly fed into chat context
+- Proper filtering of metadata keys from chart count
+- Detailed logging for debugging chart extraction
+
+---
+
+## Implementation Details (April 2026)
+
+### Chat History System
+
+**Components:**
+1. **ChatHistoryManager** (350+ lines)
+   - Atomic file operations with `.tmp` + rename pattern
+   - File locking with `filelock` library to prevent race conditions
+   - Message persistence and retrieval
+   - Metadata tracking (total messages, tokens used, last activity)
+
+2. **ContextSummaryGenerator** (200+ lines)
+   - Triggers rolling summaries every 10 messages
+   - Incremental updates using Gemini API
+   - Key topics extraction from conversations
+   - Prevents context dilution through smart summarization
+
+3. **KundliFactsExtractor** (250+ lines)
+   - Extracts astrological facts from kundli data
+   - Parses AI responses for new facts
+   - Merges facts without duplicates
+   - Stores immutable core facts only
+
+4. **ChatService** (300+ lines)
+   - High-level orchestration of chat operations
+   - Async task management for background operations
+   - Context building from facts + summary + recent messages
+   - Conversation lifecycle management
+
+**Storage Structure:**
+```
+users/{timestamp}-{uid}-{name}/
+└── chat/
+    └── {kundli_id}/
+        ├── messages.json          # All messages (saved immediately)
+        ├── context_summary.json   # Rolling summary (updated every 10 msgs)
+        ├── kundli_facts.json      # Extracted astrological facts
+        └── metadata.json          # Conversation statistics
+```
+
+**Message Storage Timeline:**
+- **Immediate**: User/assistant messages saved atomically
+- **Every 10 messages**: Rolling summary generated asynchronously
+- **On assistant response**: Facts extracted asynchronously
+- **Persistent**: All data survives page refresh and browser restart
+
+### Divisional Charts Extraction
+
+**Issue Fixed:**
+- Previous implementation counted metadata keys as charts
+- Extraction logic: `divisional_charts = kundli_data.get('jyotishganit_json', {}).get('divisionalCharts', {})`
+- Chart count included `available_charts` and `total_charts` keys
+
+**Solution:**
+```python
+# Filter out metadata keys
+chart_names = [k for k in divisional_charts.keys() 
+               if not k.startswith('_') 
+               and k not in ['available_charts', 'total_charts']]
+extracted_data["divisional_charts"]["available_charts"] = chart_names
+extracted_data["divisional_charts"]["total_charts"] = len(chart_names)
+```
+
+**Result:**
+- Correctly identifies D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60
+- Logs show actual chart count (e.g., "Found 15 divisional charts")
+- All charts properly fed into chat context for AI analysis
+
+### Multi-Kundli Chat Support
+
+**Problem:**
+- Users with multiple kundlis couldn't load chat history for non-first kundlis
+- Backend used `get_user_folder(uid)` which returned only first folder
+
+**Solution:**
+- Use `kundli_id` to lookup correct folder in `kundli_index.json`
+- Extract user folder from `file_path` in metadata
+- Verify UID matches current user for security
+- Fallback to `get_user_folder()` if lookup fails
+
+**Implementation:**
+```python
+# Get user folder from kundli_id (most reliable)
+kundli_metadata = file_manager.lookup_kundli(kundli_id)
+if kundli_metadata and kundli_metadata.get('uid') == current_user['uid']:
+    # Extract folder from file_path
+    parts = file_path.split(os.sep)
+    users_idx = parts.index('users')
+    user_folder = parts[users_idx + 1]
+```
+
+**Endpoints Updated:**
+- `GET /api/chat/history/{kundli_id}` - Load chat history
+- `POST /api/chat/save-message` - Save messages
+- `GET /api/chat/context/{kundli_id}` - Get context
+- `DELETE /api/chat/history/{kundli_id}` - Clear history
+
+### Frontend Chat Improvements
+
+**ChatWithKundliPage Component:**
+- Loads user's kundlis on mount
+- Displays previous chats in sidebar with dates
+- "New Chat" button navigates to `/generate`
+- Click previous chat to resume conversation
+- Highlights current active chat
+- Proper error handling with toast notifications
+
+**Data Flow:**
+1. Component mounts → Load user kundlis
+2. Build previous chats list from kundlis
+3. User clicks chat → Navigate to `/chat/{kundli_id}`
+4. Load chat history from backend
+5. Display messages with context
+6. Send message → Save atomically with file locking
+
+## Previous Updates (April 2026)
 
 ### 🔧 FIXED: Google Maps Autocomplete Dropdown Display ✅
 
