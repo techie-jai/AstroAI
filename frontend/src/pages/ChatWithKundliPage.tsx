@@ -311,7 +311,7 @@ export default function ChatWithKundliPage() {
         <div className="text-center">
           <p className="text-indigo-200 mb-4">Kundli data not found</p>
           <button
-            onClick={() => navigate('/generator')}
+            onClick={() => navigate('/generate')}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
           >
             Generate New Kundli
@@ -408,7 +408,7 @@ export default function ChatWithKundliPage() {
 
         <div className="p-4 border-t border-slate-700/50">
           <button
-            onClick={() => navigate('/generator')}
+            onClick={() => navigate('/generate')}
             className="w-full flex items-center gap-2 px-4 py-2 bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all duration-200 text-sm text-slate-200"
           >
             <ArrowLeft size={16} />
