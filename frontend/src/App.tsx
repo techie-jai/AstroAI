@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import GeneratorPage from './pages/GeneratorPage'
@@ -42,6 +43,7 @@ function App() {
     <Router>
       <Toaster position="top-right" />
       <Routes>
+        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <LandingPage />} />
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
         
         <Route
@@ -170,7 +172,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   )
