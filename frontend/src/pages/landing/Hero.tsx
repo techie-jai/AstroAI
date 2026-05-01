@@ -66,18 +66,18 @@ export function Hero() {
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight tracking-tight">
-              <span className="text-white">Unveil Your</span>
+              <span className="text-white">3 Cosmic</span>
               <br />
               <span className="bg-clip-text text-transparent animate-glow-text" style={{ backgroundImage: 'linear-gradient(to right, #8952ec 0%, #a78bfa 50%, #c084fc 100%)' }}>
-                Cosmic Blueprint
+                Knowledge Systems
               </span>
               <br />
-              <span className="text-white">with AI</span>
+              <span className="text-white">One Advance AI</span>
             </h1>
 
             {/* Subheadline */}
             <p className="max-w-xl text-base sm:text-lg text-slate-300 leading-relaxed">
-              Experience the ancient wisdom of astrology enhanced by cutting-edge artificial intelligence. Get personalized insights, real-time transit alerts, and deep compatibility analysis.
+              Welcome To Kendraa.ai. Central Hub for all your Astrology, Palmistry and Numerology needs. Our advance AI allows you to harness the power of these ancient wisdom systems and cross reference them for accurate predictions and deeper insights.   
             </p>
 
             {/* CTA Buttons */}
