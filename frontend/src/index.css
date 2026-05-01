@@ -161,6 +161,24 @@ html {
   }
 }
 
+@keyframes pulse-line {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 /* Animation Classes */
 .animate-rotate-slow {
   animation: rotate-slow 60s linear infinite;
@@ -205,6 +223,14 @@ html {
 
 .animate-fade-in {
   animation: fade-in 0.8s ease-out;
+}
+
+.animate-pulse-line {
+  animation: pulse-line 2s ease-in-out infinite;
+}
+
+.animate-bounce {
+  animation: bounce 0.6s ease-in-out infinite;
 }
 
 /* Cosmic Background */

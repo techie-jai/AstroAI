@@ -18,9 +18,9 @@ export default function LandingPage() {
     <main className="min-h-screen bg-black">
       <Header />
       <Hero />
+      <FusionAnimation />
       <HowItWorks />
       <FeaturesGrid />
-      <FusionAnimation />
       <ExtendedFeatures />
       <AIAstrologer />
       <Pricing />
