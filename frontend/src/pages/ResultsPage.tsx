@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { api } from '../services/api'
 import apiClient from '../services/api'
 import toast from 'react-hot-toast'
-import { Sparkles, Download, Loader, MessageCircle } from 'lucide-react'
+import { Sparkles, Download, Loader, MessageCircle, Calendar, Clock, MapPin, Star, Sun, ChevronDown, ChevronUp, Zap, Globe, ArrowRight } from 'lucide-react'
 import { getDisplayableItems, extractPanchanga, extractAyanamsa, extractPlanets, formatKey } from '../utils/jyotishganitHelper'
 import CacheManager from '../utils/cacheManager'
 
@@ -20,6 +20,73 @@ interface KundliData {
   }
   horoscope_info: Record<string, any>
   charts?: Record<string, any>
+}
+
+function OrbitingPlanets() {
+  const planets = [
+    { name: "Sun", size: 20, orbit: 60, duration: 20, color: "from-yellow-400 to-orange-500" },
+    { name: "Moon", size: 12, orbit: 90, duration: 15, color: "from-gray-300 to-gray-400" },
+    { name: "Mars", size: 10, orbit: 120, duration: 25, color: "from-red-500 to-red-600" },
+    { name: "Jupiter", size: 16, orbit: 150, duration: 35, color: "from-yellow-500 to-amber-600" },
+    { name: "Saturn", size: 14, orbit: 180, duration: 45, color: "from-purple-400 to-purple-600" },
+  ]
+  return (
+    <div className="relative w-full h-[400px] flex items-center justify-center">
+      <div className="absolute w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 opacity-30 blur-2xl animate-pulse-glow" />
+      <div className="absolute w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center z-10 glow-purple"><Sparkles className="w-8 h-8 text-white" /></div>
+      {planets.map((p, i) => (<div key={`orbit-${i}`} className="absolute rounded-full border border-purple-500/20" style={{ width: `${p.orbit * 2}px`, height: `${p.orbit * 2}px` }} />))}
+      {planets.map((p, i) => (<div key={p.name} className="absolute animate-orbit" style={{ '--orbit-radius': `${p.orbit}px`, '--orbit-duration': `${p.duration}s`, animationDelay: `${i * -5}s` } as React.CSSProperties}><div className={`rounded-full bg-gradient-to-br ${p.color} shadow-lg`} style={{ width: `${p.size}px`, height: `${p.size}px` }} title={p.name} /></div>))}
+    </div>
+  )
+}
+
+function SectionCard({ title, icon: Icon, children, gradient = "from-purple-500/20 to-transparent", collapsible = false }: { title: string; icon: React.ElementType; children: React.ReactNode; gradient?: string; collapsible?: boolean }) {
+  const [isOpen, setIsOpen] = useState(true)
+  return (
+    <div className="cosmic-card rounded-2xl overflow-hidden">
+      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+      <div className={`flex items-center justify-between p-5 ${collapsible ? 'cursor-pointer hover:bg-purple-500/5' : ''}`} onClick={() => collapsible && setIsOpen(!isOpen)}>
+        <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/30 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center"><Icon className="w-5 h-5 text-purple-400" /></div><h2 className="text-xl font-bold text-foreground">{title}</h2></div>
+        {collapsible && (isOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />)}
+      </div>
+      {isOpen && <div className="px-5 pb-5">{children}</div>}
+    </div>
+  )
+}
+
+function DataItem({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className="relative pl-3 border-l-2 border-purple-500/30"><p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p><p className={`font-semibold ${accent ? 'text-cyan-400' : 'text-foreground'}`}>{value}</p></div>
+}
+
+function PlanetCard({ planet }: { planet: any }) {
+  const planetColors: Record<string, string> = {
+    "Sun": "bg-gradient-to-br from-yellow-400 to-orange-500",
+    "Moon": "bg-gradient-to-br from-gray-300 to-gray-400",
+    "Mars": "bg-gradient-to-br from-red-500 to-red-600",
+    "Mercury": "bg-gradient-to-br from-green-400 to-green-600",
+    "Jupiter": "bg-gradient-to-br from-yellow-500 to-amber-600",
+    "Venus": "bg-gradient-to-br from-pink-400 to-pink-600",
+    "Saturn": "bg-gradient-to-br from-purple-400 to-purple-600",
+    "Rahu": "bg-gradient-to-br from-blue-500 to-cyan-600",
+    "Ketu": "bg-gradient-to-br from-slate-600 to-slate-800",
+  }
+  
+  return (
+    <div className="group cosmic-card rounded-xl p-4 hover:bg-purple-500/10 transition-all duration-300">
+      <div className="flex items-start gap-4">
+        <div className="relative"><div className={`w-12 h-12 rounded-full ${planetColors[planet.name] || 'bg-gradient-to-br from-purple-400 to-purple-600'} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}><span className="text-xs font-bold text-white">{planet.name.slice(0, 2)}</span></div><div className={`absolute inset-0 rounded-full ${planetColors[planet.name] || 'bg-gradient-to-br from-purple-400 to-purple-600'} opacity-0 group-hover:opacity-50 blur-xl transition-opacity`} /></div>
+        <div className="flex-1 space-y-2">
+          <h3 className="font-bold text-purple-300 group-hover:text-purple-200 transition-colors">{planet.name}</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div><span className="text-muted-foreground">Sign:</span><span className="ml-2 text-foreground">{planet.sign}</span></div>
+            <div><span className="text-muted-foreground">House:</span><span className="ml-2 text-cyan-400">{planet.house}</span></div>
+            <div className="col-span-2"><span className="text-muted-foreground">Nakshatra:</span><span className="ml-2 text-foreground">{planet.nakshatra}</span></div>
+          </div>
+        </div>
+        <div className="px-2 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-xs font-mono text-purple-300">{planet.degree?.toFixed(1) || 'N/A'}°</div>
+      </div>
+    </div>
+  )
 }
 
 export default function ResultsPage() {
@@ -199,10 +266,12 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading kundli data...</p>
+      <div className="relative min-h-screen bg-slate-950 flex items-center justify-center overflow-hidden">
+        <div className="fixed inset-0 cosmic-gradient-bg opacity-20 pointer-events-none" />
+        <div className="fixed inset-0 dot-grid opacity-30 pointer-events-none" />
+        <div className="relative z-10 text-center">
+          <Loader className="w-12 h-12 animate-spin text-purple-400 mx-auto mb-4" />
+          <p className="text-slate-300">Loading kundli data...</p>
         </div>
       </div>
     )
@@ -210,10 +279,11 @@ export default function ResultsPage() {
 
   if (!kundli) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600">Kundli data not found</p>
+      <div className="relative min-h-screen bg-slate-950 py-12 overflow-hidden">
+        <div className="fixed inset-0 cosmic-gradient-bg opacity-20 pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="cosmic-card rounded-2xl p-8 text-center">
+            <p className="text-slate-300">Kundli data not found</p>
           </div>
         </div>
       </div>
@@ -221,242 +291,90 @@ export default function ResultsPage() {
   }
 
   return (
-    <div key={kundliId} className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Kundli Results</h1>
-        <p className="text-gray-600 mb-8">Birth Chart Analysis for {kundli.birth_data.name}</p>
+    <div key={kundliId} className="relative space-y-8 min-h-screen bg-slate-950 pb-8 overflow-hidden">
+      <div className="fixed inset-0 cosmic-gradient-bg opacity-20 pointer-events-none" />
+      <div className="fixed inset-0 dot-grid opacity-30 pointer-events-none" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">{[...Array(30)].map((_, i) => (<div key={i} className="absolute w-1 h-1 bg-purple-400/30 rounded-full animate-twinkle" style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 5}s`, animationDuration: `${2 + Math.random() * 3}s` }} />))}</div>
 
-        {/* Birth Information Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Birth Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Name</p>
-              <p className="text-lg text-gray-900">{kundli.birth_data.name}</p>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center glow-purple animate-float"><Star className="w-6 h-6 text-white fill-white" /></div>
+              <div><h1 className="text-4xl font-bold gradient-text-purple text-glow-purple">Kundli Results</h1><p className="text-muted-foreground">Birth Chart Analysis for <span className="text-cyan-400">{kundli.birth_data.name}</span></p></div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Place of Birth</p>
-              <p className="text-lg text-gray-900">{kundli.birth_data.place}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Date</p>
-              <p className="text-lg text-gray-900">{kundli.birth_data.date}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Time</p>
-              <p className="text-lg text-gray-900">{kundli.birth_data.time}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Latitude</p>
-              <p className="text-lg text-gray-900">{kundli.birth_data.latitude.toFixed(4)}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Longitude</p>
-              <p className="text-lg text-gray-900">{kundli.birth_data.longitude.toFixed(4)}</p>
-            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={handleDownloadPDF} disabled={downloading} className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center gap-2"><Download className="w-4 h-4" />{downloading ? 'Downloading...' : 'Download PDF'}</button>
+            <Link to={`/chat/${kundliId}`}><button className="border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 font-semibold py-2 px-4 rounded-lg transition flex items-center gap-2"><MessageCircle className="w-4 h-4" />Chat with AI</button></Link>
           </div>
         </div>
+      </div>
 
-        {/* Panchanga Section */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Panchanga (Astrological Calendar)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {(() => {
-              const panchanga = extractPanchanga(kundli.horoscope_info)
-              return Object.entries(panchanga).map(([key, value]) => (
-                <div key={key} className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
-                  <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{formatKey(key)}</p>
-                  <p className="text-lg font-bold text-gray-900 mt-2">{value}</p>
-                </div>
-              ))
-            })()}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 cosmic-card rounded-2xl overflow-hidden"><div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-transparent" /><OrbitingPlanets /><div className="absolute bottom-4 left-4 right-4 text-center"><p className="text-sm text-muted-foreground">Interactive Planetary Visualization</p></div></div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <SectionCard title="Birth Information" icon={Calendar} gradient="from-cyan-500/50 to-purple-500/30">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <DataItem label="Name" value={kundli.birth_data.name} />
+            <DataItem label="Place of Birth" value={kundli.birth_data.place} />
+            <DataItem label="Date" value={kundli.birth_data.date} />
+            <DataItem label="Time" value={kundli.birth_data.time} accent />
+            <DataItem label="Latitude" value={kundli.birth_data.latitude.toFixed(4)} />
+            <DataItem label="Longitude" value={kundli.birth_data.longitude.toFixed(4)} />
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Ayanamsa Section */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Ayanamsa (Precession Correction)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(() => {
-              const ayanamsa = extractAyanamsa(kundli.horoscope_info)
-              return Object.entries(ayanamsa).map(([key, value]) => (
-                <div key={key} className="border-l-4 border-purple-500 pl-4">
-                  <p className="text-sm font-medium text-gray-500">{formatKey(key)}</p>
-                  <p className="text-lg text-gray-900 font-semibold">{value}</p>
-                </div>
-              ))
-            })()}
-          </div>
-        </div>
+        <SectionCard title="Panchanga (Astrological Calendar)" icon={Calendar} gradient="from-purple-500/50 to-pink-500/30">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{(() => {
+            const panchanga = extractPanchanga(kundli.horoscope_info)
+            return Object.entries(panchanga).map(([key, value]) => (<div key={key} className="cosmic-card rounded-xl p-4 text-center hover:bg-purple-500/10 transition-colors"><p className="text-xs text-purple-400 uppercase tracking-wider mb-1">{formatKey(key)}</p><p className="font-semibold text-foreground">{value}</p></div>))
+          })()}</div>
+        </SectionCard>
 
-        {/* Houses and Planets Section */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Houses and Planetary Positions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(() => {
-              const planets = extractPlanets(kundli.horoscope_info)
-              return planets.map((planet) => (
-                <div key={planet.name} className="border-l-4 border-blue-500 pl-4 py-2">
-                  <p className="text-sm font-semibold text-blue-600">{planet.name}</p>
-                  <div className="mt-2 space-y-1 text-sm">
-                    <p className="text-gray-700"><span className="font-medium">Sign:</span> {planet.sign}</p>
-                    <p className="text-gray-700"><span className="font-medium">House:</span> {planet.house}</p>
-                    <p className="text-gray-700"><span className="font-medium">Nakshatra:</span> {planet.nakshatra}</p>
-                  </div>
-                </div>
-              ))
-            })()}
-          </div>
-        </div>
+        <SectionCard title="Ayanamsa (Precession Correction)" icon={Globe} gradient="from-pink-500/50 to-purple-500/30">
+          <div className="grid md:grid-cols-2 gap-6">{(() => {
+            const ayanamsa = extractAyanamsa(kundli.horoscope_info)
+            return Object.entries(ayanamsa).map(([key, value]) => (<DataItem key={key} label={formatKey(key)} value={value.toString()} accent={key === 'value'} />))
+          })()}</div>
+        </SectionCard>
 
-        {/* Additional Astrological Information */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Additional Astrological Data</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {getDisplayableItems(kundli.horoscope_info, 12).map(([key, value]) => (
-              <div key={key} className="border-l-4 border-indigo-500 pl-4">
-                <p className="text-sm font-medium text-gray-500">{formatKey(key)}</p>
-                <p className="text-lg text-gray-900">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SectionCard title="Houses and Planetary Positions" icon={Sun} gradient="from-yellow-500/50 to-orange-500/30" collapsible>
+          <div className="grid md:grid-cols-2 gap-4">{(() => {
+            const planets = extractPlanets(kundli.horoscope_info)
+            return planets.map((p) => (<PlanetCard key={p.name} planet={p} />))
+          })()}</div>
+        </SectionCard>
 
-        {/* AI Analysis Section */}
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg shadow-lg p-8 mb-8">
-          <div className="flex items-center mb-6">
-            <Sparkles className="w-6 h-6 text-indigo-600 mr-3" />
-            <h2 className="text-2xl font-bold text-gray-900">AI Astrological Analysis</h2>
-          </div>
+        <SectionCard title="Additional Astrological Data" icon={Sparkles} gradient="from-cyan-500/50 to-blue-500/30" collapsible>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">{getDisplayableItems(kundli.horoscope_info, 12).map(([key, value]) => (<div key={key} className="cosmic-card rounded-xl p-4 hover:bg-purple-500/10 transition-colors"><DataItem label={formatKey(key)} value={value.toString()} /></div>))}</div>
+        </SectionCard>
 
-          {!analysis ? (
-            <div className="space-y-4">
-              <p className="text-gray-600">
-                Get a comprehensive AI-powered analysis of your kundli using Google Gemini API.
-              </p>
-              <button
-                onClick={handleAnalyze}
-                disabled={analyzing}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-              >
-                {analyzing ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    <span>Analyzing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    <span>Generate AI Analysis</span>
-                  </>
-                )}
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg p-8">
-              <div className="prose prose-sm max-w-none">
-                {analysis.split('\n').map((line, idx) => {
-                  const trimmed = line.trim()
-                  
-                  // Empty lines
-                  if (!trimmed) {
-                    return <div key={idx} className="h-2" />
-                  }
-                  
-                  // Section headings (all caps or quoted)
-                  if (trimmed.match(/^[A-Z\s\.]+$/) && trimmed.length > 5 || 
-                      (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
-                    return (
-                      <h3 key={idx} className="text-lg font-bold text-indigo-700 mt-6 mb-3 border-b-2 border-indigo-200 pb-2">
-                        {trimmed.replace(/^"|"$/g, '')}
-                      </h3>
-                    )
-                  }
-                  
-                  // Numbered points
-                  if (trimmed.match(/^\d+[\.\)]\s+/)) {
-                    return (
-                      <div key={idx} className="ml-4 mb-3 text-gray-700">
-                        <p className="text-base leading-relaxed">{trimmed}</p>
-                      </div>
-                    )
-                  }
-                  
-                  // Regular paragraphs
-                  return (
-                    <p key={idx} className="text-gray-700 leading-relaxed mb-4">
-                      {trimmed}
-                    </p>
-                  )
-                })}
-              </div>
-              <button
-                onClick={() => setAnalysis(null)}
-                className="mt-8 text-indigo-600 hover:text-indigo-700 font-semibold"
-              >
-                Generate New Analysis
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Download & Chat Section */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="flex items-center mb-6">
-            <Download className="w-6 h-6 text-indigo-600 mr-3" />
-            <h2 className="text-2xl font-bold text-gray-900">Download Results & Chat</h2>
-          </div>
-          {analysis ? (
-            <div className="space-y-4">
-              <p className="text-gray-600">
-                Your AI analysis has been generated. Download the professional PDF report or chat about your kundli.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  onClick={handleDownloadPDF}
-                  disabled={downloading}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  {downloading ? (
-                    <>
-                      <Loader className="w-5 h-5 animate-spin" />
-                      <span>Downloading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-5 h-5" />
-                      <span>Download PDF Report</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleOpenChat}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  <span>Chat About Kundli</span>
-                </button>
+        <div className="cosmic-card rounded-2xl overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-purple-500 via-cyan-500 to-pink-500" />
+          <div className="p-6 bg-gradient-to-r from-purple-900/40 to-cyan-900/20">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-cyan-600 flex items-center justify-center glow-purple animate-pulse-glow"><Sparkles className="w-7 h-7 text-white" /></div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold gradient-text-purple mb-2">AI Astrological Analysis</h3>
+                <p className="text-muted-foreground mb-4">Get a comprehensive AI-powered analysis of your kundli using advanced algorithms that cross-reference Palmistry, Numerology, and Astrology for accurate predictions.</p>
+                <button onClick={handleAnalyze} disabled={analyzing} className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition flex items-center gap-2 glow-purple text-lg"><Sparkles className="w-5 h-5" />{analyzing ? 'Analyzing...' : 'Generate AI Analysis'}<ArrowRight className="w-4 h-4 ml-2" /></button>
               </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-gray-600">
-                Generate an AI analysis first to download the professional PDF report or chat about your kundli.
-              </p>
-              <p className="text-sm text-gray-500">
-                Your kundli data has been generated and saved. You can access it through your calculation history.
-              </p>
-              <div className="grid grid-cols-1 gap-4 mt-4">
-                <button
-                  onClick={handleOpenChat}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  <span>Chat About Kundli</span>
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="cosmic-card rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4"><Download className="w-6 h-6 text-green-400" /><h3 className="text-xl font-bold text-foreground">Download Results</h3></div>
+            <p className="text-muted-foreground mb-4">Download a professional PDF report of your complete kundli analysis.</p>
+            <button onClick={handleDownloadPDF} disabled={downloading} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"><Download className="w-4 h-4" />{downloading ? 'Downloading...' : 'Download PDF Report'}</button>
+          </div>
+          <div className="cosmic-card rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4"><MessageCircle className="w-6 h-6 text-purple-400" /><h3 className="text-xl font-bold text-foreground">Chat About Kundli</h3></div>
+            <p className="text-muted-foreground mb-4">Ask questions about your kundli and get personalized AI-powered insights.</p>
+            <Link to={`/chat/${kundliId}`}><button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"><MessageCircle className="w-4 h-4" />Start Chat Session</button></Link>
+          </div>
         </div>
       </div>
     </div>
