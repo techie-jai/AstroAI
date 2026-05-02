@@ -4,6 +4,7 @@ import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { searchCities, CityData } from '../data/cities'
 import { GooglePlacesAutocomplete } from '../components/GooglePlacesAutocomplete'
+import { Sparkles, Loader } from 'lucide-react'
 
 const generateRandomBirthData = () => {
   const firstNames = ['Arjun', 'Priya', 'Rohan', 'Ananya', 'Vikram', 'Neha', 'Aditya', 'Pooja', 'Rahul', 'Divya', 'Sanjay', 'Kavya', 'Nikhil', 'Shreya', 'Akshay']
@@ -99,87 +100,104 @@ export default function GeneratorPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Generate Kundli</h1>
-          <p className="text-gray-600 mb-8">Enter your birth details to generate your personalized kundli</p>
+    <div className="min-h-screen bg-slate-950 py-12 relative overflow-hidden">
+      {/* Cosmic gradient background */}
+      <div className="absolute inset-0 cosmic-gradient-bg opacity-10 pointer-events-none" />
+      
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center animate-float">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Generate Kundli</h1>
+          </div>
+          <p className="text-slate-300 text-lg">Enter your birth details to generate your personalized kundli</p>
+        </div>
 
+        {/* Form Card */}
+        <div className="cosmic-card p-8 rounded-2xl border border-purple-500/20">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+              <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Name</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 placeholder="Your full name"
               />
             </div>
 
+            {/* Place of Birth */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Place of Birth</label>
+              <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Place of Birth</label>
               <GooglePlacesAutocomplete
                 value={formData.place_name}
                 onChange={handlePlaceChange}
                 onSelect={selectPlace}
                 placeholder="Search for a city, hospital, landmark..."
               />
-              <p className="text-xs text-gray-500 mt-1">Powered by Google Maps. Search for exact locations to get high-precision coordinates.</p>
+              <p className="text-xs text-slate-500 mt-2">Powered by Google Maps. Search for exact locations to get high-precision coordinates.</p>
             </div>
 
+            {/* Latitude & Longitude */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
+                <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Latitude</label>
                 <input
                   type="number"
                   name="latitude"
                   value={formData.latitude}
                   onChange={handleChange}
                   step="0.0001"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
+                <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Longitude</label>
                 <input
                   type="number"
                   name="longitude"
                   value={formData.longitude}
                   onChange={handleChange}
                   step="0.0001"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 />
               </div>
             </div>
 
+            {/* Timezone Offset */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Timezone Offset (UTC)</label>
+              <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Timezone Offset (UTC)</label>
               <input
                 type="number"
                 name="timezone_offset"
                 value={formData.timezone_offset}
                 onChange={handleChange}
                 step="0.5"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
               />
             </div>
 
+            {/* Date Fields */}
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Year</label>
                 <input
                   type="number"
                   name="year"
                   value={formData.year}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Month</label>
+                <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Month</label>
                 <input
                   type="number"
                   name="month"
@@ -187,11 +205,11 @@ export default function GeneratorPage() {
                   onChange={handleChange}
                   min="1"
                   max="12"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Day</label>
+                <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Day</label>
                 <input
                   type="number"
                   name="day"
@@ -199,14 +217,15 @@ export default function GeneratorPage() {
                   onChange={handleChange}
                   min="1"
                   max="31"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 />
               </div>
             </div>
 
+            {/* Time Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Hour (24h)</label>
+                <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Hour (24h)</label>
                 <input
                   type="number"
                   name="hour"
@@ -214,11 +233,11 @@ export default function GeneratorPage() {
                   onChange={handleChange}
                   min="0"
                   max="23"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Minute</label>
+                <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Minute</label>
                 <input
                   type="number"
                   name="minute"
@@ -226,26 +245,46 @@ export default function GeneratorPage() {
                   onChange={handleChange}
                   min="0"
                   max="59"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-purple-500/30 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all duration-200"
                 />
               </div>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 glow-purple disabled:glow-none"
             >
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Generating...</span>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  <span>Generating your cosmic chart...</span>
                 </>
               ) : (
-                <span>Generate Kundli</span>
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  <span>Generate Kundli</span>
+                </>
               )}
             </button>
           </form>
+        </div>
+
+        {/* Info Section */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="cosmic-card p-4 rounded-xl border border-purple-500/20">
+            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-semibold">Accurate Birth Time</p>
+            <p className="text-sm text-slate-300">Provide the most accurate birth time possible for precise astrological calculations</p>
+          </div>
+          <div className="cosmic-card p-4 rounded-xl border border-cyan-500/20">
+            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-semibold">Exact Location</p>
+            <p className="text-sm text-slate-300">Use Google Maps to find your exact birth location for high-precision coordinates</p>
+          </div>
+          <div className="cosmic-card p-4 rounded-xl border border-pink-500/20">
+            <p className="text-xs text-slate-400 uppercase tracking-wider mb-2 font-semibold">Vedic Accuracy</p>
+            <p className="text-sm text-slate-300">Our calculations follow traditional Vedic astrology principles for authentic results</p>
+          </div>
         </div>
       </div>
     </div>
