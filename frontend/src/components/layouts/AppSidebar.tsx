@@ -20,7 +20,7 @@ const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/kundli', icon: BookOpen, label: 'Kundli' },
   { path: '/analysis', icon: Sparkles, label: 'Analysis' },
-  { path: '/dosha-analysis', icon: Target, label: 'Dosha Analysis' },
+  { path: '/dosh-dasha-analysis', icon: Target, label: 'Dosha Analysis' },
   { path: '/kundli-matching', icon: Heart, label: 'Kundli Matching' },
   { path: '/chat', icon: MessageCircle, label: 'Chat' },
   { path: '/settings', icon: Settings, label: 'Settings' },
