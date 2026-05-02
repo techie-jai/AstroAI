@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
+import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import GeneratorPage from './pages/GeneratorPage'
@@ -29,10 +30,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-black">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading KendraaAI...</p>
+          <div className="animate-spin-slow w-16 h-16 rounded-full border-4 border-primary/30 border-t-primary mb-4"></div>
+          <p className="text-foreground text-lg">Loading Kendraa.ai...</p>
         </div>
       </div>
     )
@@ -42,6 +43,7 @@ function App() {
     <Router>
       <Toaster position="top-right" />
       <Routes>
+        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <LandingPage />} />
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
         
         <Route
@@ -113,6 +115,16 @@ function App() {
           }
         />
         <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <GeneratorPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/livechat"
           element={
             <ProtectedRoute>
@@ -170,7 +182,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   )

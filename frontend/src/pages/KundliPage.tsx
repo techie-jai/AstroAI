@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Calendar, MapPin, Clock } from 'lucide-react'
+import { Plus, Calendar, MapPin, Clock, BookOpen } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -55,16 +55,28 @@ export default function KundliPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="relative w-full">
+      {/* Floating Particles Background */}
+      <div className="floating-particles">
+        <div className="particle" />
+        <div className="particle" />
+        <div className="particle" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">Your Kundlis</h1>
-            <p className="text-gray-600 mt-2">View and manage your generated kundlis</p>
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              <span className="text-sm text-muted-foreground uppercase tracking-wider">Your Collection</span>
+            </div>
+            <h1 className="text-4xl font-bold gradient-text">Your Kundlis</h1>
+            <p className="text-muted-foreground mt-2">View and manage your generated kundlis</p>
           </div>
           <Link
             to="/generate"
-            className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-3 px-6 rounded-lg transition glow-purple"
           >
             <Plus size={20} />
             <span>Generate New</span>
@@ -73,14 +85,14 @@ export default function KundliPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin-slow w-12 h-12 rounded-full border-4 border-primary/30 border-t-primary"></div>
           </div>
         ) : calculations.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-600 mb-6">No kundlis generated yet</p>
+          <div className="cosmic-card p-12 text-center">
+            <p className="text-muted-foreground mb-6">No kundlis generated yet</p>
             <Link
               to="/generate"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              className="inline-block bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition"
             >
               Generate Your First Kundli
             </Link>
@@ -99,51 +111,65 @@ export default function KundliPage() {
               const personName = birthData?.name || 'Kundli'
               
               return (
-                <div key={calc.calculation_id} className="bg-white rounded-lg shadow-lg hover:shadow-xl transition overflow-hidden">
-                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-                    <h3 className="text-xl font-bold">{personName}</h3>
+                <div key={calc.calculation_id} className="cosmic-card overflow-hidden group hover:border-primary/50 transition-all">
+                  {/* Gradient Header */}
+                  <div className="h-16 bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-30" />
+                    <div className="relative z-10 p-4 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                        <BookOpen className="w-4 h-4 text-white" />
+                      </div>
+                      <h3 className="text-lg font-bold text-white truncate">{personName}</h3>
+                    </div>
                   </div>
                   
+                  {/* Card Body */}
                   <div className="p-6 space-y-4">
-                    <div className="flex items-center space-x-3 text-gray-700">
-                      <Calendar size={18} className="text-indigo-600" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Calendar size={16} className="text-primary" />
+                      </div>
                       <div>
-                        <p className="text-sm text-gray-500">Birth Date</p>
-                        <p className="font-semibold">{birthDate}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Birth Date</p>
+                        <p className="font-semibold text-foreground">{birthDate}</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3 text-gray-700">
-                      <Clock size={18} className="text-indigo-600" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0">
+                        <Clock size={16} className="text-accent" />
+                      </div>
                       <div>
-                        <p className="text-sm text-gray-500">Birth Time</p>
-                        <p className="font-semibold">{birthTime}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Birth Time</p>
+                        <p className="font-semibold text-foreground">{birthTime}</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3 text-gray-700">
-                      <MapPin size={18} className="text-indigo-600" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <MapPin size={16} className="text-green-500" />
+                      </div>
                       <div>
-                        <p className="text-sm text-gray-500">Place</p>
-                        <p className="font-semibold">{birthPlace}</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Place</p>
+                        <p className="font-semibold text-foreground truncate">{birthPlace}</p>
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-xs text-gray-500 mb-4">
+                    <div className="pt-4 border-t border-border/50">
+                      <p className="text-xs text-muted-foreground mb-4">
                         Generated: {formatDate(generatedAt)}
                       </p>
                       
-                      <div className="flex space-x-2">
+                      <div className="flex gap-2">
                         <Link
                           to={`/results/${kundliId}`}
-                          className="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition"
+                          className="flex-1 text-center bg-primary/20 hover:bg-primary/30 text-primary font-semibold py-2 px-4 rounded transition"
                         >
                           View
                         </Link>
                         <Link
                           to={`/chat/${kundliId}`}
-                          className="flex-1 text-center bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition"
+                          className="flex-1 text-center bg-accent/20 hover:bg-accent/30 text-accent font-semibold py-2 px-4 rounded transition"
                         >
                           Chat
                         </Link>

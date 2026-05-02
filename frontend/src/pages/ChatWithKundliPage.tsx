@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { Send, Loader, Sparkles, ChevronDown, ArrowLeft } from 'lucide-react'
+import { Send, Loader, Sparkles, ChevronUp, ArrowLeft, Calendar, Clock, MapPin, Star, MessageCircle, Zap, Plus } from 'lucide-react'
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -311,7 +311,7 @@ export default function ChatWithKundliPage() {
         <div className="text-center">
           <p className="text-indigo-200 mb-4">Kundli data not found</p>
           <button
-            onClick={() => navigate('/generator')}
+            onClick={() => navigate('/generate')}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
           >
             Generate New Kundli
@@ -322,124 +322,153 @@ export default function ChatWithKundliPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex bg-slate-950">
-      {/* Left Panel - Kundli Info */}
-      <div className={`${showKundliInfo ? 'w-64' : 'w-0'} bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 text-white transition-all duration-300 overflow-hidden border-r border-slate-700/50 flex flex-col`}>
-        <div className="p-4 border-b border-slate-700/50">
+    <div className="flex h-screen bg-slate-950 overflow-hidden">
+      {/* Left Panel - Sidebar */}
+      <div className="w-72 border-r border-slate-700/50 bg-slate-900/30 backdrop-blur-sm flex flex-col">
+        {/* New Chat Button */}
+        <div className="p-4">
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-lg transition-all duration-200 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 rounded-lg transition-all duration-200 text-sm font-semibold text-white shadow-lg shadow-green-500/20"
           >
             <Sparkles size={16} />
             <span>New Chat</span>
           </button>
         </div>
-        <div className="p-6 flex-1 overflow-y-auto">
-          <h2 className="text-2xl font-bold mb-6">Your Kundli</h2>
 
-          <div className="space-y-8">
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Name</p>
-              <p className="text-lg font-bold text-white">{kundli.birth_data.name}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Birth Date</p>
-              <p className="text-lg font-bold text-white">{kundli.birth_data.date}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Birth Time</p>
-              <p className="text-lg font-bold text-white">{kundli.birth_data.time}</p>
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Birth Place</p>
-              <p className="text-lg font-bold text-white">{kundli.birth_data.place}</p>
-            </div>
-
-            {previousChats.length > 1 && (
-              <div className="pt-8 border-t border-slate-700/50">
-                <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Previous Chats</p>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {previousChats.map((chat) => (
-                    <button
-                      key={chat.kundli_id}
-                      onClick={() => handleSelectChat(chat.kundli_id)}
-                      className={`w-full text-left text-sm p-3 rounded-lg transition-all duration-200 ${
-                        kundliId === chat.kundli_id
-                          ? 'bg-slate-800/80 border-l-2 border-purple-500 pl-3 text-white'
-                          : 'bg-slate-800/40 hover:bg-slate-800/60 text-slate-200'
-                      }`}
-                    >
-                      <p className="font-medium truncate">{chat.kundli_name}</p>
-                      <p className="text-xs text-slate-400 opacity-75">
-                        {new Date(chat.last_message_time).toLocaleDateString()}
-                      </p>
-                    </button>
-                  ))}
-                </div>
+        {/* Kundli Info Section */}
+        <div className="px-4 py-3 border-b border-slate-700/50">
+          <h2 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">Your Kundli</h2>
+          <div className="space-y-3">
+            {/* Name */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
+                <Star className="w-4 h-4 text-purple-400" />
               </div>
-            )}
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Name</p>
+                <p className="text-slate-100 font-medium">{kundli.birth_data.name}</p>
+              </div>
+            </div>
 
-            <div className="pt-8 border-t border-slate-700/50">
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Quick Questions</p>
-              <div className="grid grid-cols-1 gap-2">
-                {[
-                  'What are my key planetary positions?',
-                  'What does my chart say about my career?',
-                  'What are my strengths according to astrology?',
-                  'What challenges should I be aware of?',
-                  'Tell me about my D10 chart',
-                  'What does my D9 chart reveal?',
-                ].map((question, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setInputValue(question)}
-                    className="text-left text-sm px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:bg-slate-700/80 hover:border-indigo-500/50 transition-all duration-200 text-slate-200"
-                  >
-                    {question}
-                  </button>
-                ))}
+            {/* Birth Date */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Birth Date</p>
+                <p className="text-slate-100 font-medium">{kundli.birth_data.date}</p>
+              </div>
+            </div>
+
+            {/* Birth Time */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-pink-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Birth Time</p>
+                <p className="text-cyan-400 font-medium">{kundli.birth_data.time}</p>
+              </div>
+            </div>
+
+            {/* Birth Place */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Birth Place</p>
+                <p className="text-slate-100 font-medium">{kundli.birth_data.place}</p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Previous Chats */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <h3 className="text-xs text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <MessageCircle className="w-3 h-3" />
+            Previous Chats
+          </h3>
+          <div className="space-y-2">
+            {previousChats.map((chat) => (
+              <button
+                key={chat.kundli_id}
+                onClick={() => handleSelectChat(chat.kundli_id)}
+                className={`w-full text-left p-3 rounded-xl transition-all duration-300 ${
+                  kundliId === chat.kundli_id
+                    ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border-l-2 border-purple-500 glow-purple'
+                    : 'hover:bg-purple-500/10 border-l-2 border-transparent'
+                }`}
+              >
+                <p className="font-medium text-slate-100 text-sm">{chat.kundli_name}</p>
+                <p className="text-xs text-slate-400">{new Date(chat.last_message_time).toLocaleDateString()}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Questions */}
+        <div className="p-4 border-t border-slate-700/50">
+          <h3 className="text-xs text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Zap className="w-3 h-3 text-amber-400" />
+            Quick Questions
+          </h3>
+          <div className="space-y-2">
+            {[
+              'What are my key personality traits?',
+              'What career path suits me best?',
+              'How is my love life this year?',
+              'What are my lucky numbers?',
+            ].map((question, idx) => (
+              <button
+                key={idx}
+                onClick={() => setInputValue(question)}
+                className="w-full text-left p-2.5 text-sm text-slate-400 hover:text-slate-100 hover:bg-purple-500/10 rounded-lg transition-all duration-200 truncate border border-transparent hover:border-purple-500/20"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* New Kundli Button */}
         <div className="p-4 border-t border-slate-700/50">
           <button
-            onClick={() => navigate('/generator')}
-            className="w-full flex items-center gap-2 px-4 py-2 bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 rounded-lg transition-all duration-200 text-sm text-slate-200"
+            onClick={() => navigate('/generate')}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg transition-all duration-200 text-sm text-slate-200"
           >
-            <ArrowLeft size={16} />
+            <Plus className="w-4 h-4" />
             <span>New Kundli</span>
           </button>
         </div>
       </div>
 
       {/* Right Panel - Chat */}
-      <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        {/* Cosmic Gradient Background */}
+        <div className="absolute inset-0 cosmic-gradient-bg opacity-10 pointer-events-none" />
+
         {/* Header */}
-        <div className="bg-slate-900/50 backdrop-blur-md border-b border-slate-700/30 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowKundliInfo(!showKundliInfo)}
-              className="p-2 hover:bg-slate-800/50 rounded-lg transition-all duration-200"
-            >
-              <ChevronDown size={20} className={`text-indigo-400 transition-transform ${showKundliInfo ? 'rotate-180' : ''}`} />
-            </button>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200"
-            >
-              <Sparkles className="text-indigo-400" size={24} />
-              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Kendraa.ai</h1>
-            </button>
+        <div className="relative flex items-center gap-3 p-4 border-b border-slate-700/50 backdrop-blur-sm">
+          <ChevronUp className="w-5 h-5 text-slate-400" />
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200"
+          >
+            <Sparkles className="text-purple-400" size={20} />
+            <h1 className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Kendraa.ai</h1>
+          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-sm text-slate-400">AI Online</span>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -452,62 +481,30 @@ export default function ChatWithKundliPage() {
           {messages.map((message, idx) => (
             <div
               key={idx}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+                message.role === 'user' ? 'ml-auto' : ''
+              }`}
             >
               <div
-                className={`max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl px-4 py-3 sm:px-5 sm:py-3 rounded-2xl ${
+                className={`p-5 rounded-2xl transition-all ${
                   message.role === 'user'
-                    ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-br-none shadow-lg shadow-purple-500/20'
-                    : 'bg-slate-800/80 border border-slate-700/50 text-slate-100 rounded-bl-none shadow-md'
+                    ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30'
+                    : 'cosmic-card'
                 }`}
               >
-                {message.role === 'assistant' ? (
-                  <div className="text-sm space-y-2">
-                    {message.content.split('\n').map((line, i) => {
-                      const trimmed = line.trim()
-                      if (!trimmed) return null
-                      
-                      if (trimmed.match(/^#{1,3}\s+/)) {
-                        return (
-                          <div key={i} className="font-bold text-indigo-300 mt-3 mb-2 text-base">
-                            <MarkdownText text={trimmed.replace(/^#+\s+/, '')} />
-                          </div>
-                        )
-                      }
-                      
-                      if (trimmed.match(/^[A-Z][^:]*:$/)) {
-                        return (
-                          <div key={i} className="font-semibold text-indigo-300 mt-2 mb-1">
-                            <MarkdownText text={trimmed} />
-                          </div>
-                        )
-                      }
-                      
-                      if (trimmed.startsWith('•') || trimmed.match(/^[-*]\s/)) {
-                        const bulletText = trimmed.replace(/^[-*•]\s*/, '')
-                        return (
-                          <div key={i} className="ml-4 text-sm flex gap-2">
-                            <span className="flex-shrink-0">•</span>
-                            <span className="flex-1">
-                              <MarkdownText text={bulletText} />
-                            </span>
-                          </div>
-                        )
-                      }
-                      
-                      return (
-                        <div key={i} className="text-sm leading-relaxed">
-                          <MarkdownText text={trimmed} />
-                        </div>
-                      )
-                    })}
+                {message.role === 'assistant' && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Kendraa AI</span>
+                    <span className="text-xs text-cyan-400 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">Triple-verified</span>
                   </div>
-                ) : (
-                  <p className="text-sm">
-                    <MarkdownText text={message.content} />
-                  </p>
                 )}
-                <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-indigo-100' : 'text-slate-400'}`}>
+                <p className="text-slate-100 leading-relaxed text-sm">
+                  <MarkdownText text={message.content} />
+                </p>
+                <p className="text-xs text-slate-400 mt-3">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -515,11 +512,17 @@ export default function ChatWithKundliPage() {
           ))}
 
           {loading && (
-            <div className="flex justify-start">
-              <div className="bg-slate-800/80 border border-slate-700/50 text-slate-200 px-4 py-3 rounded-2xl rounded-bl-none shadow-md">
-                <div className="flex items-center space-x-2">
-                  <Loader size={16} className="animate-pulse text-indigo-400" />
-                  <span className="text-sm">Thinking...</span>
+            <div className="max-w-3xl animate-in fade-in">
+              <div className="cosmic-card p-5 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center animate-pulse-glow">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -529,62 +532,29 @@ export default function ChatWithKundliPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-slate-700/30 bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4 flex-shrink-0">
-          <form onSubmit={handleSendMessage} className="flex gap-2">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask about your cosmic journey..."
-              disabled={loading}
-              className="flex-1 px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base bg-slate-800/60 border border-slate-700/50 rounded-full text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-700/50 transition-all duration-200"
-            />
+        <div className="relative p-4 border-t border-slate-700/50 backdrop-blur-sm">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-3 max-w-3xl mx-auto">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask about your cosmic journey..."
+                disabled={loading}
+                className="w-full bg-slate-800/50 border border-purple-500/30 focus:border-purple-500/50 pr-12 h-12 text-base rounded-full text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 disabled:opacity-50"
+              />
+              <Sparkles className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/50" />
+            </div>
             <button
               type="submit"
               disabled={loading || !inputValue.trim()}
-              className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/30"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 glow-purple h-12 w-12 rounded-full flex items-center justify-center text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
-              <Send size={18} className="flex-shrink-0" />
+              <Send className="w-5 h-5" />
             </button>
           </form>
         </div>
       </div>
     </div>
   )
-}
-
-// Add custom scrollbar styling
-const scrollbarStyles = `
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  /* Custom scrollbar for main chat area */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: rgba(71, 85, 105, 0.5);
-    border-radius: 3px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(51, 65, 85, 0.7);
-  }
-`;
-
-// Inject styles
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = scrollbarStyles;
-  document.head.appendChild(styleSheet);
 }
