@@ -257,6 +257,18 @@ export const api = {
   getDoshaAnalysis: (kundliId: string) =>
     apiClient.post(`/analysis/${kundliId}`),
 
+  // Palmistry Analysis
+  analyzePalmistry: (data: { left_hand_image: string; right_hand_image: string; handedness: 'left' | 'right' }) =>
+    apiClient.post('/palmistry/analyze', data),
+  getPalmistryList: () =>
+    apiClient.get('/palmistry/list'),
+  getPalmistryReading: (palmistryId: string) =>
+    apiClient.get(`/palmistry/${palmistryId}`),
+  deletePalmistry: (palmistryId: string) =>
+    apiClient.delete(`/palmistry/${palmistryId}`),
+  getPalmistryKundliCorrelation: (palmistryId: string) =>
+    apiClient.get(`/palmistry/${palmistryId}/kundli-correlation`),
+
   // Bot Services
   sendKundliWhatsApp: (phoneNumber: string, kundliData: Record<string, any>, birthData: Record<string, any>) =>
     apiClient.post('/bot/send-kundli-whatsapp', {

@@ -294,3 +294,68 @@ class ConversationMetadata(BaseModel):
     total_tokens_used: int = Field(default=0, description="Total tokens used")
     status: str = Field(default="active", description="Status: active or archived")
     summary_version: int = Field(default=0, description="Version of context summary")
+
+
+# Palmistry Models
+class PalmLine(BaseModel):
+    """Palm line analysis"""
+    name: str = Field(..., description="Name of the line (e.g., Heart Line)")
+    description: str = Field(..., description="Physical description of the line")
+    meaning: str = Field(..., description="Astrological meaning and interpretation")
+    strength: str = Field(..., description="Strength level: strong, moderate, or faint")
+
+
+class PalmMount(BaseModel):
+    """Planetary mount analysis"""
+    name: str = Field(..., description="Name of the mount")
+    planet: str = Field(..., description="Associated planet")
+    description: str = Field(..., description="Description of the mount")
+    prominence: str = Field(..., description="Prominence level: prominent, normal, or flat")
+
+
+class PalmMetadata(BaseModel):
+    """Complete palmistry metadata extracted by AI"""
+    palmistry_id: str = Field(..., description="Unique palmistry reading ID")
+    user_id: str = Field(..., description="User ID")
+    created_at: datetime = Field(..., description="When reading was created")
+    handedness: str = Field(..., description="User's handedness: left or right")
+    hand_type: str = Field(..., description="Hand type (e.g., Air, Fire, Water, Earth)")
+    elemental_type: str = Field(..., description="Elemental classification")
+    palm_shape: str = Field(..., description="Palm shape (Square, Rectangular, etc.)")
+    finger_length: str = Field(..., description="Finger length relative to palm")
+    major_lines: Dict[str, PalmLine] = Field(..., description="Major palm lines")
+    mounts: Dict[str, PalmMount] = Field(..., description="Planetary mounts")
+    special_marks: List[str] = Field(default_factory=list, description="Special markings (Mystic Cross, Tridents, etc.)")
+    finger_gaps: Optional[str] = Field(None, description="Notable finger gaps")
+    overall_reading: str = Field(..., description="Overall palmistry reading summary")
+    life_areas: Dict[str, Dict[str, Any]] = Field(..., description="Life area scores and descriptions")
+    dominant_hand_analysis: Optional[Dict[str, str]] = Field(None, description="Analysis of dominant hand")
+    non_dominant_hand_analysis: Optional[Dict[str, str]] = Field(None, description="Analysis of non-dominant hand")
+
+
+class PalmistryAnalysisRequest(BaseModel):
+    """Request to analyze palm images"""
+    left_hand_image: str = Field(..., description="Base64 encoded left hand image")
+    right_hand_image: str = Field(..., description="Base64 encoded right hand image")
+    handedness: str = Field(..., description="User's handedness: left or right")
+
+
+class PalmistryAnalysisResponse(BaseModel):
+    """Response from palmistry analysis"""
+    palmistry_id: str = Field(..., description="Unique palmistry reading ID")
+    handedness: str = Field(..., description="User's handedness")
+    hand_type: str = Field(..., description="Hand type")
+    elemental_type: str = Field(..., description="Elemental type")
+    palm_shape: str = Field(..., description="Palm shape")
+    finger_length: str = Field(..., description="Finger length")
+    major_lines: Dict[str, PalmLine] = Field(..., description="Major palm lines")
+    mounts: Dict[str, PalmMount] = Field(..., description="Planetary mounts")
+    overall_reading: str = Field(..., description="Overall reading")
+    life_areas: Dict[str, Dict[str, Any]] = Field(..., description="Life area scores")
+    created_at: datetime = Field(..., description="When reading was created")
+    metadata: Optional[PalmMetadata] = Field(None, description="Complete metadata")
+
+
+class PalmistryListResponse(BaseModel):
+    """List of user's palmistry readings"""
+    readings: List[Dict[str, Any]] = Field(..., description="List of palmistry readings")

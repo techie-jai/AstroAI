@@ -18,6 +18,7 @@ import ChatWithKundliPage from './pages/ChatWithKundliPage'
 import DoshDashaAnalysisPage from './pages/DoshDashaAnalysisPage'
 import KundliMatchingPage from './pages/KundliMatchingPage'
 import KundliMatchingResultsPage from './pages/KundliMatchingResultsPage'
+import PalmistryPage from './pages/PalmistryPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -178,6 +179,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <KundliMatchingResultsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/palmistry"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <PalmistryPage />
               </Layout>
             </ProtectedRoute>
           }

@@ -36,7 +36,9 @@ from models import (
     
     KundliMatchingRequest, KundliMatchingResponse,
     
-    ChatMessage, ContextSummary, KundliFacts, ConversationMetadata
+    ChatMessage, ContextSummary, KundliFacts, ConversationMetadata,
+    
+    PalmLine, PalmMount, PalmMetadata, PalmistryAnalysisRequest, PalmistryAnalysisResponse, PalmistryListResponse
 
 )
 
@@ -3948,6 +3950,180 @@ async def clear_chat_history(
         raise
     except Exception as e:
         print(f"[CHAT_API] Error clearing history: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Palmistry Endpoints
+@app.post('/api/palmistry/analyze')
+async def analyze_palmistry(
+    request: PalmistryAnalysisRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Analyze palm images and generate palmistry reading
+    
+    Args:
+        request: Palmistry analysis request with images
+        current_user: Authenticated user
+        
+    Returns:
+        Complete palmistry analysis
+    """
+    try:
+        import traceback
+        from palmistry_service import PalmistryService
+        
+        print(f"[PALMISTRY] Starting analysis for user {current_user['uid']}")
+        print(f"[PALMISTRY] Handedness: {request.handedness}")
+        print(f"[PALMISTRY] Left hand image size: {len(request.left_hand_image)} chars")
+        print(f"[PALMISTRY] Right hand image size: {len(request.right_hand_image)} chars")
+        
+        palmistry_service = PalmistryService()
+        
+        print(f"[PALMISTRY] PalmistryService initialized")
+        
+        # Analyze palm images
+        print(f"[PALMISTRY] Calling analyze_palm_images...")
+        analysis_result = palmistry_service.analyze_palm_images(
+            request.left_hand_image,
+            request.right_hand_image,
+            request.handedness,
+            current_user['uid']
+        )
+        
+        print(f"[PALMISTRY] Analysis completed successfully")
+        return analysis_result
+    
+    except Exception as e:
+        print(f"[PALMISTRY] Error analyzing palm images: {str(e)}")
+        print(f"[PALMISTRY] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/palmistry/list')
+async def get_palmistry_list(current_user: dict = Depends(get_current_user)):
+    """
+    Get list of user's palmistry readings
+    
+    Args:
+        current_user: Authenticated user
+        
+    Returns:
+        List of palmistry readings
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        readings = palmistry_service.get_user_palmistry_list(current_user['uid'])
+        
+        return {
+            "readings": readings
+        }
+    
+    except Exception as e:
+        print(f"[PALMISTRY] Error getting palmistry list: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/palmistry/{palmistry_id}')
+async def get_palmistry_reading(
+    palmistry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get specific palmistry reading
+    
+    Args:
+        palmistry_id: Palmistry reading ID
+        current_user: Authenticated user
+        
+    Returns:
+        Complete palmistry data
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        metadata = palmistry_service.load_palmistry_reading(current_user['uid'], palmistry_id)
+        
+        return metadata
+    
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Palmistry reading not found")
+    except Exception as e:
+        print(f"[PALMISTRY] Error getting palmistry reading: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete('/api/palmistry/{palmistry_id}')
+async def delete_palmistry_reading(
+    palmistry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete a palmistry reading
+    
+    Args:
+        palmistry_id: Palmistry reading ID
+        current_user: Authenticated user
+        
+    Returns:
+        Success status
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        success = palmistry_service.delete_palmistry_reading(current_user['uid'], palmistry_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Palmistry reading not found")
+        
+        return {
+            "status": "success",
+            "message": "Palmistry reading deleted"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[PALMISTRY] Error deleting palmistry reading: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/palmistry/{palmistry_id}/kundli-correlation')
+async def get_palmistry_kundli_correlation(
+    palmistry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get kundli correlation for palmistry reading (optional feature)
+    
+    Args:
+        palmistry_id: Palmistry reading ID
+        current_user: Authenticated user
+        
+    Returns:
+        Correlation data if user has kundli
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        metadata = palmistry_service.load_palmistry_reading(current_user['uid'], palmistry_id)
+        
+        # TODO: Implement kundli correlation logic
+        # For now, return empty correlation
+        return {
+            "palmistry_id": palmistry_id,
+            "correlations": []
+        }
+    
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Palmistry reading not found")
+    except Exception as e:
+        print(f"[PALMISTRY] Error getting kundli correlation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
