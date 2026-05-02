@@ -197,7 +197,7 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
   return (
     <div className="relative" ref={containerRef}>
       <div className="relative" title={value}>
-        <Search className="absolute left-3 top-3 text-gray-400 h-5 w-5" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
         <input
           ref={inputRef}
           type="text"
@@ -207,7 +207,7 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
           disabled={disabled}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed overflow-hidden text-ellipsis"
+          className="w-full pl-10 pr-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground placeholder:text-slate-400 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden text-ellipsis transition-all"
           title={value}
         />
         {loading && (
@@ -227,7 +227,7 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
       )}
 
       {showPredictions && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-1 bg-slate-900/95 border border-purple-500/30 rounded-lg shadow-lg max-h-64 overflow-y-auto backdrop-blur-sm">
           {predictions.length > 0 ? (
             predictions.map((prediction, idx) => {
               console.log(`[GooglePlaces] Rendering prediction ${idx}:`, prediction.main_text, prediction.secondary_text)
@@ -236,17 +236,17 @@ export const GooglePlacesAutocomplete: React.FC<GooglePlacesAutocompleteProps> =
                   key={prediction.place_id}
                   type="button"
                   onClick={() => handleSelectPrediction(prediction)}
-                  className="w-full text-left px-4 py-3 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none transition border-b border-gray-100 last:border-b-0 text-gray-900"
+                  className="w-full text-left px-4 py-3 hover:bg-purple-500/20 focus:bg-purple-500/20 focus:outline-none transition border-b border-purple-500/10 last:border-b-0 text-foreground"
                 >
-                  <div className="font-medium text-gray-900">{prediction.main_text || prediction.description}</div>
+                  <div className="font-medium text-foreground">{prediction.main_text || prediction.description}</div>
                   {prediction.secondary_text && (
-                    <div className="text-xs text-gray-600">{prediction.secondary_text}</div>
+                    <div className="text-xs text-muted-foreground">{prediction.secondary_text}</div>
                   )}
                 </button>
               )
             })
           ) : (
-            <div className="p-4 text-center text-gray-500">
+            <div className="p-4 text-center text-muted-foreground">
               {loading ? 'Searching...' : 'No locations found'}
             </div>
           )}

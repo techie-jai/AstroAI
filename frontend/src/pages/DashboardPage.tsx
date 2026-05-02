@@ -288,7 +288,7 @@ export default function DashboardPage() {
                     onChange={handleChange}
                     required
                     placeholder="Your full name"
-                    className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground placeholder:text-slate-400 focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                   />
                 </div>
 
@@ -319,7 +319,7 @@ export default function DashboardPage() {
                       value={formData.latitude}
                       onChange={handleChange}
                       step="0.0001"
-                      className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -330,7 +330,7 @@ export default function DashboardPage() {
                       value={formData.longitude}
                       onChange={handleChange}
                       step="0.0001"
-                      className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                     />
                   </div>
                 </div>
@@ -343,7 +343,7 @@ export default function DashboardPage() {
                     value={formData.timezone_offset}
                     onChange={handleChange}
                     step="0.5"
-                    className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                   />
                 </div>
 
@@ -355,7 +355,7 @@ export default function DashboardPage() {
                       name="year"
                       value={formData.year}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -367,7 +367,7 @@ export default function DashboardPage() {
                       onChange={handleChange}
                       min="1"
                       max="12"
-                      className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -379,7 +379,7 @@ export default function DashboardPage() {
                       onChange={handleChange}
                       min="1"
                       max="31"
-                      className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                     />
                   </div>
                 </div>
@@ -394,7 +394,7 @@ export default function DashboardPage() {
                       onChange={handleChange}
                       min="0"
                       max="23"
-                      className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -406,7 +406,7 @@ export default function DashboardPage() {
                       onChange={handleChange}
                       min="0"
                       max="59"
-                      className="w-full px-4 py-2.5 bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-900/50 border border-purple-500/30 rounded-lg text-foreground focus:outline-none focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition-all"
                     />
                   </div>
                 </div>
