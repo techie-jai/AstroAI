@@ -115,6 +115,16 @@ function App() {
           }
         />
         <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <GeneratorPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/livechat"
           element={
             <ProtectedRoute>

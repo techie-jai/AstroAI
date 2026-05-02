@@ -4,7 +4,7 @@ import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { searchCities, CityData } from '../data/cities'
 import { GooglePlacesAutocomplete } from '../components/GooglePlacesAutocomplete'
-import { Sparkles, Loader } from 'lucide-react'
+import { Sparkles, Loader, MessageCircle, ChevronDown } from 'lucide-react'
 
 const generateRandomBirthData = () => {
   const firstNames = ['Arjun', 'Priya', 'Rohan', 'Ananya', 'Vikram', 'Neha', 'Aditya', 'Pooja', 'Rahul', 'Divya', 'Sanjay', 'Kavya', 'Nikhil', 'Shreya', 'Akshay']
@@ -43,10 +43,20 @@ const generateRandomBirthData = () => {
   }
 }
 
+interface Kundli {
+  kundli_id: string
+  name: string
+  birth_date: string
+}
+
 export default function GeneratorPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = React.useState(false)
   const [formData, setFormData] = React.useState(generateRandomBirthData())
+  const [kundlis, setKundlis] = React.useState<Kundli[]>([])
+  const [selectedKundliId, setSelectedKundliId] = React.useState<string>('')
+  const [loadingKundlis, setLoadingKundlis] = React.useState(false)
+  const [dropdownOpen, setDropdownOpen] = React.useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -75,6 +85,36 @@ export default function GeneratorPage() {
     }))
   }
 
+  // Fetch user's kundlis on mount
+  React.useEffect(() => {
+    const fetchKundlis = async () => {
+      setLoadingKundlis(true)
+      try {
+        const response = await api.getUserCalculations()
+        const calculations = response.data.calculations || []
+        const formattedKundlis: Kundli[] = calculations.map((calc: any) => {
+          const birthData = calc.birth_data || {}
+          const name = birthData.name || 'Kundli'
+          const birthDate = birthData.year 
+            ? `${birthData.year}-${String(birthData.month || 1).padStart(2, '0')}-${String(birthData.day || 1).padStart(2, '0')}`
+            : 'N/A'
+          return {
+            kundli_id: calc.kundli_id,
+            name: name,
+            birth_date: birthDate
+          }
+        })
+        setKundlis(formattedKundlis)
+        console.log('[GeneratorPage] Fetched kundlis:', formattedKundlis)
+      } catch (error: any) {
+        console.error('Failed to fetch kundlis:', error)
+      } finally {
+        setLoadingKundlis(false)
+      }
+    }
+    fetchKundlis()
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -98,6 +138,14 @@ export default function GeneratorPage() {
     }
   }
 
+  const handleStartChat = () => {
+    if (!selectedKundliId) {
+      toast.error('Please select a kundli to chat about')
+      return
+    }
+    navigate(`/chat/${selectedKundliId}`)
+  }
+
 
   return (
     <div className="min-h-screen bg-slate-950 py-12 relative overflow-hidden">
@@ -115,6 +163,103 @@ export default function GeneratorPage() {
           </div>
           <p className="text-slate-300 text-lg">Enter your birth details to generate your personalized kundli</p>
         </div>
+
+        {/* Chat with Existing Kundli Section */}
+        {kundlis.length > 0 && (
+          <div className="cosmic-card p-6 rounded-2xl border border-cyan-500/20 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-xl font-semibold text-slate-100">Chat About Existing Kundli</h2>
+            </div>
+            <p className="text-slate-400 text-sm mb-4">Don't want to generate a new one? Select an existing kundli and start chatting about it.</p>
+            
+            <div className="space-y-3">
+              {/* Dropdown */}
+              <div className="relative z-20">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-cyan-500/30 rounded-lg text-slate-100 text-left flex items-center justify-between hover:border-cyan-500/50 transition-all duration-200"
+                >
+                  <span className="text-slate-100">
+                    {selectedKundliId 
+                      ? kundlis.find(k => k.kundli_id === selectedKundliId)?.name 
+                      : 'Select a kundli...'}
+                  </span>
+                  <ChevronDown className={`w-5 h-5 text-cyan-400 transition-transform flex-shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {/* Dropdown Menu */}
+                {dropdownOpen && (
+                  <div 
+                    className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-cyan-500/30 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto"
+                    style={{ backgroundColor: '#0f172a', borderColor: 'rgba(34, 211, 238, 0.3)' }}
+                  >
+                    {loadingKundlis ? (
+                      <div className="p-4 text-center" style={{ color: '#cbd5e1' }}>
+                        <Loader className="w-4 h-4 animate-spin inline-block" />
+                      </div>
+                    ) : kundlis.length === 0 ? (
+                      <div className="p-4 text-center text-sm" style={{ color: '#cbd5e1' }}>No kundlis found</div>
+                    ) : (
+                      kundlis.map((kundli) => (
+                        <div
+                          key={kundli.kundli_id}
+                          onClick={() => {
+                            setSelectedKundliId(kundli.kundli_id)
+                            setDropdownOpen(false)
+                          }}
+                          style={{
+                            padding: '12px 16px',
+                            textAlign: 'left',
+                            borderBottom: '1px solid rgba(30, 41, 59, 0.5)',
+                            cursor: 'pointer',
+                            backgroundColor: selectedKundliId === kundli.kundli_id ? 'rgba(34, 211, 238, 0.2)' : 'transparent',
+                            borderLeft: selectedKundliId === kundli.kundli_id ? '2px solid #22d3ee' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedKundliId !== kundli.kundli_id) {
+                              e.currentTarget.style.backgroundColor = 'rgba(34, 211, 238, 0.1)'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedKundliId !== kundli.kundli_id) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                        >
+                          <p style={{ fontWeight: '500', color: '#f1f5f9', margin: 0 }}>{kundli.name}</p>
+                          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', margin: 0 }}>{kundli.birth_date}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Button */}
+              <button
+                onClick={handleStartChat}
+                disabled={!selectedKundliId || loadingKundlis}
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>Start Chatting</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Divider */}
+        {kundlis.length > 0 && (
+          <div className="flex items-center gap-4 mb-8">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+            <span className="text-slate-400 text-sm">OR</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+          </div>
+        )}
 
         {/* Form Card */}
         <div className="cosmic-card p-8 rounded-2xl border border-purple-500/20">
