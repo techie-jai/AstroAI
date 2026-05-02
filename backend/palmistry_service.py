@@ -18,7 +18,7 @@ class PalmistryService:
         self.gemini_service = GeminiVisionService()
         self.file_manager = FileManager()
 
-    def analyze_palm_images(self, left_hand_image: str, right_hand_image: str, handedness: str, user_id: str) -> Dict[str, Any]:
+    def analyze_palm_images(self, left_hand_image: str, right_hand_image: str, handedness: str, user_id: str, name: str = None) -> Dict[str, Any]:
         """
         Analyze palm images and generate palmistry reading
         
@@ -27,13 +27,21 @@ class PalmistryService:
             right_hand_image: Base64 encoded right hand image
             handedness: User's handedness ('left' or 'right')
             user_id: User's Firebase UID
+            name: Optional name to identify the reading
             
         Returns:
             Complete palmistry analysis with metadata
         """
         try:
-            # Generate unique palmistry ID
-            palmistry_id = f"palmistry-{int(datetime.now().timestamp())}"
+            # Generate unique palmistry ID with optional name
+            import uuid
+            unique_id = str(uuid.uuid4())[:8]
+            if name and name.strip():
+                # Format: name_entered-unique_id
+                palmistry_id = f"{name.strip().replace(' ', '_')}-{unique_id}"
+            else:
+                # Format: random_string-unique_id
+                palmistry_id = f"palmistry-{unique_id}"
             
             print(f"[PALMISTRY_SERVICE] Starting analysis for user {user_id}, palmistry_id: {palmistry_id}")
             

@@ -3,7 +3,7 @@ import { Upload, Camera, Hand, CheckCircle, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface PalmistryUploadProps {
-  onImageUpload: (leftHandImage: string, rightHandImage: string, handedness: 'left' | 'right') => void
+  onImageUpload: (leftHandImage: string, rightHandImage: string, handedness: 'left' | 'right', name?: string) => void
 }
 
 export default function PalmistryUpload({ onImageUpload }: PalmistryUploadProps) {
@@ -15,6 +15,7 @@ export default function PalmistryUpload({ onImageUpload }: PalmistryUploadProps)
   const [showCamera, setShowCamera] = useState(false)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [name, setName] = useState<string>('')
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -55,14 +56,25 @@ export default function PalmistryUpload({ onImageUpload }: PalmistryUploadProps)
         setCurrentHand('right')
         toast.success('Left hand image captured! Now upload right hand.')
       } else {
+        // For right hand, we need to use the leftHandImage from state
+        // But state updates are async, so we'll handle this differently
         setRightHandImage(result)
-        if (handedness) {
-          onImageUpload(leftHandImage || '', result, handedness)
-        }
+        // We'll trigger upload in a useEffect when both images are set
       }
     }
     reader.readAsDataURL(file)
   }
+
+  // useEffect to handle upload when both images are ready
+  React.useEffect(() => {
+    if (leftHandImage && rightHandImage && handedness && currentHand === 'right') {
+      onImageUpload(leftHandImage, rightHandImage, handedness, name || undefined)
+      // Reset for next reading
+      setLeftHandImage(null)
+      setRightHandImage(null)
+      setCurrentHand('left')
+    }
+  }, [leftHandImage, rightHandImage, handedness, currentHand, name, onImageUpload])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -123,6 +135,21 @@ export default function PalmistryUpload({ onImageUpload }: PalmistryUploadProps)
             <Hand className="w-16 h-16 text-purple-400 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-white mb-2">Palm Reading</h1>
             <p className="text-slate-300">Let's start by understanding your handedness</p>
+          </div>
+
+          {/* Name Input (Optional) */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Your Name <span className="text-xs text-slate-500">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your name"
+              className="w-full px-4 py-2 bg-slate-900/50 border border-purple-500/30 rounded-lg text-white placeholder:text-slate-500 focus:border-purple-500/70 focus:ring-2 focus:ring-purple-500/30 transition"
+            />
+            <p className="text-xs text-slate-400 mt-1">This will help identify your reading results</p>
           </div>
 
           <div className="space-y-4">

@@ -1,5 +1,7 @@
+"use client"
+
 import { useState, useMemo } from "react"
-import { useNavigate } from "react-router-dom"
+import { useRouter } from "next/navigation"
 import {
   Hand,
   Heart,
@@ -597,7 +599,7 @@ export function PalmistryResults({
   onReset,
   onSelectReading 
 }: PalmistryResultsProps) {
-  const navigate = useNavigate()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("lines")
   const [expandedLine, setExpandedLine] = useState<string | null>(null)
   const [selectedPalmId, setSelectedPalmId] = useState(palmReadings[0]?.id || "")
@@ -665,7 +667,7 @@ export function PalmistryResults({
             </button>
             
             <button
-              onClick={() => navigate("/chat")}
+              onClick={() => router.push("/chat")}
               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-sm text-white font-medium hover:shadow-lg hover:shadow-purple-500/25 transition-all"
             >
               <MessageCircle className="h-4 w-4" />
@@ -1000,7 +1002,7 @@ export function PalmistryResults({
             <span>Download PDF Report</span>
           </button>
           <button
-            onClick={() => navigate("/chat")}
+            onClick={() => router.push("/chat")}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-xl text-white font-medium hover:shadow-lg hover:shadow-purple-500/25 transition-all"
           >
             <MessageCircle className="h-5 w-5" />

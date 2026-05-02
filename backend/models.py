@@ -338,6 +338,7 @@ class PalmistryAnalysisRequest(BaseModel):
     left_hand_image: str = Field(..., description="Base64 encoded left hand image")
     right_hand_image: str = Field(..., description="Base64 encoded right hand image")
     handedness: str = Field(..., description="User's handedness: left or right")
+    name: Optional[str] = Field(None, description="Optional name to identify the reading")
 
 
 class PalmistryAnalysisResponse(BaseModel):

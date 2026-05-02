@@ -86,13 +86,14 @@ export default function PalmistryPage() {
     }
   }
 
-  const handleImageUpload = async (leftHandImage: string, rightHandImage: string, handedness: 'left' | 'right') => {
+  const handleImageUpload = async (leftHandImage: string, rightHandImage: string, handedness: 'left' | 'right', name?: string) => {
     try {
       setState('scanning')
       const response = await api.analyzePalmistry({
         left_hand_image: leftHandImage,
         right_hand_image: rightHandImage,
         handedness: handedness,
+        name: name || undefined,
       })
       
       setCurrentPalmistryData(response.data)
@@ -149,9 +150,7 @@ export default function PalmistryPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 border border-slate-700/50 rounded-lg hover:bg-slate-700/80 transition text-slate-200"
                   >
                     <span className="text-sm">
-                      {palmistryReadings.find(r => r.palmistry_id === selectedPalmistryId)?.created_at 
-                        ? new Date(palmistryReadings.find(r => r.palmistry_id === selectedPalmistryId)?.created_at || '').toLocaleDateString()
-                        : 'Select Reading'}
+                      {selectedPalmistryId || 'Select Reading'}
                     </span>
                     <ChevronDown className="w-4 h-4" />
                   </button>
@@ -168,8 +167,8 @@ export default function PalmistryPage() {
                               : 'hover:bg-slate-700/50 text-slate-300'
                           }`}
                         >
-                          <div className="font-medium">{new Date(reading.created_at).toLocaleDateString()}</div>
-                          <div className="text-xs text-slate-400 mt-1">{reading.hand_type}</div>
+                          <div className="font-medium text-sm truncate">{reading.palmistry_id}</div>
+                          <div className="text-xs text-slate-400 mt-1">{new Date(reading.created_at).toLocaleDateString()} • {reading.hand_type}</div>
                         </button>
                       ))}
                     </div>

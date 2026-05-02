@@ -258,7 +258,7 @@ export const api = {
     apiClient.post(`/analysis/${kundliId}`),
 
   // Palmistry Analysis
-  analyzePalmistry: (data: { left_hand_image: string; right_hand_image: string; handedness: 'left' | 'right' }) =>
+  analyzePalmistry: (data: { left_hand_image: string; right_hand_image: string; handedness: 'left' | 'right'; name?: string }) =>
     apiClient.post('/palmistry/analyze', data),
   getPalmistryList: () =>
     apiClient.get('/palmistry/list'),

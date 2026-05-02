@@ -3988,7 +3988,8 @@ async def analyze_palmistry(
             request.left_hand_image,
             request.right_hand_image,
             request.handedness,
-            current_user['uid']
+            current_user['uid'],
+            request.name
         )
         
         print(f"[PALMISTRY] Analysis completed successfully")

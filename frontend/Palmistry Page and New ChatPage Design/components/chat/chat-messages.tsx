@@ -103,10 +103,13 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
               </p>
             </div>
 
-            <div className={cn(
-              "text-xs text-muted-foreground mt-1.5",
-              message.role === "user" ? "text-right" : "text-left"
-            )}>
+            <div 
+              className={cn(
+                "text-xs text-muted-foreground mt-1.5",
+                message.role === "user" ? "text-right" : "text-left"
+              )}
+              suppressHydrationWarning
+            >
               {formatTime(message.timestamp)}
             </div>
           </div>
