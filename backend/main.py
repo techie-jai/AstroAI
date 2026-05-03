@@ -562,25 +562,15 @@ async def generate_kundli(
 
         
 
-        # Create user folder
+        # Get or create user folder (reuse existing if already exists)
 
-        print(f"[KUNDLI] Creating user folder...")
+        print(f"[KUNDLI] Getting or creating user folder...")
 
-        user_folder, unique_id = file_manager.create_user_folder(user_name)
-
-        
-
-        # Save user info
-
-        print(f"[KUNDLI] Saving user info...")
-
-        user_info = birth_data_dict.copy()
-
-        user_info['uid'] = current_user['uid']
-
-        user_info['unique_id'] = unique_id
-
-        file_manager.save_user_info(user_folder, user_info)
+        user_folder, unique_id = file_manager.get_or_create_user_folder(
+            user_name, 
+            uid=current_user.get('uid'),
+            email=current_user.get('email')
+        )
 
         
 
@@ -627,9 +617,17 @@ async def generate_kundli(
         kundli_id = f"{safe_name}-Kundli-{counter}-{kundli_hash}"
         print(f"[KUNDLI] Step 4: New kundli_id: {kundli_id}")
 
+        # Step 5: Save user info in the kundli subfolder
+        print(f"[KUNDLI] Step 5: Saving user info in kundli folder...")
+        user_info = birth_data_dict.copy()
+        user_info['uid'] = current_user['uid']
+        user_info['unique_id'] = unique_id
+        file_manager.save_user_info(user_folder, user_info, kundli_id=kundli_id)
+        print(f"[KUNDLI] Step 5: User info saved")
+
         # Step 6: Save comprehensive Kundli JSON only
         print(f"[KUNDLI] Step 6: Saving comprehensive Kundli JSON...")
-        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data)
+        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data, kundli_id=kundli_id)
         print(f"[KUNDLI] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
         # Step 7: Add to local index
@@ -1493,7 +1491,30 @@ async def generate_analysis(
             )
 
         
-        user_folder = kundli_metadata.get('file_path', '').rsplit('\\', 2)[0] if '\\' in kundli_metadata.get('file_path', '') else kundli_metadata.get('file_path', '').rsplit('/', 2)[0]
+        # Extract user folder from file path
+        # File path is: users/user_{email}/Astrology/{kundli_id}/comprehensive_kundli.json
+        # We need: users/user_{email}
+        file_path = kundli_metadata.get('file_path', '')
+        
+        # Split by separator and reconstruct
+        if '\\' in file_path:
+            # Windows path
+            parts = file_path.split('\\')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '\\'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('\\', 3)[0]
+        else:
+            # Unix path
+            parts = file_path.split('/')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '/'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('/', 3)[0]
 
         birth_data = kundli_metadata.get('birth_data')
 
@@ -1616,7 +1637,7 @@ async def generate_analysis(
 
         print(f"[ANALYSIS] Saving analysis locally...")
 
-        analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, formatted_analysis_text)
+        analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, formatted_analysis_text, kundli_id=request.kundli_id)
 
         print(f"[ANALYSIS] Analysis saved: {analysis_text_path}")
 
@@ -1643,7 +1664,8 @@ async def generate_analysis(
 
             # Save PDF to file
 
-            analysis_pdf_path = file_manager.save_analysis_pdf(user_folder, user_name, pdf_content)
+            print(f"[ANALYSIS] Saving PDF with kundli_id: {request.kundli_id}, user_folder: {user_folder}")
+            analysis_pdf_path = file_manager.save_analysis_pdf(user_folder, user_name, pdf_content, kundli_id=request.kundli_id)
 
             print(f"[ANALYSIS] PDF saved: {analysis_pdf_path}")
 
@@ -1880,7 +1902,30 @@ async def download_analysis_pdf(
             )
 
         
-        user_folder = kundli_metadata.get('file_path', '').rsplit('\\', 2)[0] if '\\' in kundli_metadata.get('file_path', '') else kundli_metadata.get('file_path', '').rsplit('/', 2)[0]
+        # Extract user folder from file path
+        # File path is: users/user_{email}/Astrology/{kundli_id}/comprehensive_kundli.json
+        # We need: users/user_{email}
+        file_path = kundli_metadata.get('file_path', '')
+        
+        # Split by separator and reconstruct
+        if '\\' in file_path:
+            # Windows path
+            parts = file_path.split('\\')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '\\'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('\\', 3)[0]
+        else:
+            # Unix path
+            parts = file_path.split('/')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '/'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('/', 3)[0]
 
         birth_data = kundli_metadata.get('birth_data')
 
@@ -1898,40 +1943,19 @@ async def download_analysis_pdf(
             )
 
         
-        # Get PDF file path - find the latest PDF file for this user
+        # Get PDF file path from the kundli subfolder
+        # PDF is saved in: users/user_{email}/Astrology/{kundli_id}/analysis.pdf
+        analysis_pdf_path = os.path.join(user_folder, "Astrology", kundli_id, "analysis.pdf")
         
-        user_name = birth_data.get('name', 'User')
-        
-        analysis_folder = os.path.join(user_folder, "analysis")
-        
-        if not os.path.exists(analysis_folder):
-            print(f"[DOWNLOAD] Analysis folder not found: {analysis_folder}")
+        if not os.path.exists(analysis_pdf_path):
+            print(f"[DOWNLOAD] Analysis PDF not found: {analysis_pdf_path}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Analysis folder not found. Please generate the analysis first."
+                detail="Analysis PDF not found. Please generate the analysis first."
             )
         
-        # Find all PDF files for this user
-        import glob
-        safe_name = user_name.replace(' ', '-')
-        pdf_pattern = os.path.join(analysis_folder, f"{safe_name}_analysis_*.pdf")
-        pdf_files = glob.glob(pdf_pattern)
-        
-        if not pdf_files:
-            # Try old naming convention as fallback
-            old_pdf_path = os.path.join(analysis_folder, f"{user_name}_AI_Analysis.pdf")
-            if os.path.exists(old_pdf_path):
-                pdf_path = old_pdf_path
-            else:
-                print(f"[DOWNLOAD] No PDF files found for user: {user_name}")
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Analysis PDF not found. Please generate the analysis first."
-                )
-        else:
-            # Get the most recent PDF file
-            pdf_path = max(pdf_files, key=os.path.getmtime)
-            print(f"[DOWNLOAD] Found {len(pdf_files)} PDF files, using latest: {os.path.basename(pdf_path)}")    
+        pdf_path = analysis_pdf_path
+        print(f"[DOWNLOAD] Found analysis PDF: {pdf_path}")    
 
         print(f"[DOWNLOAD] Returning PDF file: {pdf_path}")
 
@@ -2383,22 +2407,14 @@ async def livechat_generate_kundli(
 
         user_name = birth_data_dict.get('name', 'User')
         
-        # Create user folder
-        print(f"[LIVECHAT] Creating user folder...")
+        # Get or create user folder (reuse existing if already exists)
+        print(f"[LIVECHAT] Getting or creating user folder...")
 
-        user_folder, unique_id = file_manager.create_user_folder(user_name)
-
-        
-        # Save user info
-        print(f"[LIVECHAT] Saving user info...")
-
-        user_info = birth_data_dict.copy()
-
-        user_info['uid'] = current_user['uid']
-
-        user_info['unique_id'] = unique_id
-
-        file_manager.save_user_info(user_folder, user_info)
+        user_folder, unique_id = file_manager.get_or_create_user_folder(
+            user_name,
+            uid=current_user.get('uid'),
+            email=current_user.get('email')
+        )
 
         
         # Generate kundli
@@ -2444,10 +2460,17 @@ async def livechat_generate_kundli(
         kundli_id = f"{safe_name}-Kundli-{counter}-{kundli_hash}"
         print(f"[LIVECHAT] Step 4: New kundli_id: {kundli_id}")
 
-        
+        # Step 5: Save user info in the kundli subfolder
+        print(f"[LIVECHAT] Step 5: Saving user info in kundli folder...")
+        user_info = birth_data_dict.copy()
+        user_info['uid'] = current_user['uid']
+        user_info['unique_id'] = unique_id
+        file_manager.save_user_info(user_folder, user_info, kundli_id=kundli_id)
+        print(f"[LIVECHAT] Step 5: User info saved")
+
         # Step 6: Save comprehensive Kundli JSON only
         print(f"[LIVECHAT] Step 6: Saving comprehensive Kundli JSON...")
-        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data)
+        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data, kundli_id=kundli_id)
         print(f"[LIVECHAT] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
         

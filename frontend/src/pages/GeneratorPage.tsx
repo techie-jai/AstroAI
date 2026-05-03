@@ -122,7 +122,8 @@ export default function GeneratorPage() {
     try {
       const response = await api.generateKundli(formData)
       toast.success('Kundli generated successfully!')
-      navigate(`/completion/${response.data.kundli_id}`)
+      // Redirect directly to results page, skipping completion page
+      navigate(`/results/${response.data.kundli_id}`)
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || error?.response?.data?.error || error?.message || 'Failed to generate kundli'
       toast.error(errorMessage)
