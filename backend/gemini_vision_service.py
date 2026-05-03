@@ -205,23 +205,39 @@ CRITICAL: Return ONLY the JSON object, no markdown, no code blocks, no extra tex
             prompt = self.generate_palmistry_prompt(handedness)
             
             logger.info(f"Starting palm image analysis for {handedness}-handed user")
+            print(f"[GEMINI_VISION] Starting analysis for {handedness}-handed user")
+            
+            # Log image sizes for verification
+            print(f"[GEMINI_VISION] Left hand image size: {len(left_hand_base64)} chars")
+            print(f"[GEMINI_VISION] Right hand image size: {len(right_hand_base64)} chars")
+            logger.info(f"Left hand image size: {len(left_hand_base64)} chars")
+            logger.info(f"Right hand image size: {len(right_hand_base64)} chars")
             
             # Prepare image parts
+            left_image_data = left_hand_base64.split(',')[-1] if ',' in left_hand_base64 else left_hand_base64
+            right_image_data = right_hand_base64.split(',')[-1] if ',' in right_hand_base64 else right_hand_base64
+            
+            print(f"[GEMINI_VISION] Cleaned left image size: {len(left_image_data)} chars")
+            print(f"[GEMINI_VISION] Cleaned right image size: {len(right_image_data)} chars")
+            
             left_image_part = {
                 "mime_type": "image/jpeg",
-                "data": left_hand_base64.split(',')[-1] if ',' in left_hand_base64 else left_hand_base64
+                "data": left_image_data
             }
             
             right_image_part = {
                 "mime_type": "image/jpeg",
-                "data": right_hand_base64.split(',')[-1] if ',' in right_hand_base64 else right_hand_base64
+                "data": right_image_data
             }
             
             logger.info("Calling Gemini Vision API...")
+            print(f"[GEMINI_VISION] Calling Gemini Vision API with images...")
             
             # Call Gemini - response_mime_type not supported in this version
             # The prompt itself instructs Gemini to return JSON
             logger.info("Calling Gemini with vision analysis prompt...")
+            print(f"[GEMINI_VISION] Sending request to Gemini model: gemini-2.5-flash")
+            
             response = self.model.generate_content(
                 [
                     "Analyze these two palm images:\n\nLeft Hand:",
@@ -232,15 +248,18 @@ CRITICAL: Return ONLY the JSON object, no markdown, no code blocks, no extra tex
                 ]
             )
             logger.info("Successfully called Gemini API")
+            print(f"[GEMINI_VISION] ✓ Successfully called Gemini API")
             
             if not response:
                 raise ValueError("No response from Gemini API")
             
             logger.info(f"Received response from Gemini, length: {len(response.text)}")
+            print(f"[GEMINI_VISION] Received response from Gemini, length: {len(response.text)} chars")
             
             # Parse response
             response_text = response.text.strip()
             logger.info(f"Raw response (first 500 chars): {response_text[:500]}")
+            print(f"[GEMINI_VISION] Raw response (first 500 chars): {response_text[:500]}")
             
             # Remove markdown code blocks if present
             if response_text.startswith('```json'):
@@ -253,17 +272,26 @@ CRITICAL: Return ONLY the JSON object, no markdown, no code blocks, no extra tex
             response_text = response_text.strip()
             
             logger.info(f"Cleaned response (first 500 chars): {response_text[:500]}")
+            print(f"[GEMINI_VISION] Cleaned response (first 500 chars): {response_text[:500]}")
             
             # Parse JSON
             analysis_data = json.loads(response_text)
             
             logger.info(f"Successfully parsed JSON and analyzed palm images for {handedness}-handed user")
+            print(f"[GEMINI_VISION] ✓ Successfully parsed JSON response")
+            print(f"[GEMINI_VISION] Response keys: {list(analysis_data.keys())}")
+            
             return analysis_data
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse Gemini response as JSON: {e}")
             logger.error(f"Response text: {response_text if 'response_text' in locals() else 'N/A'}")
+            print(f"[GEMINI_VISION] ❌ JSON Parse Error: {e}")
+            print(f"[GEMINI_VISION] Response text: {response_text if 'response_text' in locals() else 'N/A'}")
             raise ValueError(f"Invalid JSON response from Gemini: {str(e)}")
         except Exception as e:
             logger.error(f"Error analyzing palm images: {str(e)}", exc_info=True)
+            print(f"[GEMINI_VISION] ❌ Error: {str(e)}")
+            import traceback
+            print(f"[GEMINI_VISION] Traceback: {traceback.format_exc()}")
             raise ValueError(f"Failed to analyze palm images: {str(e)}")
