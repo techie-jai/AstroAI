@@ -4005,6 +4005,15 @@ async def analyze_palmistry(
         
         print(f"[PALMISTRY] PalmistryService initialized")
         
+        # Get or create user folder using email
+        from file_manager import FileManager
+        file_manager = FileManager()
+        user_email = current_user.get('email', '')
+        user_name = current_user.get('name', 'User')
+        user_folder_path, _ = file_manager.get_or_create_user_folder(user_name, uid=current_user['uid'], email=user_email)
+        
+        print(f"[PALMISTRY] User folder path: {user_folder_path}")
+        
         # Analyze palm images
         print(f"[PALMISTRY] Calling analyze_palm_images...")
         analysis_result = palmistry_service.analyze_palm_images(
@@ -4012,7 +4021,8 @@ async def analyze_palmistry(
             request.right_hand_image,
             request.handedness,
             current_user['uid'],
-            request.name
+            request.name,
+            user_folder_path
         )
         
         print(f"[PALMISTRY] Analysis completed successfully")

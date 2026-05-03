@@ -22,9 +22,30 @@ class FileManager:
         Args:
             base_dir: Base directory for storing user data (default: users/)
         """
-        self.base_dir = base_dir
+        # Resolve to absolute path - prioritize parent directory (project root)
+        if os.path.isabs(base_dir):
+            # Absolute path provided, use as-is
+            self.base_dir = base_dir
+        else:
+            # For relative paths, always use parent directory (project root)
+            # This ensures we use E:\25. Codes\17. AstroAI V3\AstroAi\users
+            # not E:\25. Codes\17. AstroAI V3\AstroAi\backend\users
+            parent_path = os.path.abspath(os.path.join("..", base_dir))
+            
+            # If parent path exists, use it (preferred for project root)
+            if os.path.exists(parent_path):
+                self.base_dir = parent_path
+            # Otherwise check current directory
+            elif os.path.exists(base_dir):
+                self.base_dir = os.path.abspath(base_dir)
+            # Default to parent directory
+            else:
+                self.base_dir = parent_path
+        
         if not os.path.exists(self.base_dir):
             os.makedirs(self.base_dir)
+        
+        print(f"[FILE_MANAGER] Using users directory: {self.base_dir}")
         
         self.index_file = os.path.join(self.base_dir, "kundli_index.json")
         self._ensure_index_exists()
