@@ -80,14 +80,22 @@ export default function PalmistryResults({ data, onNewReading }: PalmistryResult
           {/* Hand Image */}
           <div className="lg:w-1/3">
             <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-              <div className="aspect-square bg-slate-900 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🖐️</div>
-                  <p className="text-slate-400 text-sm">
-                    {data.handedness === 'right' ? 'Right' : 'Left'} Hand
-                  </p>
-                  <p className="text-slate-500 text-xs mt-2">{data.hand_type}</p>
-                </div>
+              <div className="aspect-square bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                {data.right_hand_image_url ? (
+                  <img 
+                    src={data.right_hand_image_url} 
+                    alt={`${data.handedness === 'right' ? 'Right' : 'Left'} Hand`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">🖐️</div>
+                    <p className="text-slate-400 text-sm">
+                      {data.handedness === 'right' ? 'Right' : 'Left'} Hand
+                    </p>
+                    <p className="text-slate-500 text-xs mt-2">{data.hand_type}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

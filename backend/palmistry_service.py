@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import base64
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from pathlib import Path
@@ -78,7 +79,7 @@ class PalmistryService:
             self.save_palmistry_reading(user_folder_path, palmistry_id, left_hand_image, right_hand_image, metadata)
             print(f"[PALMISTRY_SERVICE] Palmistry reading saved successfully")
             
-            # Return response
+            # Return response with image URLs
             response = {
                 "palmistry_id": palmistry_id,
                 "handedness": handedness,
@@ -93,6 +94,22 @@ class PalmistryService:
                 "created_at": datetime.now().isoformat(),
                 "metadata": metadata
             }
+            
+            # Add image URLs to response
+            palmistry_dir = Path(user_folder_path) / "Palmistry" / palmistry_id
+            left_hand_path = palmistry_dir / "left_hand.jpg"
+            right_hand_path = palmistry_dir / "right_hand.jpg"
+            
+            if left_hand_path.exists():
+                with open(left_hand_path, 'rb') as f:
+                    left_hand_data = f.read()
+                    response['left_hand_image_url'] = f"data:image/jpeg;base64,{base64.b64encode(left_hand_data).decode()}"
+            
+            if right_hand_path.exists():
+                with open(right_hand_path, 'rb') as f:
+                    right_hand_data = f.read()
+                    response['right_hand_image_url'] = f"data:image/jpeg;base64,{base64.b64encode(right_hand_data).decode()}"
+            
             print(f"[PALMISTRY_SERVICE] Returning response with palmistry_id: {palmistry_id}")
             return response
             
@@ -194,7 +211,7 @@ class PalmistryService:
             palmistry_id: Unique palmistry reading ID
             
         Returns:
-            Complete palmistry metadata
+            Complete palmistry metadata with image URLs
         """
         try:
             # Find user folder by searching for one with matching uid
@@ -218,13 +235,28 @@ class PalmistryService:
             if not user_folder_path:
                 raise FileNotFoundError(f"User folder not found for user_id {user_id}")
             
-            metadata_file = user_folder_path / "Palmistry" / palmistry_id / "metadata.json"
+            palmistry_dir = user_folder_path / "Palmistry" / palmistry_id
+            metadata_file = palmistry_dir / "metadata.json"
             
             if not metadata_file.exists():
                 raise FileNotFoundError(f"Palmistry reading {palmistry_id} not found")
             
             with open(metadata_file, 'r') as f:
                 metadata = json.load(f)
+            
+            # Add image URLs
+            left_hand_path = palmistry_dir / "left_hand.jpg"
+            right_hand_path = palmistry_dir / "right_hand.jpg"
+            
+            if left_hand_path.exists():
+                with open(left_hand_path, 'rb') as f:
+                    left_hand_data = f.read()
+                    metadata['left_hand_image_url'] = f"data:image/jpeg;base64,{base64.b64encode(left_hand_data).decode()}"
+            
+            if right_hand_path.exists():
+                with open(right_hand_path, 'rb') as f:
+                    right_hand_data = f.read()
+                    metadata['right_hand_image_url'] = f"data:image/jpeg;base64,{base64.b64encode(right_hand_data).decode()}"
             
             return metadata
             

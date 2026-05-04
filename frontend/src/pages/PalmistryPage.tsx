@@ -42,6 +42,8 @@ export interface PalmistryData {
   }
   created_at: string
   metadata?: Record<string, any>
+  left_hand_image_url?: string
+  right_hand_image_url?: string
 }
 
 export default function PalmistryPage() {
