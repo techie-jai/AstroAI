@@ -97,6 +97,7 @@ export default function ResultsPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchKundli = async () => {
@@ -114,6 +115,7 @@ export default function ResultsPage() {
         setLoading(true)
         setKundli(null)  // Clear immediately
         setAnalysis(null)
+        setAnalysisError(null)
         
         // Use CacheManager to clear all caches
         console.log('[RESULTS] Clearing all caches...')
@@ -170,6 +172,7 @@ export default function ResultsPage() {
     }
 
     setAnalyzing(true)
+    setAnalysisError(null)
     let retries = 0
     const maxRetries = 2
     
@@ -179,6 +182,7 @@ export default function ResultsPage() {
         const response = await api.generateAnalysis(kundliId, 'comprehensive')
         console.log('[RESULTS] Analysis generated successfully')
         setAnalysis(response.data.analysis_text || 'Analysis generated successfully')
+        setAnalysisError(null)
         toast.success('Analysis generated successfully')
         
         window.dispatchEvent(new CustomEvent('analysisGenerated', { detail: { kundliId } }))
@@ -194,7 +198,9 @@ export default function ResultsPage() {
           return attemptAnalysis()
         }
         
-        toast.error('Failed to generate analysis. Please try again.')
+        const errorMessage = 'Analysis Failed, Please try again'
+        setAnalysisError(errorMessage)
+        toast.error(errorMessage)
       } finally {
         setAnalyzing(false)
       }
@@ -359,17 +365,30 @@ export default function ResultsPage() {
                 <h3 className="text-2xl font-bold gradient-text-purple mb-2">AI Astrological Analysis</h3>
                 <p className="text-muted-foreground mb-4">Get a comprehensive AI-powered analysis of your kundli using advanced algorithms that cross-reference Palmistry, Numerology, and Astrology for accurate predictions.</p>
                 <button onClick={handleAnalyze} disabled={analyzing} className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition flex items-center gap-2 glow-purple text-lg"><Sparkles className="w-5 h-5" />{analyzing ? 'Analyzing...' : 'Generate AI Analysis'}<ArrowRight className="w-4 h-4 ml-2" /></button>
+                {analysisError && (
+                  <div className="mt-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50 flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-xs font-bold">!</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-red-300 font-semibold">{analysisError}</p>
+                      <p className="text-red-200/70 text-sm mt-1">Please check your internet connection and try again.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="cosmic-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4"><Download className="w-6 h-6 text-green-400" /><h3 className="text-xl font-bold text-foreground">Download Results</h3></div>
-            <p className="text-muted-foreground mb-4">Download a professional PDF report of your complete kundli analysis.</p>
-            <button onClick={handleDownloadPDF} disabled={downloading} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"><Download className="w-4 h-4" />{downloading ? 'Downloading...' : 'Download PDF Report'}</button>
-          </div>
+        <div className={`grid ${analysis ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-6`}>
+          {analysis && (
+            <div className="cosmic-card rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4"><Download className="w-6 h-6 text-green-400" /><h3 className="text-xl font-bold text-foreground">Download Results</h3></div>
+              <p className="text-muted-foreground mb-4">Download a professional PDF report of your complete kundli analysis.</p>
+              <button onClick={handleDownloadPDF} disabled={downloading} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:opacity-50 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"><Download className="w-4 h-4" />{downloading ? 'Downloading...' : 'Download PDF Report'}</button>
+            </div>
+          )}
           <div className="cosmic-card rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4"><MessageCircle className="w-6 h-6 text-purple-400" /><h3 className="text-xl font-bold text-foreground">Chat About Kundli</h3></div>
             <p className="text-muted-foreground mb-4">Ask questions about your kundli and get personalized AI-powered insights.</p>

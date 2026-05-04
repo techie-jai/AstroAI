@@ -150,8 +150,25 @@ class AdminAnalyticsService:
         return count
     
     def _count_analysis(self, user_path: str) -> int:
-        """Count analysis files in user directory"""
+        """Count analysis files in user directory (supports both old and new structure)"""
         count = 0
+        
+        # Check new structure first (Astrology/{kundli_id}/analysis.txt)
+        astrology_dir = os.path.join(user_path, 'Astrology')
+        if os.path.isdir(astrology_dir):
+            try:
+                for kundli_folder in os.listdir(astrology_dir):
+                    kundli_path = os.path.join(astrology_dir, kundli_folder)
+                    if os.path.isdir(kundli_path):
+                        # Check for analysis.txt or analysis.pdf
+                        if os.path.exists(os.path.join(kundli_path, 'analysis.txt')):
+                            count += 1
+                        elif os.path.exists(os.path.join(kundli_path, 'analysis.pdf')):
+                            count += 1
+            except Exception as e:
+                logger.debug(f"Error counting analysis in Astrology: {str(e)}")
+        
+        # Check old structure for backward compatibility
         analysis_dir = os.path.join(user_path, 'analysis')
         try:
             if os.path.exists(analysis_dir):
@@ -159,7 +176,8 @@ class AdminAnalyticsService:
                     if item.endswith('.txt') and ('_analysis_' in item or item.endswith('_AI_Analysis.txt')):
                         count += 1
         except Exception as e:
-            logger.error(f"Error counting analysis: {str(e)}")
+            logger.debug(f"Error counting analysis in old structure: {str(e)}")
+        
         return count
     
     def get_all_kundlis_from_filesystem(self) -> List[Dict[str, Any]]:
@@ -189,32 +207,45 @@ class AdminAnalyticsService:
                             }
                             kundlis.append(kundli_entry)
             
-            # Check for analysis files to update hasAnalysis flag
+            # Check for analysis files to update hasAnalysis flag (supports both old and new structure)
             for user_dir in os.listdir(self.users_base_path):
                 user_path = os.path.join(self.users_base_path, user_dir)
                 
                 if not os.path.isdir(user_path):
                     continue
                 
+                # Get user name
+                user_name = None
+                user_info_file = os.path.join(user_path, 'user_info.json')
+                if os.path.exists(user_info_file):
+                    try:
+                        with open(user_info_file, 'r') as f:
+                            user_info = json.load(f)
+                            user_name = user_info.get('name')
+                    except:
+                        pass
+                
+                # Check new structure (Astrology/{kundli_id}/analysis.txt)
+                astrology_dir = os.path.join(user_path, 'Astrology')
+                if os.path.isdir(astrology_dir):
+                    for kundli_folder in os.listdir(astrology_dir):
+                        kundli_path = os.path.join(astrology_dir, kundli_folder)
+                        if os.path.isdir(kundli_path):
+                            if os.path.exists(os.path.join(kundli_path, 'analysis.txt')) or os.path.exists(os.path.join(kundli_path, 'analysis.pdf')):
+                                if user_name:
+                                    for kundli in kundlis:
+                                        if kundli['userName'] == user_name:
+                                            kundli['hasAnalysis'] = True
+                
+                # Check old structure for backward compatibility
                 analysis_dir = os.path.join(user_path, 'analysis')
                 if os.path.isdir(analysis_dir):
                     analysis_files = [f for f in os.listdir(analysis_dir) if f.endswith('.txt') and ('_analysis_' in f or f.endswith('_AI_Analysis.txt'))]
-                    if analysis_files:
+                    if analysis_files and user_name:
                         # Mark kundlis for this user as having analysis
-                        user_name = None
-                        user_info_file = os.path.join(user_path, 'user_info.json')
-                        if os.path.exists(user_info_file):
-                            try:
-                                with open(user_info_file, 'r') as f:
-                                    user_info = json.load(f)
-                                    user_name = user_info.get('name')
-                            except:
-                                pass
-                        
-                        if user_name:
-                            for kundli in kundlis:
-                                if kundli['userName'] == user_name:
-                                    kundli['hasAnalysis'] = True
+                        for kundli in kundlis:
+                            if kundli['userName'] == user_name:
+                                kundli['hasAnalysis'] = True
         
         except Exception as e:
             logger.error(f"Error scanning kundlis: {str(e)}")

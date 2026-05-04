@@ -1059,6 +1059,120 @@ The generated data feeds into AI models for:
 - Proper filtering of metadata keys from chart count
 - Detailed logging for debugging chart extraction
 
+### 🖐️ Palmistry Analysis Feature (NEW - May 2026)
+
+**Overview:**
+Complete palmistry analysis system that analyzes hand images using Google Gemini Vision API and saves results in organized user folders with proper path resolution.
+
+**Features Implemented:**
+- ✅ **Hand Image Analysis**: Left and right hand image upload and analysis
+- ✅ **Gemini Vision Integration**: AI-powered palm reading using Google Gemini 2.5 Flash
+- ✅ **Comprehensive Analysis**: Hand type, elemental type, major lines, mounts, special marks, life areas
+- ✅ **File Organization**: Automatic folder creation per palmistry reading with proper structure
+- ✅ **Path Resolution**: Smart path resolution for both local and Docker environments
+- ✅ **User Isolation**: Files saved in user-specific folders with email-based naming
+- ✅ **Metadata Tracking**: Complete palmistry index with reading history
+
+**File Structure:**
+```
+users/user_{email}/
+├── Palmistry/
+│   ├── {name}-{palmistry_id}/
+│   │   ├── left_hand.jpg
+│   │   ├── right_hand.jpg
+│   │   ├── metadata.json (complete analysis data)
+│   │   └── results.json (summary results)
+│   └── [other readings]
+├── palmistry_index.json (reading history)
+└── [other folders: Astrology, Numerology, Chats]
+```
+
+**API Endpoint:**
+```
+POST /api/palmistry/analyze
+Content-Type: application/json
+
+{
+  "left_hand_image": "base64_encoded_image",
+  "right_hand_image": "base64_encoded_image",
+  "handedness": "right" | "left" | "ambidextrous",
+  "name": "Person Name"
+}
+
+Response:
+{
+  "palmistry_id": "unique-id",
+  "hand_type": "Water (Emotional, Intuitive, Imaginative)",
+  "elemental_type": "Water",
+  "palm_shape": "Rectangular",
+  "finger_length": "Long",
+  "major_lines": {...},
+  "mounts": {...},
+  "special_marks": {...},
+  "life_areas": {...},
+  "overall_reading": "..."
+}
+```
+
+**Backend Components:**
+
+1. **PalmistryService** (palmistry_service.py - 350+ lines)
+   - `analyze_palm_images()`: Main analysis orchestration
+   - `save_palmistry_reading()`: Saves all files with error handling
+   - `_update_palmistry_index()`: Tracks readings in index
+   - `load_palmistry_reading()`: Retrieves saved readings
+   - `get_user_palmistry_list()`: Lists all user's readings
+   - `delete_palmistry_reading()`: Removes readings
+
+2. **GeminiVisionService** (gemini_vision_service.py)
+   - Calls Google Gemini 2.5 Flash API
+   - Analyzes hand images for palmistry insights
+   - Returns structured JSON with analysis data
+   - Handles API errors gracefully
+
+3. **FileManager Path Resolution** (file_manager.py)
+   - Smart path resolution for multiple execution contexts
+   - Prioritizes project root `users/` folder
+   - Falls back to parent directory for backend execution
+   - Works with both absolute and relative paths
+   - Supports Docker and local development
+
+**Path Resolution Logic:**
+```python
+# FileManager.__init__() resolution order:
+1. Check if absolute path provided → use as-is
+2. Check if users/ exists in parent directory → use parent (preferred)
+3. Check if users/ exists in current directory → use current
+4. Default to parent directory → ensures correct location
+```
+
+**Bug Fixes & Improvements:**
+
+**Issue 1: Files saved to wrong location**
+- **Problem**: Files were being saved to `backend/users/` instead of `users/`
+- **Root Cause**: Backend runs from `backend/` directory, relative paths resolved incorrectly
+- **Solution**: Updated FileManager to prioritize parent directory path resolution
+- **Result**: Files now saved to correct location: `E:\25. Codes\17. AstroAI V3\AstroAi\users\`
+
+**Issue 2: Index update skipping**
+- **Problem**: `_update_palmistry_index` couldn't find user folder
+- **Root Cause**: Method was looking for `users/{user_id}` instead of `users/user_{email}`
+- **Solution**: Updated to search for user folder by UID in `user_info.json`
+- **Result**: Index properly updated with reading metadata
+
+**Verification:**
+All files are now saved correctly:
+- ✅ left_hand.jpg (139 KB)
+- ✅ right_hand.jpg (145 KB)
+- ✅ metadata.json (8 KB)
+- ✅ results.json (2.4 KB)
+
+**Files Modified:**
+- `backend/file_manager.py` - Updated `__init__()` for smart path resolution (lines 18-51)
+- `backend/palmistry_service.py` - Complete palmistry service (350+ lines)
+- `backend/gemini_vision_service.py` - Gemini Vision API integration
+- `backend/main.py` - Added `/api/palmistry/analyze` endpoint (lines 4008-4034)
+
 ---
 
 ## Implementation Details (April 2026)

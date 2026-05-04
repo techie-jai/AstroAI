@@ -105,11 +105,24 @@ Write-Host "  Admin Dashboard: Real data from local storage" -ForegroundColor Cy
 Write-Host "  Divisional Charts: All D1-D60" -ForegroundColor Cyan
 Write-Host "  AI Analysis: Enhanced with complete data" -ForegroundColor Cyan
 Write-Host ""
+Write-Host "Directory Structure:" -ForegroundColor Green
+Write-Host "  users/" -ForegroundColor Cyan
+Write-Host "  +-- user_email_1/" -ForegroundColor Cyan
+Write-Host "  |   +-- Astrology/          (Kundli readings)" -ForegroundColor Cyan
+Write-Host "  |   +-- Palmistry/          (Palm readings)" -ForegroundColor Cyan
+Write-Host "  |   +-- Numerology/         (Numerology readings)" -ForegroundColor Cyan
+Write-Host "  |   +-- Chats/              (Chat sessions)" -ForegroundColor Cyan
+Write-Host "  |   +-- kundli_index.json   (Per-user kundli metadata)" -ForegroundColor Cyan
+Write-Host "  +-- user_email_2/" -ForegroundColor Cyan
+Write-Host "      +-- ..." -ForegroundColor Cyan
+Write-Host ""
 Write-Host "Admin Panel Data Sources:" -ForegroundColor Green
-Write-Host "  Users: Firebase + Local filesystem" -ForegroundColor Cyan
-Write-Host "  Kundlis: Local filesystem (users/kundli_index.json)" -ForegroundColor Cyan
+Write-Host "  Users: Aggregated from per-user kundli_index.json files" -ForegroundColor Cyan
+Write-Host "  Kundlis: Local filesystem (Astrology folders)" -ForegroundColor Cyan
+Write-Host "  Palmistry: Local filesystem (Palmistry folders)" -ForegroundColor Cyan
+Write-Host "  Numerology: Local filesystem (Numerology folders)" -ForegroundColor Cyan
+Write-Host "  Chats: Local filesystem (Chats folders)" -ForegroundColor Cyan
 Write-Host "  Analytics: Computed from local storage" -ForegroundColor Cyan
-Write-Host "  User Growth: Real data from filesystem timestamps" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press any key to open the frontend in your browser..." -ForegroundColor Cyan
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

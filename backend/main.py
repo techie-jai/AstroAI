@@ -36,7 +36,9 @@ from models import (
     
     KundliMatchingRequest, KundliMatchingResponse,
     
-    ChatMessage, ContextSummary, KundliFacts, ConversationMetadata
+    ChatMessage, ContextSummary, KundliFacts, ConversationMetadata,
+    
+    PalmLine, PalmMount, PalmMetadata, PalmistryAnalysisRequest, PalmistryAnalysisResponse, PalmistryListResponse
 
 )
 
@@ -560,25 +562,15 @@ async def generate_kundli(
 
         
 
-        # Create user folder
+        # Get or create user folder (reuse existing if already exists)
 
-        print(f"[KUNDLI] Creating user folder...")
+        print(f"[KUNDLI] Getting or creating user folder...")
 
-        user_folder, unique_id = file_manager.create_user_folder(user_name)
-
-        
-
-        # Save user info
-
-        print(f"[KUNDLI] Saving user info...")
-
-        user_info = birth_data_dict.copy()
-
-        user_info['uid'] = current_user['uid']
-
-        user_info['unique_id'] = unique_id
-
-        file_manager.save_user_info(user_folder, user_info)
+        user_folder, unique_id = file_manager.get_or_create_user_folder(
+            user_name, 
+            uid=current_user.get('uid'),
+            email=current_user.get('email')
+        )
 
         
 
@@ -617,7 +609,7 @@ async def generate_kundli(
 
         # Step 3: Get counter for this user
         print(f"[KUNDLI] Step 3: Getting counter for user: {user_name}")
-        counter = file_manager.get_next_kundli_counter(user_name)
+        counter = file_manager.get_next_kundli_counter(user_folder, user_name)
         print(f"[KUNDLI] Step 3: Counter value: {counter}")
 
         # Step 4: Build new kundli_id with counter and hash
@@ -625,14 +617,23 @@ async def generate_kundli(
         kundli_id = f"{safe_name}-Kundli-{counter}-{kundli_hash}"
         print(f"[KUNDLI] Step 4: New kundli_id: {kundli_id}")
 
+        # Step 5: Save user info in the kundli subfolder
+        print(f"[KUNDLI] Step 5: Saving user info in kundli folder...")
+        user_info = birth_data_dict.copy()
+        user_info['uid'] = current_user['uid']
+        user_info['unique_id'] = unique_id
+        file_manager.save_user_info(user_folder, user_info, kundli_id=kundli_id)
+        print(f"[KUNDLI] Step 5: User info saved")
+
         # Step 6: Save comprehensive Kundli JSON only
         print(f"[KUNDLI] Step 6: Saving comprehensive Kundli JSON...")
-        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data)
+        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data, kundli_id=kundli_id)
         print(f"[KUNDLI] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
-        # Step 7: Add to local index
-        print(f"[KUNDLI] Step 7: Adding kundli to local index...")
+        # Step 7: Add to user's index
+        print(f"[KUNDLI] Step 7: Adding kundli to user's index...")
         file_manager.add_to_index(
+            user_folder=user_folder,
             kundli_id=kundli_id,
             file_path=comprehensive_kundli_path,
             birth_data=birth_data_dict,
@@ -641,7 +642,7 @@ async def generate_kundli(
             counter=counter,
             uid=current_user['uid']
         )
-        print(f"[KUNDLI] Step 7: Added to local index")
+        print(f"[KUNDLI] Step 7: Added to user's index")
 
         # Ensure user profile exists
 
@@ -1037,7 +1038,7 @@ async def get_calculation_history(
                 # Check if analysis exists for this kundli
                 file_path = metadata.get('file_path', '')
                 user_folder = file_path.rsplit('\\', 2)[0] if '\\' in file_path else file_path.rsplit('/', 2)[0]
-                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''))
+                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''), kundli_id)
                 
                 calculations.append({
                     'calculation_id': kundli_id,
@@ -1126,7 +1127,7 @@ async def get_user_calculations(
                 # Check if analysis exists for this kundli
                 file_path = metadata.get('file_path', '')
                 user_folder = file_path.rsplit('\\', 2)[0] if '\\' in file_path else file_path.rsplit('/', 2)[0]
-                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''))
+                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''), kundli_id)
                 
                 calculations.append({
                     'calculation_id': kundli_id,
@@ -1491,7 +1492,30 @@ async def generate_analysis(
             )
 
         
-        user_folder = kundli_metadata.get('file_path', '').rsplit('\\', 2)[0] if '\\' in kundli_metadata.get('file_path', '') else kundli_metadata.get('file_path', '').rsplit('/', 2)[0]
+        # Extract user folder from file path
+        # File path is: users/user_{email}/Astrology/{kundli_id}/comprehensive_kundli.json
+        # We need: users/user_{email}
+        file_path = kundli_metadata.get('file_path', '')
+        
+        # Split by separator and reconstruct
+        if '\\' in file_path:
+            # Windows path
+            parts = file_path.split('\\')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '\\'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('\\', 3)[0]
+        else:
+            # Unix path
+            parts = file_path.split('/')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '/'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('/', 3)[0]
 
         birth_data = kundli_metadata.get('birth_data')
 
@@ -1614,7 +1638,7 @@ async def generate_analysis(
 
         print(f"[ANALYSIS] Saving analysis locally...")
 
-        analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, formatted_analysis_text)
+        analysis_text_path = file_manager.save_analysis_text(user_folder, user_name, formatted_analysis_text, kundli_id=request.kundli_id)
 
         print(f"[ANALYSIS] Analysis saved: {analysis_text_path}")
 
@@ -1641,7 +1665,8 @@ async def generate_analysis(
 
             # Save PDF to file
 
-            analysis_pdf_path = file_manager.save_analysis_pdf(user_folder, user_name, pdf_content)
+            print(f"[ANALYSIS] Saving PDF with kundli_id: {request.kundli_id}, user_folder: {user_folder}")
+            analysis_pdf_path = file_manager.save_analysis_pdf(user_folder, user_name, pdf_content, kundli_id=request.kundli_id)
 
             print(f"[ANALYSIS] PDF saved: {analysis_pdf_path}")
 
@@ -1651,6 +1676,20 @@ async def generate_analysis(
 
             analysis_pdf_path = None
 
+        
+        # Update kundli_index to mark that analysis exists for this kundli
+        print(f"[ANALYSIS] Updating kundli_index to mark analysis as present...")
+        try:
+            index = file_manager._read_index()
+            if request.kundli_id in index:
+                index[request.kundli_id]['has_analysis'] = True
+                index[request.kundli_id]['analysis_generated_at'] = datetime.now().isoformat()
+                file_manager._write_index(index)
+                print(f"[ANALYSIS] Kundli index updated successfully")
+            else:
+                print(f"[ANALYSIS] Warning: Kundli ID not found in index")
+        except Exception as e:
+            print(f"[ANALYSIS] Warning: Could not update kundli_index: {str(e)}")
         
         return {
 
@@ -1878,7 +1917,30 @@ async def download_analysis_pdf(
             )
 
         
-        user_folder = kundli_metadata.get('file_path', '').rsplit('\\', 2)[0] if '\\' in kundli_metadata.get('file_path', '') else kundli_metadata.get('file_path', '').rsplit('/', 2)[0]
+        # Extract user folder from file path
+        # File path is: users/user_{email}/Astrology/{kundli_id}/comprehensive_kundli.json
+        # We need: users/user_{email}
+        file_path = kundli_metadata.get('file_path', '')
+        
+        # Split by separator and reconstruct
+        if '\\' in file_path:
+            # Windows path
+            parts = file_path.split('\\')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '\\'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('\\', 3)[0]
+        else:
+            # Unix path
+            parts = file_path.split('/')
+            # Find the Astrology folder index and take everything before it
+            if 'Astrology' in parts:
+                astrology_index = parts.index('Astrology')
+                user_folder = '/'.join(parts[:astrology_index])
+            else:
+                user_folder = file_path.rsplit('/', 3)[0]
 
         birth_data = kundli_metadata.get('birth_data')
 
@@ -1896,40 +1958,19 @@ async def download_analysis_pdf(
             )
 
         
-        # Get PDF file path - find the latest PDF file for this user
+        # Get PDF file path from the kundli subfolder
+        # PDF is saved in: users/user_{email}/Astrology/{kundli_id}/analysis.pdf
+        analysis_pdf_path = os.path.join(user_folder, "Astrology", kundli_id, "analysis.pdf")
         
-        user_name = birth_data.get('name', 'User')
-        
-        analysis_folder = os.path.join(user_folder, "analysis")
-        
-        if not os.path.exists(analysis_folder):
-            print(f"[DOWNLOAD] Analysis folder not found: {analysis_folder}")
+        if not os.path.exists(analysis_pdf_path):
+            print(f"[DOWNLOAD] Analysis PDF not found: {analysis_pdf_path}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Analysis folder not found. Please generate the analysis first."
+                detail="Analysis PDF not found. Please generate the analysis first."
             )
         
-        # Find all PDF files for this user
-        import glob
-        safe_name = user_name.replace(' ', '-')
-        pdf_pattern = os.path.join(analysis_folder, f"{safe_name}_analysis_*.pdf")
-        pdf_files = glob.glob(pdf_pattern)
-        
-        if not pdf_files:
-            # Try old naming convention as fallback
-            old_pdf_path = os.path.join(analysis_folder, f"{user_name}_AI_Analysis.pdf")
-            if os.path.exists(old_pdf_path):
-                pdf_path = old_pdf_path
-            else:
-                print(f"[DOWNLOAD] No PDF files found for user: {user_name}")
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Analysis PDF not found. Please generate the analysis first."
-                )
-        else:
-            # Get the most recent PDF file
-            pdf_path = max(pdf_files, key=os.path.getmtime)
-            print(f"[DOWNLOAD] Found {len(pdf_files)} PDF files, using latest: {os.path.basename(pdf_path)}")    
+        pdf_path = analysis_pdf_path
+        print(f"[DOWNLOAD] Found analysis PDF: {pdf_path}")    
 
         print(f"[DOWNLOAD] Returning PDF file: {pdf_path}")
 
@@ -2381,22 +2422,14 @@ async def livechat_generate_kundli(
 
         user_name = birth_data_dict.get('name', 'User')
         
-        # Create user folder
-        print(f"[LIVECHAT] Creating user folder...")
+        # Get or create user folder (reuse existing if already exists)
+        print(f"[LIVECHAT] Getting or creating user folder...")
 
-        user_folder, unique_id = file_manager.create_user_folder(user_name)
-
-        
-        # Save user info
-        print(f"[LIVECHAT] Saving user info...")
-
-        user_info = birth_data_dict.copy()
-
-        user_info['uid'] = current_user['uid']
-
-        user_info['unique_id'] = unique_id
-
-        file_manager.save_user_info(user_folder, user_info)
+        user_folder, unique_id = file_manager.get_or_create_user_folder(
+            user_name,
+            uid=current_user.get('uid'),
+            email=current_user.get('email')
+        )
 
         
         # Generate kundli
@@ -2433,7 +2466,7 @@ async def livechat_generate_kundli(
         
         # Step 3: Get counter for this user
         print(f"[LIVECHAT] Step 3: Getting counter for user: {user_name}")
-        counter = file_manager.get_next_kundli_counter(user_name)
+        counter = file_manager.get_next_kundli_counter(user_folder, user_name)
         print(f"[LIVECHAT] Step 3: Counter value: {counter}")
 
         
@@ -2442,16 +2475,24 @@ async def livechat_generate_kundli(
         kundli_id = f"{safe_name}-Kundli-{counter}-{kundli_hash}"
         print(f"[LIVECHAT] Step 4: New kundli_id: {kundli_id}")
 
-        
+        # Step 5: Save user info in the kundli subfolder
+        print(f"[LIVECHAT] Step 5: Saving user info in kundli folder...")
+        user_info = birth_data_dict.copy()
+        user_info['uid'] = current_user['uid']
+        user_info['unique_id'] = unique_id
+        file_manager.save_user_info(user_folder, user_info, kundli_id=kundli_id)
+        print(f"[LIVECHAT] Step 5: User info saved")
+
         # Step 6: Save comprehensive Kundli JSON only
         print(f"[LIVECHAT] Step 6: Saving comprehensive Kundli JSON...")
-        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data)
+        comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data, kundli_id=kundli_id)
         print(f"[LIVECHAT] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
         
-        # Step 7: Add to local index
-        print(f"[LIVECHAT] Step 7: Adding kundli to local index...")
+        # Step 7: Add to user's index
+        print(f"[LIVECHAT] Step 7: Adding kundli to user's index...")
         file_manager.add_to_index(
+            user_folder=user_folder,
             kundli_id=kundli_id,
             file_path=comprehensive_kundli_path,
             birth_data=birth_data_dict,
@@ -2460,7 +2501,7 @@ async def livechat_generate_kundli(
             counter=counter,
             uid=current_user['uid']
         )
-        print(f"[LIVECHAT] Step 7: Added to local index")
+        print(f"[LIVECHAT] Step 7: Added to user's index")
 
         
         # Ensure user profile exists
@@ -4080,6 +4121,360 @@ async def clear_chat_history(
     except Exception as e:
         print(f"[CHAT_API] Error clearing history: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Palmistry Endpoints
+@app.post('/api/palmistry/analyze')
+async def analyze_palmistry(
+    request: PalmistryAnalysisRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Analyze palm images and generate palmistry reading
+    
+    Args:
+        request: Palmistry analysis request with images
+        current_user: Authenticated user
+        
+    Returns:
+        Complete palmistry analysis
+    """
+    try:
+        import traceback
+        from palmistry_service import PalmistryService
+        
+        print(f"[PALMISTRY] Starting analysis for user {current_user['uid']}")
+        print(f"[PALMISTRY] Handedness: {request.handedness}")
+        print(f"[PALMISTRY] Left hand image size: {len(request.left_hand_image)} chars")
+        print(f"[PALMISTRY] Right hand image size: {len(request.right_hand_image)} chars")
+        
+        palmistry_service = PalmistryService()
+        
+        print(f"[PALMISTRY] PalmistryService initialized")
+        
+        # Get or create user folder using email
+        from file_manager import FileManager
+        file_manager = FileManager()
+        user_email = current_user.get('email', '')
+        user_name = current_user.get('name', 'User')
+        user_folder_path, _ = file_manager.get_or_create_user_folder(user_name, uid=current_user['uid'], email=user_email)
+        
+        print(f"[PALMISTRY] User folder path: {user_folder_path}")
+        
+        # Analyze palm images
+        print(f"[PALMISTRY] Calling analyze_palm_images...")
+        analysis_result = palmistry_service.analyze_palm_images(
+            request.left_hand_image,
+            request.right_hand_image,
+            request.handedness,
+            current_user['uid'],
+            request.name,
+            user_folder_path
+        )
+        
+        print(f"[PALMISTRY] Analysis completed successfully")
+        return analysis_result
+    
+    except Exception as e:
+        print(f"[PALMISTRY] Error analyzing palm images: {str(e)}")
+        print(f"[PALMISTRY] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/palmistry/list')
+async def get_palmistry_list(current_user: dict = Depends(get_current_user)):
+    """
+    Get list of user's palmistry readings
+    
+    Args:
+        current_user: Authenticated user
+        
+    Returns:
+        List of palmistry readings
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        readings = palmistry_service.get_user_palmistry_list(current_user['uid'])
+        
+        return {
+            "readings": readings
+        }
+    
+    except Exception as e:
+        print(f"[PALMISTRY] Error getting palmistry list: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/palmistry/{palmistry_id}')
+async def get_palmistry_reading(
+    palmistry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get specific palmistry reading
+    
+    Args:
+        palmistry_id: Palmistry reading ID
+        current_user: Authenticated user
+        
+    Returns:
+        Complete palmistry data
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        metadata = palmistry_service.load_palmistry_reading(current_user['uid'], palmistry_id)
+        
+        return metadata
+    
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Palmistry reading not found")
+    except Exception as e:
+        print(f"[PALMISTRY] Error getting palmistry reading: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete('/api/palmistry/{palmistry_id}')
+async def delete_palmistry_reading(
+    palmistry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete a palmistry reading
+    
+    Args:
+        palmistry_id: Palmistry reading ID
+        current_user: Authenticated user
+        
+    Returns:
+        Success status
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        success = palmistry_service.delete_palmistry_reading(current_user['uid'], palmistry_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Palmistry reading not found")
+        
+        return {
+            "status": "success",
+            "message": "Palmistry reading deleted"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[PALMISTRY] Error deleting palmistry reading: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/palmistry/{palmistry_id}/kundli-correlation')
+async def get_palmistry_kundli_correlation(
+    palmistry_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get kundli correlation for palmistry reading (optional feature)
+    
+    Args:
+        palmistry_id: Palmistry reading ID
+        current_user: Authenticated user
+        
+    Returns:
+        Correlation data if user has kundli
+    """
+    try:
+        from palmistry_service import PalmistryService
+        
+        palmistry_service = PalmistryService()
+        metadata = palmistry_service.load_palmistry_reading(current_user['uid'], palmistry_id)
+        
+        # TODO: Implement kundli correlation logic
+        # For now, return empty correlation
+        return {
+            "palmistry_id": palmistry_id,
+            "correlations": []
+        }
+    
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Palmistry reading not found")
+    except Exception as e:
+        print(f"[PALMISTRY] Error getting kundli correlation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post('/api/palmistry/chat')
+async def palmistry_chat(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Chat endpoint for palmistry readings with top 20 answers context
+    
+    Args:
+        request_data: Contains palmistry_id, user_message, and chat_history
+        current_user: Authenticated user information
+        
+    Returns:
+        AI response based on palmistry analysis and top 20 answers
+    """
+    try:
+        print(f"[PALMISTRY_CHAT] Processing message for user: {current_user.get('uid')}")
+        
+        # Validate request data
+        user_message = request_data.get('user_message', '').strip()
+        palmistry_id = request_data.get('palmistry_id', '').strip()
+        
+        if not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_message is required"
+            )
+        
+        if not palmistry_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="palmistry_id is required"
+            )
+        
+        print(f"[PALMISTRY_CHAT] Palmistry ID: {palmistry_id}")
+        print(f"[PALMISTRY_CHAT] User message: {user_message[:100]}...")
+        
+        # Load palmistry reading
+        from palmistry_service import PalmistryService
+        palmistry_service = PalmistryService()
+        
+        try:
+            palmistry_data = palmistry_service.load_palmistry_reading(current_user['uid'], palmistry_id)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Palmistry reading not found")
+        
+        # Extract top 20 answers from metadata
+        top_20_answers = palmistry_data.get('top_20_answers', {})
+        print(f"[PALMISTRY_CHAT] Loaded top 20 answers: {len(top_20_answers)} answers available")
+        
+        # Build context from palmistry data and top 20 answers
+        palmistry_context = f"""
+=== PALMISTRY READING DATA ===
+Palmistry ID: {palmistry_id}
+Handedness: {palmistry_data.get('handedness', 'Unknown')}
+Hand Type: {palmistry_data.get('hand_type', 'Unknown')}
+Elemental Type: {palmistry_data.get('elemental_type', 'Unknown')}
+Palm Shape: {palmistry_data.get('palm_shape', 'Unknown')}
+Finger Length: {palmistry_data.get('finger_length', 'Unknown')}
+
+=== OVERALL READING ===
+{palmistry_data.get('overall_reading', 'No overall reading available')}
+
+=== TOP 20 PALMISTRY QUESTIONS - PRE-ANSWERED ===
+"""
+        
+        # Add top 20 answers to context
+        if top_20_answers:
+            questions = [
+                ("Q1: When will I get married?", "marriage_age"),
+                ("Q2: Love marriage or arranged?", "marriage_type"),
+                ("Q3: How many serious relationships?", "relationships_count"),
+                ("Q4: Will I face divorce/heartbreak?", "divorce_risk"),
+                ("Q5: How many children?", "children_count"),
+                ("Q6: Best career path?", "career_path"),
+                ("Q7: When will I achieve career success?", "career_success_age"),
+                ("Q8: Will I be wealthy/millionaire?", "wealth_potential"),
+                ("Q9: Chances of sudden wealth?", "sudden_wealth"),
+                ("Q10: Will I face bankruptcy?", "bankruptcy_risk"),
+                ("Q11: Will I settle abroad?", "foreign_settlement"),
+                ("Q12: Will I travel extensively?", "travel_frequency"),
+                ("Q13: Will I own real estate?", "property_ownership"),
+                ("Q14: How long is my lifespan?", "lifespan"),
+                ("Q15: Major health issues?", "health_issues"),
+                ("Q16: Mental health and stability?", "mental_health"),
+                ("Q17: Will I attain fame?", "fame_potential"),
+                ("Q18: Lucky/rare signs?", "special_signs"),
+                ("Q19: Legal troubles or enemies?", "legal_troubles"),
+                ("Q20: Strong intuition/spiritual awakening?", "intuition_spirituality"),
+            ]
+            
+            for question, key in questions:
+                answer = top_20_answers.get(key)
+                if answer:
+                    palmistry_context += f"{question}\nAnswer: {answer}\n\n"
+        
+        # Build chat history context
+        chat_history = request_data.get('chat_history', [])
+        chat_context = ""
+        if chat_history:
+            chat_context = "\n=== PREVIOUS CONVERSATION ===\n"
+            for msg in chat_history[-3:]:
+                role = msg.get('role', 'user').upper()
+                content = msg.get('content', '')
+                chat_context += f"{role}: {content}\n"
+            chat_context += "=== END PREVIOUS CONVERSATION ===\n"
+        
+        # Check Gemini service availability
+        if not gemini_service:
+            print(f"[PALMISTRY_CHAT] ERROR: Gemini service not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gemini API key not configured. Please set GEMINI_API_KEY in environment variables."
+            )
+        
+        # Create comprehensive prompt for Gemini
+        import json
+        
+        prompt = f"""You are an expert palmist with deep knowledge of palmistry, astrology, and life guidance.
+Analyze the palmistry reading data and top 20 pre-answered questions provided below.
+Use this information to provide insightful, personalized responses to the user's questions.
+
+{palmistry_context}
+
+{chat_context}
+
+=== USER'S QUESTION ===
+{user_message}
+
+=== RESPONSE GUIDELINES ===
+1. Base your response on the palmistry data and top 20 answers provided
+2. Provide personalized insights specific to this person's palm reading
+3. Reference specific palm features (lines, mounts, symbols) when relevant
+4. Maintain a professional, empathetic, and hopeful tone
+5. Give practical, actionable advice
+6. If the question relates to one of the top 20 pre-answered questions, incorporate that answer
+7. Avoid one-liners or shallow summaries
+8. Provide 2-3 well-written paragraphs with depth and insight
+
+Please provide a thorough, personalized response based on the palmistry analysis."""
+        
+        # Generate AI response
+        print(f"[PALMISTRY_CHAT] Generating AI response...")
+        response = gemini_service.model.generate_content(prompt)
+        ai_response = response.text
+        
+        print(f"[PALMISTRY_CHAT] Response generated successfully")
+        print(f"[PALMISTRY_CHAT] Response length: {len(ai_response)} characters")
+        
+        return {
+            "status": "success",
+            "response": ai_response,
+            "timestamp": datetime.now().isoformat(),
+            "palmistry_id": palmistry_id
+        }
+        
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(f"[PALMISTRY_CHAT] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process palmistry chat request: {str(e)}"
+        )
 
 
 @app.exception_handler(HTTPException)

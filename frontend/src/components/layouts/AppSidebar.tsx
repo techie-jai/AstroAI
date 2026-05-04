@@ -8,6 +8,7 @@ import {
   Heart,
   MessageCircle,
   Settings,
+  Hand,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { cn } from '../../lib/utils'
@@ -22,6 +23,7 @@ const navItems = [
   { path: '/analysis', icon: Sparkles, label: 'Analysis' },
   { path: '/dosh-dasha-analysis', icon: Target, label: 'Dosha Analysis' },
   { path: '/kundli-matching', icon: Heart, label: 'Kundli Matching' },
+  { path: '/palmistry', icon: Hand, label: 'Palmistry' },
   { path: '/chat', icon: MessageCircle, label: 'Chat' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ]

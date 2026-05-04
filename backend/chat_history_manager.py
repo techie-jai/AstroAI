@@ -32,7 +32,7 @@ class ChatHistoryManager:
     
     def _get_chat_dir(self, user_folder: str, kundli_id: str) -> str:
         """Get chat directory for a kundli"""
-        return os.path.join(self.users_path, user_folder, "chat", kundli_id)
+        return os.path.join(self.users_path, user_folder, "Chats", "chat_history", kundli_id)
     
     def _get_lock_path(self, file_path: str) -> str:
         """Get lock file path for a given file"""
