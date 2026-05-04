@@ -609,7 +609,7 @@ async def generate_kundli(
 
         # Step 3: Get counter for this user
         print(f"[KUNDLI] Step 3: Getting counter for user: {user_name}")
-        counter = file_manager.get_next_kundli_counter(user_name)
+        counter = file_manager.get_next_kundli_counter(user_folder, user_name)
         print(f"[KUNDLI] Step 3: Counter value: {counter}")
 
         # Step 4: Build new kundli_id with counter and hash
@@ -630,9 +630,10 @@ async def generate_kundli(
         comprehensive_kundli_path = file_manager.save_comprehensive_kundli(user_folder, user_name, kundli_data, kundli_id=kundli_id)
         print(f"[KUNDLI] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
-        # Step 7: Add to local index
-        print(f"[KUNDLI] Step 7: Adding kundli to local index...")
+        # Step 7: Add to user's index
+        print(f"[KUNDLI] Step 7: Adding kundli to user's index...")
         file_manager.add_to_index(
+            user_folder=user_folder,
             kundli_id=kundli_id,
             file_path=comprehensive_kundli_path,
             birth_data=birth_data_dict,
@@ -641,7 +642,7 @@ async def generate_kundli(
             counter=counter,
             uid=current_user['uid']
         )
-        print(f"[KUNDLI] Step 7: Added to local index")
+        print(f"[KUNDLI] Step 7: Added to user's index")
 
         # Ensure user profile exists
 
@@ -2451,7 +2452,7 @@ async def livechat_generate_kundli(
         
         # Step 3: Get counter for this user
         print(f"[LIVECHAT] Step 3: Getting counter for user: {user_name}")
-        counter = file_manager.get_next_kundli_counter(user_name)
+        counter = file_manager.get_next_kundli_counter(user_folder, user_name)
         print(f"[LIVECHAT] Step 3: Counter value: {counter}")
 
         
@@ -2474,9 +2475,10 @@ async def livechat_generate_kundli(
         print(f"[LIVECHAT] Step 6: Comprehensive Kundli saved: {comprehensive_kundli_path}")
 
         
-        # Step 7: Add to local index
-        print(f"[LIVECHAT] Step 7: Adding kundli to local index...")
+        # Step 7: Add to user's index
+        print(f"[LIVECHAT] Step 7: Adding kundli to user's index...")
         file_manager.add_to_index(
+            user_folder=user_folder,
             kundli_id=kundli_id,
             file_path=comprehensive_kundli_path,
             birth_data=birth_data_dict,
@@ -2485,7 +2487,7 @@ async def livechat_generate_kundli(
             counter=counter,
             uid=current_user['uid']
         )
-        print(f"[LIVECHAT] Step 7: Added to local index")
+        print(f"[LIVECHAT] Step 7: Added to user's index")
 
         
         # Ensure user profile exists

@@ -25,12 +25,12 @@ class FileManager:
         # Resolve to absolute path - prioritize parent directory (project root)
         if os.path.isabs(base_dir):
             # Absolute path provided, use as-is
-            self.base_dir = base_dir
+            self.base_dir = os.path.normpath(base_dir)
         else:
             # For relative paths, always use parent directory (project root)
             # This ensures we use E:\25. Codes\17. AstroAI V3\AstroAi\users
             # not E:\25. Codes\17. AstroAI V3\AstroAi\backend\users
-            parent_path = os.path.abspath(os.path.join("..", base_dir))
+            parent_path = os.path.normpath(os.path.abspath(os.path.join("..", base_dir)))
             
             # If parent path exists, use it (preferred for project root)
             if os.path.exists(parent_path):
@@ -47,8 +47,8 @@ class FileManager:
         
         print(f"[FILE_MANAGER] Using users directory: {self.base_dir}")
         
-        self.index_file = os.path.join(self.base_dir, "kundli_index.json")
-        self._ensure_index_exists()
+        # Note: Per-user index files are created in each user folder
+        # No global index file is used anymore
     
     def get_or_create_user_folder(self, user_name: str, uid: str = None, email: str = None) -> Tuple[str, str]:
         """
@@ -202,6 +202,8 @@ class FileManager:
             filename = f"{user_name}_Kundli.json"
         
         file_path = os.path.join(folder_path, "kundli", filename)
+        # Normalize the path to resolve any .. references
+        file_path = os.path.normpath(file_path)
         
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(kundli_data, f, indent=2, ensure_ascii=False)
@@ -234,6 +236,9 @@ class FileManager:
         else:
             # Fallback to old structure for backward compatibility
             file_path = os.path.join(folder_path, "kundli", filename)
+        
+        # Normalize the path to resolve any .. references
+        file_path = os.path.normpath(file_path)
         
         # Ensure directory exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -387,24 +392,62 @@ class FileManager:
         """Get current timestamp as ISO format string"""
         return datetime.now().isoformat()
     
-    def _ensure_index_exists(self) -> None:
-        """Ensure kundli_index.json exists"""
-        if not os.path.exists(self.index_file):
-            with open(self.index_file, 'w', encoding='utf-8') as f:
+    def _get_user_index_file(self, user_folder: str) -> str:
+        """
+        Get path to per-user kundli index file
+        
+        Args:
+            user_folder: Path to user's folder
+            
+        Returns:
+            Path to user's kundli_index.json
+        """
+        return os.path.join(user_folder, "kundli_index.json")
+    
+    def _ensure_user_index_exists(self, user_folder: str) -> None:
+        """Ensure per-user kundli_index.json exists"""
+        index_file = self._get_user_index_file(user_folder)
+        if not os.path.exists(index_file):
+            with open(index_file, 'w', encoding='utf-8') as f:
                 json.dump({}, f, indent=2)
     
-    def _read_index(self) -> Dict:
-        """Read kundli index from file"""
+    def _read_user_index(self, user_folder: str) -> Dict:
+        """Read per-user kundli index from file"""
+        index_file = self._get_user_index_file(user_folder)
         try:
-            with open(self.index_file, 'r', encoding='utf-8') as f:
+            with open(index_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
             return {}
     
-    def _write_index(self, index: Dict) -> None:
-        """Write kundli index to file"""
-        with open(self.index_file, 'w', encoding='utf-8') as f:
+    def _write_user_index(self, user_folder: str, index: Dict) -> None:
+        """Write per-user kundli index to file"""
+        self._ensure_user_index_exists(user_folder)
+        index_file = self._get_user_index_file(user_folder)
+        with open(index_file, 'w', encoding='utf-8') as f:
             json.dump(index, f, indent=2, ensure_ascii=False)
+    
+    def _read_index(self) -> Dict:
+        """
+        Read all kundlis from all user folders (global index)
+        
+        This is for backward compatibility with existing code that expects
+        a global index. It aggregates all per-user indexes into one dict.
+        
+        Returns:
+            Dictionary with all kundlis from all users
+        """
+        global_index = {}
+        try:
+            for folder_name in os.listdir(self.base_dir):
+                folder_path = os.path.join(self.base_dir, folder_name)
+                if os.path.isdir(folder_path):
+                    user_index = self._read_user_index(folder_path)
+                    global_index.update(user_index)
+        except (OSError, PermissionError):
+            pass
+        
+        return global_index
     
     def generate_kundli_hash(self, kundli_data: Dict) -> str:
         """
@@ -421,17 +464,18 @@ class FileManager:
         hash_obj = hashlib.sha256(json_str.encode('utf-8'))
         return hash_obj.hexdigest()[:8]
     
-    def get_next_kundli_counter(self, user_name: str) -> int:
+    def get_next_kundli_counter(self, user_folder: str, user_name: str) -> int:
         """
         Get the next counter for a user's kundli
         
         Args:
+            user_folder: Path to user's folder
             user_name: User's name
             
         Returns:
             Next counter value (1-based)
         """
-        index = self._read_index()
+        index = self._read_user_index(user_folder)
         safe_name = re.sub(r'[^\w\s-]', '', user_name).strip().replace(' ', '-')
         
         # Count existing kundlis for this user
@@ -442,30 +486,58 @@ class FileManager:
         
         return count + 1
     
-    def lookup_kundli(self, kundli_id: str) -> Optional[Dict]:
+    def lookup_kundli(self, user_folder_or_id: str, kundli_id: str = None) -> Optional[Dict]:
         """
-        Lookup kundli metadata from index
+        Lookup kundli metadata from user's index
+        
+        Supports two calling conventions for backward compatibility:
+        1. lookup_kundli(user_folder, kundli_id) - New per-user index
+        2. lookup_kundli(kundli_id) - Legacy global index (searches all user folders)
         
         Args:
-            kundli_id: Kundli ID (e.g., 'Jai-Kundli-1-a3b4c5d6')
+            user_folder_or_id: Either user folder path or kundli_id (if kundli_id param is None)
+            kundli_id: Kundli ID (e.g., 'Jai-Kundli-1-a3b4c5d6') - optional for backward compat
             
         Returns:
             Kundli metadata dict or None if not found
         """
-        index = self._read_index()
-        return index.get(kundli_id)
+        # If kundli_id is provided, use new per-user index approach
+        if kundli_id is not None:
+            user_folder = user_folder_or_id
+            index = self._read_user_index(user_folder)
+            return index.get(kundli_id)
+        
+        # Backward compatibility: search all user folders for the kundli_id
+        # This is slower but maintains compatibility with existing code
+        search_kundli_id = user_folder_or_id
+        try:
+            for folder_name in os.listdir(self.base_dir):
+                folder_path = os.path.join(self.base_dir, folder_name)
+                if os.path.isdir(folder_path):
+                    index = self._read_user_index(folder_path)
+                    if search_kundli_id in index:
+                        return index.get(search_kundli_id)
+        except (OSError, PermissionError):
+            pass
+        
+        return None
     
-    def read_kundli_by_id(self, kundli_id: str) -> Optional[Dict]:
+    def read_kundli_by_id(self, user_folder_or_id: str, kundli_id: str = None) -> Optional[Dict]:
         """
         Read kundli data by ID
         
+        Supports two calling conventions for backward compatibility:
+        1. read_kundli_by_id(user_folder, kundli_id) - New per-user approach
+        2. read_kundli_by_id(kundli_id) - Legacy global search
+        
         Args:
-            kundli_id: Kundli ID
+            user_folder_or_id: Either user folder path or kundli_id
+            kundli_id: Kundli ID (optional for backward compat)
             
         Returns:
             Kundli data dict or None if not found
         """
-        metadata = self.lookup_kundli(kundli_id)
+        metadata = self.lookup_kundli(user_folder_or_id, kundli_id)
         if not metadata:
             return None
         
@@ -475,12 +547,13 @@ class FileManager:
         
         return self.read_kundli_json(file_path)
     
-    def add_to_index(self, kundli_id: str, file_path: str, birth_data: Dict, 
+    def add_to_index(self, user_folder: str, kundli_id: str, file_path: str, birth_data: Dict, 
                      generated_at: str, hash_value: str, counter: int, uid: str = None) -> None:
         """
-        Add kundli to index
+        Add kundli to user's index
         
         Args:
+            user_folder: Path to user's folder
             kundli_id: Kundli ID
             file_path: Path to kundli JSON file
             birth_data: Birth data dictionary
@@ -489,7 +562,7 @@ class FileManager:
             counter: Counter value
             uid: User ID (Firebase UID)
         """
-        index = self._read_index()
+        index = self._read_user_index(user_folder)
         index[kundli_id] = {
             'file_path': file_path,
             'user_name': birth_data.get('name', 'User'),
@@ -499,7 +572,7 @@ class FileManager:
             'counter': counter,
             'uid': uid
         }
-        self._write_index(index)
+        self._write_user_index(user_folder, index)
     
     def save_analysis_text(self, user_folder: str, user_name: str, analysis_text: str, kundli_id: str = None) -> str:
         """
