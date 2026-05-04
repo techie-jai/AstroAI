@@ -2977,6 +2977,42 @@ Name: {girl_name}
 === USER'S QUESTION ===
 {user_message}
 
+=== CRITICAL RESPONSE FORMAT REQUIREMENTS ===
+You MUST structure your response in TWO DISTINCT PARTS:
+
+PART 1 - SHORT ANSWER (Default View):
+- 2-3 well-written paragraphs
+- Beginner-friendly but insightful tone
+- Use basic astrology concepts (planets, houses, zodiac signs)
+- Avoid heavy jargon unless softly explained
+- Must be valuable and satisfying without requiring expansion
+
+PART 2 - DETAILED ANSWER (Expandable View):
+- Maximum 350 words or 3-4 paragraphs (whichever is shorter)
+- Deeper reasoning and structured insight
+- Include intermediate/advanced concepts with clarity
+- May include cross-chart reasoning (D1, D9, etc.)
+- Suitable for knowledgeable users and astrologers
+- MUST fit within expandable box without excessive scrolling
+
+=== CRITICAL JSON FORMAT REQUIREMENTS ===
+YOU MUST RESPOND WITH VALID JSON ONLY. NO OTHER TEXT BEFORE OR AFTER THE JSON.
+
+Format your EXACT response as:
+{{
+  "short_answer": "Your 2-3 paragraph beginner-friendly explanation...",
+  "detailed_answer": "Your 350-word maximum expert-level explanation..."
+}}
+
+IMPORTANT: 
+- Start your response with {{
+- End your response with }}
+- Do NOT include any text outside the JSON structure
+- Do NOT use markdown code blocks (like ```json or ```)
+- Do NOT add explanations outside the JSON
+- The entire response must be valid JSON that can be parsed
+- NO MARKDOWN FORMATTING - PURE JSON ONLY
+
 === INSTRUCTIONS FOR MATCHING ANALYSIS ===
 1. Provide a comprehensive analysis of both individual kundlis
 2. Analyze the compatibility based on:
@@ -2994,9 +3030,11 @@ Name: {girl_name}
    - Overall marital happiness
 5. Give practical advice for a successful marriage
 6. Mention any remedies or precautions if needed
-7. Maintain a professional, empathetic, and hopeful tone
+7. Maintain a professional, empathetic and hopeful tone
+8. AVOID one-liners or shallow summaries
+9. AVOID overly long essays or rambling text
 
-Please provide a thorough, detailed response covering all aspects of the matching analysis."""
+Please provide a thorough response in the specified JSON format covering all aspects of the matching analysis."""
         else:
             # Handle regular kundli analysis
             print(f"[UNIFIED_CHAT] Extracting comprehensive Kundli data...")
@@ -3081,16 +3119,54 @@ Birth Place: {comprehensive_data['basic_info'].get('place', 'Unknown')}
 === USER'S QUESTION ===
 {user_message}
 
-=== INSTRUCTIONS ===
-1. Provide a comprehensive astrological analysis based on ALL available data
+=== CRITICAL RESPONSE FORMAT REQUIREMENTS ===
+You MUST structure your response in TWO DISTINCT PARTS:
+
+PART 1 - SHORT ANSWER (Default View):
+- 2-3 well-written paragraphs
+- Beginner-friendly but insightful tone
+- Use basic astrology concepts (planets, houses, zodiac signs)
+- Avoid heavy jargon unless softly explained
+- Must be valuable and satisfying without requiring expansion
+
+PART 2 - DETAILED ANSWER (Expandable View):
+- Maximum 350 words or 3-4 paragraphs (whichever is shorter)
+- Deeper reasoning and structured insight
+- Include intermediate/advanced concepts with clarity
+- May include cross-chart reasoning (D1, D9, etc.)
+- Suitable for knowledgeable users and astrologers
+- MUST fit within expandable box without excessive scrolling
+
+=== CRITICAL JSON FORMAT REQUIREMENTS ===
+YOU MUST RESPOND WITH VALID JSON ONLY. NO OTHER TEXT BEFORE OR AFTER THE JSON.
+
+Format your EXACT response as:
+{{
+  "short_answer": "Your 2-3 paragraph beginner-friendly explanation...",
+  "detailed_answer": "Your 350-word maximum expert-level explanation..."
+}}
+
+IMPORTANT: 
+- Start your response with {{
+- End your response with }}
+- Do NOT include any text outside the JSON structure
+- Do NOT use markdown code blocks (like ```json or ```)
+- Do NOT add explanations outside the JSON
+- The entire response must be valid JSON that can be parsed
+- NO MARKDOWN FORMATTING - PURE JSON ONLY
+
+=== CONTENT GUIDELINES ===
+1. Provide comprehensive astrological analysis based on ALL available data
 2. ALWAYS use divisional chart data when available - check the divisional_charts object
 3. When user asks about any chart (D2, D3, D4, D5, D6, D7, D8, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60), analyze it from the provided data
 4. Include insights from ashtakavarga, dashas, and planetary strengths
 5. Give practical, actionable advice
 6. Maintain a professional and empathetic tone
 7. Never claim a chart is unavailable if it's in the divisional_charts object
+8. AVOID one-liners or shallow summaries
+9. AVOID overly long essays or rambling text
 
-Please provide a thorough response incorporating all relevant astrological factors."""
+Please provide a thorough response in the specified JSON format incorporating all relevant astrological factors."""
         
         # Generate AI response
         print(f"[UNIFIED_CHAT] Generating AI response...")
@@ -3099,6 +3175,59 @@ Please provide a thorough response incorporating all relevant astrological facto
         
         print(f"[UNIFIED_CHAT] Response generated successfully")
         print(f"[UNIFIED_CHAT] Response length: {len(ai_response)} characters")
+        print(f"[UNIFIED_CHAT] Response preview: {ai_response[:200]}...")
+        print(f"[UNIFIED_CHAT] Response starts with JSON: {ai_response.strip().startswith('{')}")
+        
+        # Parse dual-layer response
+        short_answer = ""
+        detailed_answer = ""
+        
+        try:
+            # Clean response - remove markdown code blocks if present
+            cleaned_response = ai_response.strip()
+            
+            # Remove markdown code block markers
+            if cleaned_response.startswith('```json'):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            elif cleaned_response.startswith('```'):
+                cleaned_response = cleaned_response[3:]   # Remove ```
+            
+            if cleaned_response.endswith('```'):
+                cleaned_response = cleaned_response[:-3]  # Remove ending ```
+            
+            cleaned_response = cleaned_response.strip()
+            
+            print(f"[UNIFIED_CHAT] Cleaned response preview: {cleaned_response[:200]}...")
+            print(f"[UNIFIED_CHAT] Cleaned response starts with JSON: {cleaned_response.startswith('{')}")
+            
+            # Try to parse as JSON
+            import json
+            parsed_response = json.loads(cleaned_response)
+            
+            if isinstance(parsed_response, dict):
+                short_answer = parsed_response.get('short_answer', ai_response)
+                detailed_answer = parsed_response.get('detailed_answer', '')
+                print(f"[UNIFIED_CHAT] Successfully parsed dual-layer response")
+                print(f"[UNIFIED_CHAT] Short answer length: {len(short_answer)} characters")
+                print(f"[UNIFIED_CHAT] Detailed answer length: {len(detailed_answer)} characters")
+            else:
+                # Fallback to single response if JSON parsing fails
+                print(f"[UNIFIED_CHAT] Parsed response is not a dictionary")
+                short_answer = ai_response
+                detailed_answer = ""
+                
+        except json.JSONDecodeError as e:
+            print(f"[UNIFIED_CHAT] JSON parsing failed: {e}")
+            print(f"[UNIFIED_CHAT] First 500 chars of response: {ai_response[:500]}")
+            print(f"[UNIFIED_CHAT] Falling back to single response format")
+            # Fallback to single response
+            short_answer = ai_response
+            detailed_answer = ""
+        except Exception as e:
+            print(f"[UNIFIED_CHAT] Error parsing response: {e}")
+            # Fallback to single response
+            short_answer = ai_response
+            detailed_answer = ""
         
         # Save messages to persistent storage (async, non-blocking)
         if user_folder and kundli_id:
@@ -3128,7 +3257,9 @@ Please provide a thorough response incorporating all relevant astrological facto
         
         return {
             "status": "success",
-            "response": ai_response,
+            "response": short_answer,  # Backward compatibility
+            "short_answer": short_answer,
+            "detailed_answer": detailed_answer,
             "timestamp": datetime.now().isoformat(),
             "data_summary": {
                 "divisional_charts_available": comprehensive_data['divisional_charts'].get('available_charts', []),

@@ -4,6 +4,7 @@ import { Send, Loader, Sparkles, ChevronUp, ArrowLeft, Calendar, Clock, MapPin, 
 import { api } from '../services/api'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import ExpandableExplanation from '../components/ui/ExpandableExplanation'
 
 // Helper function to parse markdown formatting
 const parseMarkdown = (text: string) => {
@@ -81,6 +82,8 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  short_answer?: string
+  detailed_answer?: string
 }
 
 interface ChatSession {
@@ -164,11 +167,35 @@ export default function ChatWithKundliPage() {
           const historyResponse = await api.loadChatHistory(kundliId)
           if (historyResponse.data.messages && historyResponse.data.messages.length > 0) {
             console.log('[CHAT] Loaded', historyResponse.data.messages.length, 'messages from persistent storage')
-            const loadedMessages: Message[] = historyResponse.data.messages.map((msg: any) => ({
-              role: msg.role,
-              content: msg.content,
-              timestamp: new Date(msg.timestamp)
-            }))
+            const loadedMessages: Message[] = historyResponse.data.messages.map((msg: any) => {
+              // Parse dual-layer response for assistant messages
+              let shortAnswer = ''
+              let detailedAnswer = ''
+              let content = msg.content
+
+              if (msg.role === 'assistant' && msg.content) {
+                try {
+                  // Check if content is a JSON string that needs parsing
+                  if (typeof msg.content === 'string' && msg.content.trim().startsWith('{')) {
+                    const parsedResponse = JSON.parse(msg.content)
+                    shortAnswer = parsedResponse.short_answer || ''
+                    detailedAnswer = parsedResponse.detailed_answer || ''
+                    content = shortAnswer || msg.content
+                  }
+                } catch (error) {
+                  // If parsing fails, use original content
+                  content = msg.content
+                }
+              }
+
+              return {
+                role: msg.role,
+                content: content,
+                short_answer: shortAnswer,
+                detailed_answer: detailedAnswer,
+                timestamp: new Date(msg.timestamp)
+              }
+            })
             setMessages(loadedMessages)
           } else {
             // No previous messages, send welcome message
@@ -276,10 +303,42 @@ export default function ChatWithKundliPage() {
         messages.map(m => ({ role: m.role, content: m.content }))
       )
 
-      console.log('[CHAT] Response received:', response.data)
+      // Parse dual-layer response
+      let shortAnswer = ''
+      let detailedAnswer = ''
+      let content = ''
+
+      try {
+        // Check if response is a JSON string that needs parsing
+        if (typeof response.data.response === 'string' && response.data.response.trim().startsWith('{')) {
+          const parsedResponse = JSON.parse(response.data.response)
+          shortAnswer = parsedResponse.short_answer || ''
+          detailedAnswer = parsedResponse.detailed_answer || ''
+          content = shortAnswer || response.data.response
+        } else if (response.data.short_answer && response.data.detailed_answer) {
+          // Use the structured response from backend
+          shortAnswer = response.data.short_answer
+          detailedAnswer = response.data.detailed_answer
+          content = response.data.response || shortAnswer
+        } else {
+          // Fallback to single response
+          shortAnswer = response.data.response || 'Unable to generate response'
+          detailedAnswer = ''
+          content = shortAnswer
+        }
+      } catch (error) {
+        console.error('[CHAT] Failed to parse response:', error)
+        // Fallback to single response
+        shortAnswer = response.data.response || 'Unable to generate response'
+        detailedAnswer = ''
+        content = shortAnswer
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
-        content: response.data.response || 'Unable to generate response',
+        content: content,
+        short_answer: shortAnswer,
+        detailed_answer: detailedAnswer,
         timestamp: new Date(),
       }
 
@@ -501,9 +560,17 @@ export default function ChatWithKundliPage() {
                     <span className="text-xs text-cyan-400 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">Triple-verified</span>
                   </div>
                 )}
-                <p className="text-slate-100 leading-relaxed text-sm">
-                  <MarkdownText text={message.content} />
-                </p>
+                {message.role === 'assistant' && message.short_answer ? (
+                  <ExpandableExplanation
+                    shortAnswer={message.short_answer}
+                    detailedAnswer={message.detailed_answer || ''}
+                    className="text-slate-100 leading-relaxed text-sm"
+                  />
+                ) : (
+                  <p className="text-slate-100 leading-relaxed text-sm">
+                    <MarkdownText text={message.content} />
+                  </p>
+                )}
                 <p className="text-xs text-slate-400 mt-3">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
@@ -541,7 +608,7 @@ export default function ChatWithKundliPage() {
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask about your cosmic journey..."
                 disabled={loading}
-                className="w-full bg-slate-800/50 border border-purple-500/30 focus:border-purple-500/50 pr-12 h-12 text-base rounded-full text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 disabled:opacity-50"
+                className="w-full bg-slate-800/50 border border-purple-500/30 focus:border-purple-500/50 pl-4 pr-12 h-12 text-base rounded-full text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 disabled:opacity-50"
               />
               <Sparkles className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/50" />
             </div>

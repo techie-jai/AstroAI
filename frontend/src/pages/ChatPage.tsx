@@ -4,11 +4,14 @@ import { Send, Loader, ArrowLeft } from 'lucide-react'
 import { api } from '../services/api'
 import apiClient from '../services/api'
 import toast from 'react-hot-toast'
+import ExpandableExplanation from '../components/ui/ExpandableExplanation'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  short_answer?: string
+  detailed_answer?: string
 }
 
 interface KundliInfo {
@@ -147,13 +150,41 @@ export default function ChatPage() {
         messages.map(m => ({ role: m.role, content: m.content }))
       )
 
-      console.log('[ChatPage] Response received:', response.data)
+      // Parse dual-layer response
+      let shortAnswer = ''
+      let detailedAnswer = ''
+      let content = ''
+
+      try {
+        // Check if response is a JSON string that needs parsing
+        if (typeof response.data.response === 'string' && response.data.response.trim().startsWith('{')) {
+          const parsedResponse = JSON.parse(response.data.response)
+          shortAnswer = parsedResponse.short_answer || response.data.response
+          detailedAnswer = parsedResponse.detailed_answer || ''
+          content = shortAnswer
+        } else {
+          // Use the structured response from backend
+          shortAnswer = response.data.short_answer || response.data.response || 'Unable to generate response'
+          detailedAnswer = response.data.detailed_answer || ''
+          content = response.data.response || shortAnswer
+        }
+      } catch (error) {
+        console.error('[ChatPage] Failed to parse response:', error)
+        // Fallback to single response
+        shortAnswer = response.data.response || 'Unable to generate response'
+        detailedAnswer = ''
+        content = shortAnswer
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
-        content: response.data.response || 'Unable to generate response',
+        content: content,
+        short_answer: shortAnswer,
+        detailed_answer: detailedAnswer,
         timestamp: new Date(),
       }
 
+      
       setMessages(prev => [...prev, assistantMessage])
     } catch (error: any) {
       console.error('[ChatPage] Failed to send message:', error)
@@ -315,7 +346,17 @@ export default function ChatPage() {
                     : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none'
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
+                {message.role === 'assistant' && message.short_answer ? (
+                  <ExpandableExplanation
+                    shortAnswer={message.short_answer}
+                    detailedAnswer={message.detailed_answer || ''}
+                    className="text-sm"
+                  />
+                ) : (
+                  <div>
+                    <p className="text-sm">{message.content}</p>
+                  </div>
+                )}
                 <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-indigo-100' : 'text-gray-400'}`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
