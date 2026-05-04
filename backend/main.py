@@ -4308,6 +4308,175 @@ async def get_palmistry_kundli_correlation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post('/api/palmistry/chat')
+async def palmistry_chat(
+    request_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Chat endpoint for palmistry readings with top 20 answers context
+    
+    Args:
+        request_data: Contains palmistry_id, user_message, and chat_history
+        current_user: Authenticated user information
+        
+    Returns:
+        AI response based on palmistry analysis and top 20 answers
+    """
+    try:
+        print(f"[PALMISTRY_CHAT] Processing message for user: {current_user.get('uid')}")
+        
+        # Validate request data
+        user_message = request_data.get('user_message', '').strip()
+        palmistry_id = request_data.get('palmistry_id', '').strip()
+        
+        if not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_message is required"
+            )
+        
+        if not palmistry_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="palmistry_id is required"
+            )
+        
+        print(f"[PALMISTRY_CHAT] Palmistry ID: {palmistry_id}")
+        print(f"[PALMISTRY_CHAT] User message: {user_message[:100]}...")
+        
+        # Load palmistry reading
+        from palmistry_service import PalmistryService
+        palmistry_service = PalmistryService()
+        
+        try:
+            palmistry_data = palmistry_service.load_palmistry_reading(current_user['uid'], palmistry_id)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Palmistry reading not found")
+        
+        # Extract top 20 answers from metadata
+        top_20_answers = palmistry_data.get('top_20_answers', {})
+        print(f"[PALMISTRY_CHAT] Loaded top 20 answers: {len(top_20_answers)} answers available")
+        
+        # Build context from palmistry data and top 20 answers
+        palmistry_context = f"""
+=== PALMISTRY READING DATA ===
+Palmistry ID: {palmistry_id}
+Handedness: {palmistry_data.get('handedness', 'Unknown')}
+Hand Type: {palmistry_data.get('hand_type', 'Unknown')}
+Elemental Type: {palmistry_data.get('elemental_type', 'Unknown')}
+Palm Shape: {palmistry_data.get('palm_shape', 'Unknown')}
+Finger Length: {palmistry_data.get('finger_length', 'Unknown')}
+
+=== OVERALL READING ===
+{palmistry_data.get('overall_reading', 'No overall reading available')}
+
+=== TOP 20 PALMISTRY QUESTIONS - PRE-ANSWERED ===
+"""
+        
+        # Add top 20 answers to context
+        if top_20_answers:
+            questions = [
+                ("Q1: When will I get married?", "marriage_age"),
+                ("Q2: Love marriage or arranged?", "marriage_type"),
+                ("Q3: How many serious relationships?", "relationships_count"),
+                ("Q4: Will I face divorce/heartbreak?", "divorce_risk"),
+                ("Q5: How many children?", "children_count"),
+                ("Q6: Best career path?", "career_path"),
+                ("Q7: When will I achieve career success?", "career_success_age"),
+                ("Q8: Will I be wealthy/millionaire?", "wealth_potential"),
+                ("Q9: Chances of sudden wealth?", "sudden_wealth"),
+                ("Q10: Will I face bankruptcy?", "bankruptcy_risk"),
+                ("Q11: Will I settle abroad?", "foreign_settlement"),
+                ("Q12: Will I travel extensively?", "travel_frequency"),
+                ("Q13: Will I own real estate?", "property_ownership"),
+                ("Q14: How long is my lifespan?", "lifespan"),
+                ("Q15: Major health issues?", "health_issues"),
+                ("Q16: Mental health and stability?", "mental_health"),
+                ("Q17: Will I attain fame?", "fame_potential"),
+                ("Q18: Lucky/rare signs?", "special_signs"),
+                ("Q19: Legal troubles or enemies?", "legal_troubles"),
+                ("Q20: Strong intuition/spiritual awakening?", "intuition_spirituality"),
+            ]
+            
+            for question, key in questions:
+                answer = top_20_answers.get(key)
+                if answer:
+                    palmistry_context += f"{question}\nAnswer: {answer}\n\n"
+        
+        # Build chat history context
+        chat_history = request_data.get('chat_history', [])
+        chat_context = ""
+        if chat_history:
+            chat_context = "\n=== PREVIOUS CONVERSATION ===\n"
+            for msg in chat_history[-3:]:
+                role = msg.get('role', 'user').upper()
+                content = msg.get('content', '')
+                chat_context += f"{role}: {content}\n"
+            chat_context += "=== END PREVIOUS CONVERSATION ===\n"
+        
+        # Check Gemini service availability
+        if not gemini_service:
+            print(f"[PALMISTRY_CHAT] ERROR: Gemini service not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gemini API key not configured. Please set GEMINI_API_KEY in environment variables."
+            )
+        
+        # Create comprehensive prompt for Gemini
+        import json
+        
+        prompt = f"""You are an expert palmist with deep knowledge of palmistry, astrology, and life guidance.
+Analyze the palmistry reading data and top 20 pre-answered questions provided below.
+Use this information to provide insightful, personalized responses to the user's questions.
+
+{palmistry_context}
+
+{chat_context}
+
+=== USER'S QUESTION ===
+{user_message}
+
+=== RESPONSE GUIDELINES ===
+1. Base your response on the palmistry data and top 20 answers provided
+2. Provide personalized insights specific to this person's palm reading
+3. Reference specific palm features (lines, mounts, symbols) when relevant
+4. Maintain a professional, empathetic, and hopeful tone
+5. Give practical, actionable advice
+6. If the question relates to one of the top 20 pre-answered questions, incorporate that answer
+7. Avoid one-liners or shallow summaries
+8. Provide 2-3 well-written paragraphs with depth and insight
+
+Please provide a thorough, personalized response based on the palmistry analysis."""
+        
+        # Generate AI response
+        print(f"[PALMISTRY_CHAT] Generating AI response...")
+        response = gemini_service.model.generate_content(prompt)
+        ai_response = response.text
+        
+        print(f"[PALMISTRY_CHAT] Response generated successfully")
+        print(f"[PALMISTRY_CHAT] Response length: {len(ai_response)} characters")
+        
+        return {
+            "status": "success",
+            "response": ai_response,
+            "timestamp": datetime.now().isoformat(),
+            "palmistry_id": palmistry_id
+        }
+        
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        print(f"[PALMISTRY_CHAT] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process palmistry chat request: {str(e)}"
+        )
+
+
 @app.exception_handler(HTTPException)
 
 async def http_exception_handler(request, exc):

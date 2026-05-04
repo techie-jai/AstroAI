@@ -26,7 +26,7 @@ class GeminiVisionService:
 
     def generate_palmistry_prompt(self, handedness: str) -> str:
         """
-        Generate expert palmist prompt for Gemini
+        Generate expert palmist prompt for Gemini with comprehensive micro-features extraction
         
         Args:
             handedness: User's handedness ('left' or 'right')
@@ -44,32 +44,121 @@ Analyze the provided palm images with the following context:
 - DOMINANT HAND ({dominant_hand}): Shows current reality - what the user has done with their gifts and potential
 - NON-DOMINANT HAND ({non_dominant_hand}): Shows potential - what the user was born with and innate gifts
 
+CRITICAL INSTRUCTION - NO HALLUCINATION:
+If a specific line, symbol, or feature (like Money Triangle, Mystic Cross, Travel Lines, Marriage Lines) is NOT clearly visible in the image, you MUST return null or an empty array. Do NOT guess or hallucinate marks. Better to show missing than to invent features that aren't there. Only include what you can clearly see.
+
 Your analysis must be returned as PURE JSON with NO markdown formatting, NO code blocks, and NO extra text.
 
 Analyze both hands and provide:
 
-1. Hand Type: Classify as Air (Square palm, long fingers), Fire (Rectangular palm, short fingers), Water (Rectangular palm, long fingers), or Earth (Square palm, short fingers)
+1. Hand Type: Classify as Air, Fire, Water, or Earth
 2. Elemental Type: Air, Fire, Water, or Earth
 3. Palm Shape: Square or Rectangular
-4. Finger Length: Long or Short (relative to palm)
-5. Major Lines Analysis:
-   - Heart Line: description, meaning, strength (strong/moderate/faint)
-   - Head Line: description, meaning, strength
-   - Life Line: description, meaning, strength
-   - Fate Line: description, meaning, strength
-   - Sun Line (if present): description, meaning, strength
-6. Planetary Mounts (Jupiter, Saturn, Apollo/Sun, Mercury, Venus, Moon):
-   - For each mount: name, planet, description, prominence (prominent/normal/flat)
-7. Special Marks: List any Mystic Crosses, Tridents, Islands, or other special markings
-8. Finger Gaps: Note any significant gaps between fingers
-9. Life Areas Scores (0-100):
-   - Love & Relationships
-   - Career & Ambition
-   - Health & Vitality
-   - Wealth & Prosperity
-10. Dominant Hand Analysis: Summary of what the dominant ({dominant_hand}) hand reveals about current reality
-11. Non-Dominant Hand Analysis: Summary of what the non-dominant ({non_dominant_hand}) hand reveals about potential
-12. Overall Reading: Comprehensive summary combining both hands' insights
+4. Finger Length: Long or Short
+5. Major Lines Analysis (Heart, Head, Life, Fate, Sun):
+   - For each: name, description, meaning, strength (strong/moderate/faint)
+   
+6. MINOR LINES ANALYSIS (CRITICAL - Look carefully):
+   a) Marriage Lines (Affection lines on ulnar edge below Mercury finger):
+      - Count: number of lines
+      - Depth: deep, moderate, or faint
+      - Forks: number of forks
+      - Downward curves: number (indicates divorce/heartbreak)
+      - Description: detailed description
+   b) Children Lines (Vertical lines above marriage lines):
+      - Count: number of lines
+      - Clarity: clear, faint, or broken
+      - Description: detailed description
+   c) Travel Lines (Horizontal lines on Mount of Moon):
+      - Presence: true/false
+      - Depth: deep, moderate, or faint
+      - Description: detailed description
+   d) Intuition Line (Curve on percussion edge - outer palm edge):
+      - Presence: true/false
+      - Description: detailed description
+
+7. MONEY TRIANGLE (Formed by Fate, Head, and Mercury lines):
+   - Presence: true/false (only if clearly visible)
+   - Status: "closed" (wealth retention) or "open" (wealth loss)
+   - Description: detailed description
+
+8. AGE MARKERS ON MAJOR LINES (CRITICAL - Estimate ages):
+   For Life Line, Fate Line, and Head Line, identify:
+   - Breaks: gaps in the line
+   - Islands: oval formations on the line
+   - Crosses: cross marks on the line
+   - Forks: line splits
+   For each event, provide:
+   - Age range (e.g., "25-28", "35-40") using 0-100 scale on line length
+   - Event type: break, island, cross, fork, etc.
+   - Meaning: what this event indicates
+   Return as: "age_events": {{"life_line": [...], "fate_line": [...], "head_line": [...]}}
+
+9. SPECIAL SYMBOLS (Search for ALL of these - only include if clearly visible):
+   - Mystic Cross (between Heart and Head lines)
+   - Letter M (formed by major lines)
+   - Fish symbol (on Mount of Mercury)
+   - Star (on any mount, especially Jupiter/Apollo)
+   - Grilles (on any mount)
+   - Islands (on any line)
+   - Squares (protection marks on any line/mount)
+   - Triangle (on any mount)
+   - Trident (on any line)
+   - Circle (rare, on any mount)
+   - Plus/Cross marks (on any location)
+   - Chains (on any line)
+   - Branches (on any line)
+   - Bars (crossing lines)
+   - Dots (on any line)
+   - Tassels (line endings)
+   - Spirals (on any mount)
+   - Waves (on any line)
+   - Rings (on any finger)
+   For each symbol found, provide: symbol name, location, meaning
+
+10. BRACELET LINES (Rascettes - at wrist):
+    - Count: number of individual lines (typically 1-4)
+    - For each line: line number, clarity (clear/faint/broken), curved (upward/downward), health assessment
+    - Overall health assessment based on bracelet lines
+
+11. Planetary Mounts (Jupiter, Saturn, Apollo/Sun, Mercury, Venus, Moon):
+    - For each mount: name, planet, description, prominence (prominent/normal/flat)
+
+12. Finger Gaps: Note any significant gaps between fingers
+
+13. Life Areas Scores (0-100):
+    - Love & Relationships
+    - Career & Ambition
+    - Health & Vitality
+    - Wealth & Prosperity
+
+14. Dominant Hand Analysis: Summary of current reality
+
+15. Non-Dominant Hand Analysis: Summary of potential
+
+16. Overall Reading: Comprehensive summary combining both hands' insights
+
+17. TOP 20 QUESTIONS ANSWERS (Generate brief answers based on palmistry analysis):
+    - marriage_age: When will I get married?
+    - marriage_type: Love marriage or arranged?
+    - relationships_count: How many serious relationships?
+    - divorce_risk: Will I face divorce/heartbreak?
+    - children_count: How many children?
+    - career_path: Best career path?
+    - career_success_age: When will I achieve career success?
+    - wealth_potential: Will I be wealthy/millionaire?
+    - sudden_wealth: Chances of sudden wealth?
+    - bankruptcy_risk: Will I face bankruptcy?
+    - foreign_settlement: Will I settle abroad?
+    - travel_frequency: Will I travel extensively?
+    - property_ownership: Will I own real estate?
+    - lifespan: How long is my lifespan?
+    - health_issues: Major health issues?
+    - mental_health: Mental health and stability?
+    - fame_potential: Will I attain fame?
+    - special_signs: Lucky/rare signs?
+    - legal_troubles: Legal troubles or enemies?
+    - intuition_spirituality: Strong intuition/spiritual awakening?
 
 Return ONLY valid JSON in this exact format (no markdown, no code blocks):
 {{
@@ -78,108 +167,66 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks):
   "palm_shape": "Square",
   "finger_length": "Long",
   "major_lines": {{
-    "heart_line": {{
-      "name": "Heart Line",
-      "description": "Long and curved, starting from under the index finger",
-      "meaning": "Deep emotional capacity with strong romantic inclinations...",
-      "strength": "strong"
-    }},
-    "head_line": {{
-      "name": "Head Line",
-      "description": "Straight and clear, extending across the palm",
-      "meaning": "Analytical mind with practical thinking abilities...",
-      "strength": "strong"
-    }},
-    "life_line": {{
-      "name": "Life Line",
-      "description": "Deep and curved, encircling the thumb mount",
-      "meaning": "Strong vitality and enthusiasm for life...",
-      "strength": "moderate"
-    }},
-    "fate_line": {{
-      "name": "Fate Line",
-      "description": "Clear line running from wrist towards middle finger",
-      "meaning": "Strong sense of purpose and career direction...",
-      "strength": "moderate"
-    }},
-    "sun_line": {{
-      "name": "Sun Line",
-      "description": "Faint line running parallel to fate line",
-      "meaning": "Potential for recognition and success...",
-      "strength": "faint"
-    }}
+    "heart_line": {{"name": "Heart Line", "description": "...", "meaning": "...", "strength": "strong"}},
+    "head_line": {{"name": "Head Line", "description": "...", "meaning": "...", "strength": "strong"}},
+    "life_line": {{"name": "Life Line", "description": "...", "meaning": "...", "strength": "moderate"}},
+    "fate_line": {{"name": "Fate Line", "description": "...", "meaning": "...", "strength": "moderate"}},
+    "sun_line": {{"name": "Sun Line", "description": "...", "meaning": "...", "strength": "faint"}}
   }},
+  "minor_lines": {{
+    "marriage_lines": {{"count": 2, "depth": "moderate", "forks": 1, "downward_curves": 0, "description": "..."}},
+    "children_lines": {{"count": 3, "clarity": "clear", "description": "..."}},
+    "travel_lines": {{"presence": true, "depth": "faint", "description": "..."}},
+    "intuition_line": {{"presence": true, "description": "..."}}
+  }},
+  "money_triangle": {{"presence": true, "status": "closed", "description": "..."}},
+  "age_events": {{
+    "life_line": [{{"age_range": "25-28", "event_type": "break", "meaning": "..."}}],
+    "fate_line": [],
+    "head_line": []
+  }},
+  "special_symbols": [{{"symbol": "Mystic Cross", "location": "Between Heart and Head lines", "meaning": "..."}}],
+  "bracelet_lines": [{{"line_number": 1, "clarity": "clear", "curved": false, "health_assessment": "good"}}],
   "mounts": {{
-    "jupiter": {{
-      "name": "Mount of Jupiter",
-      "planet": "Jupiter",
-      "description": "Located under the index finger, well-developed",
-      "prominence": "prominent"
-    }},
-    "saturn": {{
-      "name": "Mount of Saturn",
-      "planet": "Saturn",
-      "description": "Located under the middle finger, moderately developed",
-      "prominence": "normal"
-    }},
-    "apollo": {{
-      "name": "Mount of Apollo",
-      "planet": "Sun",
-      "description": "Located under the ring finger, slightly developed",
-      "prominence": "normal"
-    }},
-    "mercury": {{
-      "name": "Mount of Mercury",
-      "planet": "Mercury",
-      "description": "Located under the pinky finger, well-developed",
-      "prominence": "prominent"
-    }},
-    "venus": {{
-      "name": "Mount of Venus",
-      "planet": "Venus",
-      "description": "Located at base of thumb, moderately developed",
-      "prominence": "normal"
-    }},
-    "moon": {{
-      "name": "Mount of Moon",
-      "planet": "Moon",
-      "description": "Located opposite Venus, slightly developed",
-      "prominence": "normal"
-    }}
+    "jupiter": {{"name": "Mount of Jupiter", "planet": "Jupiter", "description": "...", "prominence": "prominent"}},
+    "saturn": {{"name": "Mount of Saturn", "planet": "Saturn", "description": "...", "prominence": "normal"}},
+    "apollo": {{"name": "Mount of Apollo", "planet": "Sun", "description": "...", "prominence": "normal"}},
+    "mercury": {{"name": "Mount of Mercury", "planet": "Mercury", "description": "...", "prominence": "prominent"}},
+    "venus": {{"name": "Mount of Venus", "planet": "Venus", "description": "...", "prominence": "normal"}},
+    "moon": {{"name": "Mount of Moon", "planet": "Moon", "description": "...", "prominence": "normal"}}
   }},
-  "special_marks": ["Mystic Cross"],
-  "finger_gaps": "Wide gap between index and middle finger indicating independent thinking",
+  "finger_gaps": "...",
   "life_areas": {{
-    "love": {{
-      "title": "Love & Relationships",
-      "score": 85,
-      "description": "Your palm reveals deep emotional capacity..."
-    }},
-    "career": {{
-      "title": "Career & Ambition",
-      "score": 78,
-      "description": "Strong career indicators with leadership potential..."
-    }},
-    "health": {{
-      "title": "Health & Vitality",
-      "score": 72,
-      "description": "Good overall vitality with some periods of stress..."
-    }},
-    "wealth": {{
-      "title": "Wealth & Prosperity",
-      "score": 68,
-      "description": "Moderate wealth indicators with growth potential..."
-    }}
+    "love": {{"title": "Love & Relationships", "score": 85, "description": "..."}},
+    "career": {{"title": "Career & Ambition", "score": 78, "description": "..."}},
+    "health": {{"title": "Health & Vitality", "score": 72, "description": "..."}},
+    "wealth": {{"title": "Wealth & Prosperity", "score": 68, "description": "..."}}
   }},
-  "dominant_hand_analysis": {{
-    "description": "Current reality - what you have done with your gifts",
-    "summary": "Your dominant hand shows..."
-  }},
-  "non_dominant_hand_analysis": {{
-    "description": "Potential - what you were born with",
-    "summary": "Your non-dominant hand reveals..."
-  }},
-  "overall_reading": "Your palm reveals a balanced individual with strong emotional intelligence and analytical capabilities..."
+  "dominant_hand_analysis": {{"description": "Current reality - what you have done with your gifts", "summary": "..."}},
+  "non_dominant_hand_analysis": {{"description": "Potential - what you were born with", "summary": "..."}},
+  "overall_reading": "...",
+  "top_20_answers": {{
+    "marriage_age": "Around 28-32 based on marriage lines",
+    "marriage_type": "Likely love marriage based on heart line",
+    "relationships_count": "2-3 serious relationships",
+    "divorce_risk": "Low based on stable marriage lines",
+    "children_count": "2-3 children",
+    "career_path": "Business or entrepreneurship recommended",
+    "career_success_age": "Around 32-35",
+    "wealth_potential": "Good potential for prosperity",
+    "sudden_wealth": "Possible through inheritance or business",
+    "bankruptcy_risk": "Low risk, stable financial indicators",
+    "foreign_settlement": "Likely to settle abroad",
+    "travel_frequency": "Extensive travel for work and leisure",
+    "property_ownership": "Yes, will own real estate",
+    "lifespan": "Long and healthy life expected (75-85 years)",
+    "health_issues": "Possible minor health concerns around 45-50",
+    "mental_health": "Strong mental stability and focus",
+    "fame_potential": "Moderate potential for recognition",
+    "special_signs": "Mystic Cross present - spiritual awareness",
+    "legal_troubles": "Low risk of legal issues",
+    "intuition_spirituality": "Strong intuition and spiritual inclination"
+  }}
 }}
 
 CRITICAL: Return ONLY the JSON object, no markdown, no code blocks, no extra text."""

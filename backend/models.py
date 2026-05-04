@@ -313,6 +313,100 @@ class PalmMount(BaseModel):
     prominence: str = Field(..., description="Prominence level: prominent, normal, or flat")
 
 
+# Minor Lines Models
+class MarriageLines(BaseModel):
+    """Marriage/Affection lines analysis"""
+    count: Optional[int] = Field(None, description="Number of marriage lines")
+    depth: Optional[str] = Field(None, description="Depth: deep, moderate, faint")
+    forks: Optional[int] = Field(None, description="Number of forks")
+    downward_curves: Optional[int] = Field(None, description="Number of downward curves (divorce/heartbreak)")
+    description: Optional[str] = Field(None, description="Detailed description")
+
+
+class ChildrenLines(BaseModel):
+    """Children lines analysis"""
+    count: Optional[int] = Field(None, description="Number of children lines")
+    clarity: Optional[str] = Field(None, description="Clarity: clear, faint, broken")
+    description: Optional[str] = Field(None, description="Detailed description")
+
+
+class TravelLines(BaseModel):
+    """Travel lines analysis"""
+    presence: Optional[bool] = Field(None, description="Whether travel lines are present")
+    depth: Optional[str] = Field(None, description="Depth: deep, moderate, faint")
+    description: Optional[str] = Field(None, description="Detailed description")
+
+
+class IntuitionLine(BaseModel):
+    """Intuition line analysis"""
+    presence: Optional[bool] = Field(None, description="Whether intuition line is present")
+    description: Optional[str] = Field(None, description="Detailed description")
+
+
+class MinorLines(BaseModel):
+    """All minor lines combined"""
+    marriage_lines: Optional[MarriageLines] = Field(None, description="Marriage/Affection lines")
+    children_lines: Optional[ChildrenLines] = Field(None, description="Children lines")
+    travel_lines: Optional[TravelLines] = Field(None, description="Travel lines")
+    intuition_line: Optional[IntuitionLine] = Field(None, description="Intuition line")
+
+
+# Money Triangle and Age Events
+class MoneyTriangle(BaseModel):
+    """Money triangle analysis (Fate + Head + Mercury lines)"""
+    presence: Optional[bool] = Field(None, description="Whether money triangle is present")
+    status: Optional[str] = Field(None, description="Status: closed (wealth retention) or open (wealth loss)")
+    description: Optional[str] = Field(None, description="Detailed description")
+
+
+class AgeEvent(BaseModel):
+    """Age-based event on a palm line"""
+    age_range: str = Field(..., description="Age range (e.g., '25-28')")
+    event_type: str = Field(..., description="Event type: break, island, cross, fork, etc.")
+    meaning: str = Field(..., description="Meaning of the event")
+
+
+# Special Symbols and Bracelet Lines
+class SpecialSymbol(BaseModel):
+    """Special symbol found on palm"""
+    symbol: str = Field(..., description="Symbol name (Mystic Cross, Letter M, Fish, Star, etc.)")
+    location: str = Field(..., description="Location on palm (e.g., 'Between Heart and Head lines')")
+    meaning: str = Field(..., description="Meaning of the symbol")
+
+
+class BraceletLine(BaseModel):
+    """Bracelet line (Rascette) analysis"""
+    line_number: int = Field(..., description="Line number (1-4)")
+    clarity: str = Field(..., description="Clarity: clear, faint, broken")
+    curved: Optional[bool] = Field(None, description="Whether curved upward (good) or downward (concerns)")
+    health_assessment: Optional[str] = Field(None, description="Health assessment based on line")
+
+
+# Top 20 Answers
+class Top20Answers(BaseModel):
+    """Pre-answered responses to top 20 palmistry questions"""
+    marriage_age: Optional[str] = Field(None, description="Q1: When will I get married?")
+    marriage_type: Optional[str] = Field(None, description="Q2: Love marriage or arranged?")
+    relationships_count: Optional[str] = Field(None, description="Q3: How many serious relationships?")
+    divorce_risk: Optional[str] = Field(None, description="Q4: Will I face divorce/heartbreak?")
+    children_count: Optional[str] = Field(None, description="Q5: How many children?")
+    career_path: Optional[str] = Field(None, description="Q6: Best career path?")
+    career_success_age: Optional[str] = Field(None, description="Q7: When will I achieve career success?")
+    wealth_potential: Optional[str] = Field(None, description="Q8: Will I be wealthy/millionaire?")
+    sudden_wealth: Optional[str] = Field(None, description="Q9: Chances of sudden wealth?")
+    bankruptcy_risk: Optional[str] = Field(None, description="Q10: Will I face bankruptcy?")
+    foreign_settlement: Optional[str] = Field(None, description="Q11: Will I settle abroad?")
+    travel_frequency: Optional[str] = Field(None, description="Q12: Will I travel extensively?")
+    property_ownership: Optional[str] = Field(None, description="Q13: Will I own real estate?")
+    lifespan: Optional[str] = Field(None, description="Q14: How long is my lifespan?")
+    health_issues: Optional[str] = Field(None, description="Q15: Major health issues?")
+    mental_health: Optional[str] = Field(None, description="Q16: Mental health and stability?")
+    fame_potential: Optional[str] = Field(None, description="Q17: Will I attain fame?")
+    special_signs: Optional[str] = Field(None, description="Q18: Lucky/rare signs?")
+    legal_troubles: Optional[str] = Field(None, description="Q19: Legal troubles or enemies?")
+    intuition_spirituality: Optional[str] = Field(None, description="Q20: Strong intuition/spiritual awakening?")
+
+
 class PalmMetadata(BaseModel):
     """Complete palmistry metadata extracted by AI"""
     palmistry_id: str = Field(..., description="Unique palmistry reading ID")
@@ -331,6 +425,11 @@ class PalmMetadata(BaseModel):
     life_areas: Dict[str, Dict[str, Any]] = Field(..., description="Life area scores and descriptions")
     dominant_hand_analysis: Optional[Dict[str, str]] = Field(None, description="Analysis of dominant hand")
     non_dominant_hand_analysis: Optional[Dict[str, str]] = Field(None, description="Analysis of non-dominant hand")
+    minor_lines: Optional[MinorLines] = Field(None, description="Minor lines (marriage, children, travel, intuition)")
+    money_triangle: Optional[MoneyTriangle] = Field(None, description="Money triangle analysis")
+    age_events: Optional[Dict[str, List[AgeEvent]]] = Field(None, description="Age-based events on major lines")
+    special_symbols: Optional[List[SpecialSymbol]] = Field(None, description="Special symbols found on palm")
+    bracelet_lines: Optional[List[BraceletLine]] = Field(None, description="Bracelet lines (Rascettes) analysis")
 
 
 class PalmistryAnalysisRequest(BaseModel):

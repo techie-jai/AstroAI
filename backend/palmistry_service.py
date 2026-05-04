@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional, List
 from pathlib import Path
 from gemini_vision_service import GeminiVisionService
 from file_manager import FileManager
+from palmistry_top_20_generator import PalmistryTop20Generator
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class PalmistryService:
         """Initialize palmistry service"""
         self.gemini_service = GeminiVisionService()
         self.file_manager = FileManager()
+        self.top_20_generator = PalmistryTop20Generator()
 
     def analyze_palm_images(self, left_hand_image: str, right_hand_image: str, handedness: str, user_id: str, name: str = None, user_folder_path: str = None) -> Dict[str, Any]:
         """
@@ -65,13 +67,24 @@ class PalmistryService:
             )
             print(f"[PALMISTRY_SERVICE] Gemini analysis completed, got response")
             
+            # Generate top 20 answers from analysis data
+            print(f"[PALMISTRY_SERVICE] Generating top 20 answers...")
+            try:
+                top_20_answers = self.top_20_generator.generate_top_20_answers(analysis_data)
+                top_20_answers_dict = top_20_answers.dict(exclude_none=True)
+                print(f"[PALMISTRY_SERVICE] Top 20 answers generated successfully")
+            except Exception as e:
+                print(f"[PALMISTRY_SERVICE] Error generating top 20 answers: {str(e)}")
+                top_20_answers_dict = {}
+            
             # Create metadata
             metadata = {
                 "palmistry_id": palmistry_id,
                 "user_id": user_id,
                 "created_at": datetime.now().isoformat(),
                 "handedness": handedness,
-                **analysis_data
+                **analysis_data,
+                "top_20_answers": top_20_answers_dict
             }
             
             # Save palmistry reading
@@ -188,6 +201,19 @@ class PalmistryService:
             except Exception as e:
                 print(f"[PALMISTRY_SERVICE] ERROR saving results.json: {str(e)}")
                 raise
+            
+            # Save top 20 answers
+            try:
+                top_20_file = palmistry_dir / "top_20_answers.json"
+                top_20_answers = metadata.get("top_20_answers", {})
+                print(f"[PALMISTRY_SERVICE] Saving top_20_answers.json to: {top_20_file}")
+                with open(top_20_file, 'w') as f:
+                    json.dump(top_20_answers, f, indent=2, default=str)
+                print(f"[PALMISTRY_SERVICE] Saved top_20_answers.json, file exists: {top_20_file.exists()}")
+            except Exception as e:
+                print(f"[PALMISTRY_SERVICE] ERROR saving top_20_answers.json: {str(e)}")
+                # Don't raise - this is optional
+                logger.warning(f"Failed to save top_20_answers.json: {str(e)}")
             
             # Update palmistry index
             user_id = metadata.get("user_id")
