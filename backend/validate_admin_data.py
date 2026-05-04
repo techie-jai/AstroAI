@@ -54,139 +54,172 @@ def validate_data():
     print(f"  Size: {sum(os.path.getsize(os.path.join(dirpath, filename)) for dirpath, dirnames, filenames in os.walk(users_path) for filename in filenames) / (1024*1024):.2f} MB\n")
     
     # ========================================================================
-    # SECTION 1: Global Kundli Index
+    # SECTION 1: User Directories (New Structure)
     # ========================================================================
-    print_section("1. GLOBAL KUNDLI INDEX (kundli_index.json)")
+    print_section("1. USER DIRECTORIES (New Per-User Structure)")
     
-    index_file = os.path.join(users_path, 'kundli_index.json')
-    
-    if not os.path.exists(index_file):
-        print("⚠ kundli_index.json not found")
-        print("  This will be created when the first kundli is generated\n")
-        kundli_index = {}
-    else:
-        print(f"✓ Found: {index_file}")
-        try:
-            with open(index_file, 'r') as f:
-                kundli_index = json.load(f)
-            print(f"✓ Valid JSON format")
-            print(f"✓ Total kundlis: {len(kundli_index)}\n")
-            
-            # Show sample kundlis
-            print("Sample kundlis:")
-            for i, (kundli_id, kundli_data) in enumerate(list(kundli_index.items())[:3]):
-                print(f"\n  [{i+1}] {kundli_id}")
-                print(f"      User: {kundli_data.get('user_name', 'Unknown')}")
-                print(f"      Generated: {kundli_data.get('generated_at', 'Unknown')}")
-                if 'birth_data' in kundli_data:
-                    bd = kundli_data['birth_data']
-                    print(f"      Birth: {bd.get('name', '')} - {bd.get('place_name', '')}")
-            
-            if len(kundli_index) > 3:
-                print(f"\n  ... and {len(kundli_index) - 3} more kundlis")
-            
-        except json.JSONDecodeError as e:
-            print(f"❌ ERROR: Invalid JSON format: {e}")
-            return False
-        except Exception as e:
-            print(f"❌ ERROR: {e}")
-            return False
-    
-    # ========================================================================
-    # SECTION 2: Extract Users from Index
-    # ========================================================================
-    print_section("2. UNIQUE USERS (from kundli_index.json)")
-    
-    users_from_index = {}
-    for kundli_id, kundli_data in kundli_index.items():
-        user_name = kundli_data.get('user_name', 'Unknown')
-        if user_name not in users_from_index:
-            users_from_index[user_name] = {
-                'kundli_count': 0,
-                'first_generated': kundli_data.get('generated_at', ''),
-            }
-        users_from_index[user_name]['kundli_count'] += 1
-    
-    print(f"✓ Total unique users: {len(users_from_index)}\n")
-    
-    if users_from_index:
-        print("Users and their kundli counts:")
-        for i, (user_name, data) in enumerate(sorted(users_from_index.items())[:10]):
-            print(f"  [{i+1}] {user_name}: {data['kundli_count']} kundlis")
-        
-        if len(users_from_index) > 10:
-            print(f"  ... and {len(users_from_index) - 10} more users")
-    
-    # ========================================================================
-    # SECTION 3: User Directories
-    # ========================================================================
-    print_section("3. USER DIRECTORIES")
-    
-    user_dirs = [d for d in os.listdir(users_path) if os.path.isdir(os.path.join(users_path, d))]
+    user_dirs = [d for d in os.listdir(users_path) if os.path.isdir(os.path.join(users_path, d)) and d.startswith('user_')]
     print(f"✓ Total user directories: {len(user_dirs)}\n")
     
+    # ========================================================================
+    # SECTION 2: Aggregate Data from All User Folders
+    # ========================================================================
+    print_section("2. AGGREGATED DATA (from per-user kundli_index.json files)")
+    
+    all_kundlis = {}
+    total_astrology = 0
+    total_palmistry = 0
+    total_numerology = 0
+    total_chats = 0
+    total_analysis = 0
+    
+    for user_dir in sorted(user_dirs):
+        user_path = os.path.join(users_path, user_dir)
+        
+        # Read per-user kundli_index.json
+        user_index_file = os.path.join(user_path, 'kundli_index.json')
+        if os.path.exists(user_index_file):
+            try:
+                with open(user_index_file, 'r') as f:
+                    user_kundlis = json.load(f)
+                    all_kundlis.update(user_kundlis)
+            except Exception as e:
+                print(f"⚠ Warning: Could not read {user_index_file}: {e}")
+        
+        # Count Astrology kundlis
+        astrology_dir = os.path.join(user_path, 'Astrology')
+        if os.path.exists(astrology_dir):
+            astrology_count = len([d for d in os.listdir(astrology_dir) if os.path.isdir(os.path.join(astrology_dir, d))])
+            total_astrology += astrology_count
+            
+            # Count analysis files in Astrology
+            for kundli_folder in os.listdir(astrology_dir):
+                kundli_path = os.path.join(astrology_dir, kundli_folder)
+                if os.path.isdir(kundli_path):
+                    if os.path.exists(os.path.join(kundli_path, 'analysis.pdf')):
+                        total_analysis += 1
+        
+        # Count Palmistry
+        palmistry_dir = os.path.join(user_path, 'Palmistry')
+        if os.path.exists(palmistry_dir):
+            palmistry_count = len([d for d in os.listdir(palmistry_dir) if os.path.isdir(os.path.join(palmistry_dir, d))])
+            total_palmistry += palmistry_count
+        
+        # Count Numerology
+        numerology_dir = os.path.join(user_path, 'Numerology')
+        if os.path.exists(numerology_dir):
+            numerology_count = len([d for d in os.listdir(numerology_dir) if os.path.isdir(os.path.join(numerology_dir, d))])
+            total_numerology += numerology_count
+        
+        # Count Chats (in Chats/chat_history/{kundli_id}/)
+        chat_history_dir = os.path.join(user_path, 'Chats', 'chat_history')
+        if os.path.exists(chat_history_dir):
+            # Count kundli folders with messages.json
+            for kundli_folder in os.listdir(chat_history_dir):
+                kundli_chat_path = os.path.join(chat_history_dir, kundli_folder)
+                if os.path.isdir(kundli_chat_path):
+                    if os.path.exists(os.path.join(kundli_chat_path, 'messages.json')):
+                        total_chats += 1
+    
+    # Total registered users = number of user folders
+    total_registered_users = len(user_dirs)
+    
+    print(f"✓ Total registered users: {total_registered_users}")
+    print(f"✓ Total kundlis: {len(all_kundlis)}")
+    print(f"✓ Total Astrology readings: {total_astrology}")
+    print(f"✓ Total Palmistry readings: {total_palmistry}")
+    print(f"✓ Total Numerology readings: {total_numerology}")
+    print(f"✓ Total Chat sessions: {total_chats}")
+    print(f"✓ Total Analysis PDFs: {total_analysis}\n")
+    
+    # ========================================================================
+    # SECTION 3: Sample User Data
+    # ========================================================================
+    print_section("3. SAMPLE USER DIRECTORIES")
+    
     if user_dirs:
-        print("Sample user directories:")
+        print("User directories and their data:")
         for i, user_dir in enumerate(sorted(user_dirs)[:5]):
             user_path = os.path.join(users_path, user_dir)
             
-            # Check for user_info.json
-            user_info_file = os.path.join(user_path, 'user_info.json')
-            has_info = "✓" if os.path.exists(user_info_file) else "✗"
+            # Count items in each category
+            astrology_dir = os.path.join(user_path, 'Astrology')
+            astrology_count = len([d for d in os.listdir(astrology_dir) if os.path.isdir(os.path.join(astrology_dir, d))]) if os.path.exists(astrology_dir) else 0
             
-            # Count kundlis
-            kundli_dir = os.path.join(user_path, 'kundli')
-            kundli_count = len(os.listdir(kundli_dir)) if os.path.exists(kundli_dir) else 0
+            palmistry_dir = os.path.join(user_path, 'Palmistry')
+            palmistry_count = len([d for d in os.listdir(palmistry_dir) if os.path.isdir(os.path.join(palmistry_dir, d))]) if os.path.exists(palmistry_dir) else 0
             
-            # Count analysis
-            analysis_dir = os.path.join(user_path, 'analysis')
-            analysis_count = len([f for f in os.listdir(analysis_dir) if f.endswith('_AI_Analysis.txt')]) if os.path.exists(analysis_dir) else 0
+            numerology_dir = os.path.join(user_path, 'Numerology')
+            numerology_count = len([d for d in os.listdir(numerology_dir) if os.path.isdir(os.path.join(numerology_dir, d))]) if os.path.exists(numerology_dir) else 0
+            
+            # Count chats in Chats/chat_history/{kundli_id}/
+            chats_count = 0
+            chat_history_dir = os.path.join(user_path, 'Chats', 'chat_history')
+            if os.path.exists(chat_history_dir):
+                for kundli_folder in os.listdir(chat_history_dir):
+                    kundli_chat_path = os.path.join(chat_history_dir, kundli_folder)
+                    if os.path.isdir(kundli_chat_path):
+                        if os.path.exists(os.path.join(kundli_chat_path, 'messages.json')):
+                            chats_count += 1
             
             print(f"\n  [{i+1}] {user_dir}")
-            print(f"      user_info.json: {has_info}")
-            print(f"      kundlis: {kundli_count}")
-            print(f"      analysis: {analysis_count}")
+            print(f"      Astrology: {astrology_count} kundlis")
+            print(f"      Palmistry: {palmistry_count} readings")
+            print(f"      Numerology: {numerology_count} readings")
+            print(f"      Chats: {chats_count} sessions")
         
         if len(user_dirs) > 5:
             print(f"\n  ... and {len(user_dirs) - 5} more user directories")
     
     # ========================================================================
-    # SECTION 4: Analytics Summary
+    # SECTION 4: Sample Kundlis
     # ========================================================================
-    print_section("4. ANALYTICS SUMMARY (What Admin Panel Will Show)")
+    print_section("4. SAMPLE KUNDLIS (from per-user indexes)")
     
-    total_users = len(users_from_index)
-    total_kundlis = len(kundli_index)
-    
-    # Count analysis files
-    total_analysis = 0
-    for user_dir in user_dirs:
-        analysis_dir = os.path.join(users_path, user_dir, 'analysis')
-        if os.path.exists(analysis_dir):
-            total_analysis += len([f for f in os.listdir(analysis_dir) if f.endswith('_AI_Analysis.txt')])
-    
-    print(f"Total Users:           {total_users}")
-    print(f"Total Kundlis:         {total_kundlis}")
-    print(f"Kundlis with Analysis: {total_analysis}")
-    print(f"Kundlis without Analysis: {total_kundlis - total_analysis}")
-    
-    if total_users > 0:
-        print(f"Avg Kundlis per User:  {total_kundlis / total_users:.2f}")
+    if all_kundlis:
+        print(f"Sample kundlis (showing first 3 of {len(all_kundlis)}):")
+        for i, (kundli_id, kundli_data) in enumerate(list(all_kundlis.items())[:3]):
+            print(f"\n  [{i+1}] {kundli_id}")
+            print(f"      User: {kundli_data.get('user_name', 'Unknown')}")
+            print(f"      Generated: {kundli_data.get('generated_at', 'Unknown')}")
+            if 'birth_data' in kundli_data:
+                bd = kundli_data['birth_data']
+                print(f"      Birth: {bd.get('name', '')} - {bd.get('place_name', '')}")
+        
+        if len(all_kundlis) > 3:
+            print(f"\n  ... and {len(all_kundlis) - 3} more kundlis")
     
     # ========================================================================
-    # SECTION 5: Data Status
+    # SECTION 5: Analytics Summary
     # ========================================================================
-    print_section("5. DATA STATUS")
+    print_section("5. ANALYTICS SUMMARY (What Admin Panel Will Show)")
     
-    if total_kundlis == 0:
+    print(f"Total Registered Users:     {total_registered_users}")
+    print(f"Total Kundlis:              {len(all_kundlis)}")
+    print(f"Total Astrology Readings:   {total_astrology}")
+    print(f"Total Palmistry Readings:   {total_palmistry}")
+    print(f"Total Numerology Readings:  {total_numerology}")
+    print(f"Total Chat Sessions:        {total_chats}")
+    print(f"Kundlis with Analysis:      {total_analysis}")
+    print(f"Kundlis without Analysis:   {len(all_kundlis) - total_analysis}")
+    
+    if total_registered_users > 0:
+        print(f"Avg Kundlis per User:       {len(all_kundlis) / total_registered_users:.2f}")
+    
+    # ========================================================================
+    # SECTION 6: Data Status
+    # ========================================================================
+    print_section("6. DATA STATUS")
+    
+    if len(all_kundlis) == 0:
         print("⚠ WARNING: No kundlis found!")
         print("  The admin panel will show zeros until kundlis are generated.")
         print("  Generate a kundli in the main app to populate the data.")
-    elif total_kundlis < 10:
-        print(f"⚠ WARNING: Only {total_kundlis} kundlis found")
+    elif len(all_kundlis) < 10:
+        print(f"⚠ WARNING: Only {len(all_kundlis)} kundlis found")
         print("  Consider generating more kundlis for better demo data")
     else:
-        print(f"✓ Good: {total_kundlis} kundlis found")
+        print(f"✓ Good: {len(all_kundlis)} kundlis found")
         print("  Admin panel should display real data")
     
     print(f"\n✓ Data validation complete!")

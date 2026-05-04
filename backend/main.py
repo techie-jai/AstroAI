@@ -1038,7 +1038,7 @@ async def get_calculation_history(
                 # Check if analysis exists for this kundli
                 file_path = metadata.get('file_path', '')
                 user_folder = file_path.rsplit('\\', 2)[0] if '\\' in file_path else file_path.rsplit('/', 2)[0]
-                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''))
+                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''), kundli_id)
                 
                 calculations.append({
                     'calculation_id': kundli_id,
@@ -1127,7 +1127,7 @@ async def get_user_calculations(
                 # Check if analysis exists for this kundli
                 file_path = metadata.get('file_path', '')
                 user_folder = file_path.rsplit('\\', 2)[0] if '\\' in file_path else file_path.rsplit('/', 2)[0]
-                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''))
+                has_analysis = file_manager.has_analysis(user_folder, birth_data.get('name', ''), kundli_id)
                 
                 calculations.append({
                     'calculation_id': kundli_id,
@@ -1676,6 +1676,20 @@ async def generate_analysis(
 
             analysis_pdf_path = None
 
+        
+        # Update kundli_index to mark that analysis exists for this kundli
+        print(f"[ANALYSIS] Updating kundli_index to mark analysis as present...")
+        try:
+            index = file_manager._read_index()
+            if request.kundli_id in index:
+                index[request.kundli_id]['has_analysis'] = True
+                index[request.kundli_id]['analysis_generated_at'] = datetime.now().isoformat()
+                file_manager._write_index(index)
+                print(f"[ANALYSIS] Kundli index updated successfully")
+            else:
+                print(f"[ANALYSIS] Warning: Kundli ID not found in index")
+        except Exception as e:
+            print(f"[ANALYSIS] Warning: Could not update kundli_index: {str(e)}")
         
         return {
 

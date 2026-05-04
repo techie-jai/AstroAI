@@ -449,6 +449,49 @@ class FileManager:
         
         return global_index
     
+    def _write_index(self, global_index: Dict) -> None:
+        """
+        Write global index back to per-user index files
+        
+        This takes a global index (aggregated from all users) and writes
+        each kundli back to its corresponding user's kundli_index.json
+        
+        Args:
+            global_index: Dictionary with all kundlis from all users
+        """
+        try:
+            # Group kundlis by user folder
+            user_kundlis = {}
+            
+            for kundli_id, kundli_data in global_index.items():
+                if isinstance(kundli_data, dict):
+                    file_path = kundli_data.get('file_path', '')
+                    if file_path:
+                        # Extract user folder from file path
+                        # file_path is like: users/user_email/Astrology/kundli_id/...
+                        if '\\' in file_path:
+                            parts = file_path.split('\\')
+                        else:
+                            parts = file_path.split('/')
+                        
+                        # Find the user folder (should be at index 1 if path starts with 'users')
+                        if len(parts) >= 2 and parts[0] == 'users':
+                            user_folder_name = parts[1]
+                            user_folder_path = os.path.join(self.base_dir, user_folder_name)
+                            
+                            if user_folder_path not in user_kundlis:
+                                user_kundlis[user_folder_path] = {}
+                            
+                            user_kundlis[user_folder_path][kundli_id] = kundli_data
+            
+            # Write each user's kundlis to their index file
+            for user_folder_path, kundlis in user_kundlis.items():
+                self._write_user_index(user_folder_path, kundlis)
+                print(f"[FILE_MANAGER] Updated index for user folder: {user_folder_path}")
+        
+        except Exception as e:
+            print(f"[FILE_MANAGER] Error writing global index: {str(e)}")
+    
     def generate_kundli_hash(self, kundli_data: Dict) -> str:
         """
         Generate a unique hash from the entire kundli JSON
