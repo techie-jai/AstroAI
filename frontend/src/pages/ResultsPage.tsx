@@ -364,7 +364,7 @@ export default function ResultsPage() {
               <div className="flex-1">
                 <h3 className="text-2xl font-bold gradient-text-purple mb-2">AI Astrological Analysis</h3>
                 <p className="text-muted-foreground mb-4">Get a comprehensive AI-powered analysis of your kundli using advanced algorithms that cross-reference Palmistry, Numerology, and Astrology for accurate predictions.</p>
-                <button onClick={handleAnalyze} disabled={analyzing} className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition flex items-center gap-2 glow-purple text-lg"><Sparkles className="w-5 h-5" />{analyzing ? 'Analyzing...' : 'Generate AI Analysis'}<ArrowRight className="w-4 h-4 ml-2" /></button>
+                <button onClick={handleAnalyze} disabled={analyzing} className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 disabled:opacity-50 text-white font-semibold py-3 px-6 rounded-lg transition flex items-center gap-2 glow-purple text-lg">{analyzing ? (<><Loader className="w-5 h-5 animate-spin" /><span>Analyzing...</span></>) : (<><Sparkles className="w-5 h-5" /><span>Generate AI Analysis</span><ArrowRight className="w-4 h-4 ml-2" /></>)}</button>
                 {analysisError && (
                   <div className="mt-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50 flex items-start gap-3">
                     <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 mt-0.5">
