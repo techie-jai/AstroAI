@@ -12,6 +12,9 @@ export interface PlanetInfo {
   sign: string
   house: number
   nakshatra: string
+  degree?: number
+  longitude?: number
+  latitude?: number
 }
 
 export interface HouseInfo {
@@ -30,27 +33,48 @@ export interface JyotishganitKundli {
 
 /**
  * Extract planet information from horoscope_info
- * Looks for keys like: sun_sign, sun_house, sun_nakshatra, etc.
+ * Looks for keys like: sun_sign, sun_house, sun_nakshatra, sun_degree, sun_longitude, sun_latitude, etc.
  */
 export function extractPlanets(horoscopeInfo: HoroscopeInfo): PlanetInfo[] {
   const planets: PlanetInfo[] = []
   const planetNames = ['sun', 'moon', 'mars', 'mercury', 'jupiter', 'venus', 'saturn', 'rahu', 'ketu']
   
+  console.log('[EXTRACT_PLANETS] Starting planet extraction from horoscope_info')
+  console.log('[EXTRACT_PLANETS] Available keys:', Object.keys(horoscopeInfo).filter(k => k.includes('_degree') || k.includes('_longitude')))
+  
   for (const planetName of planetNames) {
     const sign = horoscopeInfo[`${planetName}_sign`]
     const house = horoscopeInfo[`${planetName}_house`]
     const nakshatra = horoscopeInfo[`${planetName}_nakshatra`]
+    // Try both singular and plural forms for degree
+    const degree = horoscopeInfo[`${planetName}_degree`] || horoscopeInfo[`${planetName}_degrees`]
+    const longitude = horoscopeInfo[`${planetName}_longitude`]
+    const latitude = horoscopeInfo[`${planetName}_latitude`]
     
     if (sign || house || nakshatra) {
-      planets.push({
+      const planetData = {
         name: planetName.charAt(0).toUpperCase() + planetName.slice(1),
         sign: sign || 'N/A',
         house: house || 0,
-        nakshatra: nakshatra || 'N/A'
-      })
+        nakshatra: nakshatra || 'N/A',
+        degree: degree !== undefined && degree !== null ? parseFloat(degree) : undefined,
+        longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : undefined,
+        latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : undefined
+      }
+      
+      if (planetData.degree !== undefined) {
+        console.log(`[EXTRACT_PLANETS] ✓ ${planetData.name}: degree=${planetData.degree}`)
+      } else if (planetData.longitude !== undefined) {
+        console.log(`[EXTRACT_PLANETS] ✓ ${planetData.name}: longitude=${planetData.longitude} (no degree found)`)
+      } else {
+        console.log(`[EXTRACT_PLANETS] ✗ ${planetData.name}: NO DEGREE/LONGITUDE DATA`)
+      }
+      
+      planets.push(planetData)
     }
   }
   
+  console.log('[EXTRACT_PLANETS] Extraction complete. Total planets:', planets.length)
   return planets
 }
 
