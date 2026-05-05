@@ -922,10 +922,35 @@ async def get_kundli(
             'timezone_offset': birth_data.get('timezone_offset', 0)
         }
         
+        horoscope_info = kundli_file_data.get('horoscope_info', {})
+        
+        # Extract degree data from d1Chart if not already in horoscope_info
+        # The d1Chart contains the actual planetary data with degrees in signDegrees field
+        jyotishganit_json = kundli_file_data.get('jyotishganit_json', {})
+        d1_chart = jyotishganit_json.get('d1Chart', {})
+        
+        if d1_chart and 'houses' in d1_chart:
+            print(f"[GET_KUNDLI] Extracting degree data from d1Chart...")
+            houses = d1_chart.get('houses', [])
+            for house in houses:
+                if isinstance(house, dict):
+                    occupants = house.get('occupants', [])
+                    for occupant in occupants:
+                        if isinstance(occupant, dict):
+                            # Get planet name from celestialBody field
+                            planet_name = occupant.get('celestialBody', '')
+                            if planet_name:
+                                planet_name_lower = planet_name.lower()
+                                # Extract degree from signDegrees field (this is the actual degree in the sign)
+                                sign_degrees = occupant.get('signDegrees')
+                                if sign_degrees is not None:
+                                    horoscope_info[f'{planet_name_lower}_degree'] = sign_degrees
+                                    print(f"[GET_KUNDLI] ✓ Added degree for {planet_name}: {sign_degrees}")
+        
         response_data = {
             "kundli_id": kundli_id,
             "birth_data": formatted_birth_data,
-            "horoscope_info": kundli_file_data.get('horoscope_info', {}),
+            "horoscope_info": horoscope_info,
             "generated_at": metadata.get('generated_at'),
             "kundli_json_path": file_path
         }
@@ -957,6 +982,18 @@ async def get_kundli(
         # Return with cache-control headers to prevent caching
         print(f"[GET_KUNDLI] Returning response with no-cache headers")
         print(f"[GET_KUNDLI] Response size - horoscope_info keys: {len(response_data.get('horoscope_info', {}))}")
+        
+        # Log degree data being sent to frontend
+        horoscope_info = response_data.get('horoscope_info', {})
+        degree_keys = [k for k in horoscope_info.keys() if '_degree' in k]
+        if degree_keys:
+            print(f"[GET_KUNDLI] ✓ DEGREE DATA FOUND - Sending to frontend:")
+            for key in degree_keys:
+                print(f"[GET_KUNDLI]   - {key}: {horoscope_info[key]}")
+        else:
+            print(f"[GET_KUNDLI] ✗ NO DEGREE DATA FOUND in horoscope_info")
+            print(f"[GET_KUNDLI] Available keys: {list(horoscope_info.keys())[:10]}...")
+        
         print(f"[GET_KUNDLI] D10 chart included: {'d10_chart' in response_data}")
         print(f"[GET_KUNDLI] Divisional charts included: {'divisionalCharts' in response_data}")
         return JSONResponse(
@@ -2674,13 +2711,25 @@ class KundliDataExtractor:
             planet_sign_key = f"{planet}_sign"
             planet_house_key = f"{planet}_house"
             planet_nakshatra_key = f"{planet}_nakshatra"
+            planet_degree_key = f"{planet}_degree"
+            planet_longitude_key = f"{planet}_longitude"
+            planet_latitude_key = f"{planet}_latitude"
             
             if planet_sign_key in horoscope_info:
-                extracted_data["horoscope_analysis"]["planetary_positions"][planet] = {
+                planet_data = {
                     "sign": horoscope_info.get(planet_sign_key, ''),
                     "house": horoscope_info.get(planet_house_key, 0),
                     "nakshatra": horoscope_info.get(planet_nakshatra_key, '')
                 }
+                # Add degree data if available
+                if planet_degree_key in horoscope_info:
+                    planet_data["degree"] = horoscope_info.get(planet_degree_key)
+                if planet_longitude_key in horoscope_info:
+                    planet_data["longitude"] = horoscope_info.get(planet_longitude_key)
+                if planet_latitude_key in horoscope_info:
+                    planet_data["latitude"] = horoscope_info.get(planet_latitude_key)
+                
+                extracted_data["horoscope_analysis"]["planetary_positions"][planet] = planet_data
         
         # Extract divisional charts
         # Check multiple locations where divisional charts can be stored:

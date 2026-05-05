@@ -104,10 +104,38 @@ class SimplifiedKundliGenerator:
                                     horoscope_info[f'{planet_name}_house'] = planet_house
                                     horoscope_info[f'{planet_name}_nakshatra'] = planet_nakshatra
                                     
-                                    # Store detailed planetary info
-                                    horoscope_info[f'{planet_name}_degrees'] = occupant.get('signDegrees', 0)
+                                    # Store detailed planetary info (degree/coordinate data)
+                                    # Try multiple field names for degrees: pos.dec_deg, signDegrees, degree, longitude, etc.
+                                    pos_data = occupant.get('pos', {})
+                                    sign_degrees = None
+                                    
+                                    # First try pos.dec_deg (decimal degrees from position object)
+                                    if isinstance(pos_data, dict) and 'dec_deg' in pos_data:
+                                        sign_degrees = pos_data.get('dec_deg')
+                                    # Then try other field names
+                                    elif occupant.get('signDegrees'):
+                                        sign_degrees = occupant.get('signDegrees')
+                                    elif occupant.get('degree'):
+                                        sign_degrees = occupant.get('degree')
+                                    elif occupant.get('longitude'):
+                                        sign_degrees = occupant.get('longitude')
+                                    
+                                    if sign_degrees:
+                                        horoscope_info[f'{planet_name}_degree'] = sign_degrees
+                                        print(f"[KUNDLI_GENERATOR] ✓ Extracted degree for {planet_name}: {sign_degrees}")
+                                    else:
+                                        print(f"[KUNDLI_GENERATOR] ✗ No degree found for {planet_name} (checked: pos.dec_deg={pos_data.get('dec_deg') if isinstance(pos_data, dict) else 'N/A'}, signDegrees={occupant.get('signDegrees')}, degree={occupant.get('degree')}, longitude={occupant.get('longitude')})")
+                                    
                                     horoscope_info[f'{planet_name}_pada'] = occupant.get('pada', 0)
                                     horoscope_info[f'{planet_name}_motion'] = occupant.get('motion_type', 'direct')
+                                    
+                                    # Store longitude and latitude if available
+                                    if occupant.get('longitude'):
+                                        horoscope_info[f'{planet_name}_longitude'] = occupant.get('longitude')
+                                        print(f"[KUNDLI_GENERATOR] ✓ Extracted longitude for {planet_name}: {occupant.get('longitude')}")
+                                    if occupant.get('latitude'):
+                                        horoscope_info[f'{planet_name}_latitude'] = occupant.get('latitude')
+                                        print(f"[KUNDLI_GENERATOR] ✓ Extracted latitude for {planet_name}: {occupant.get('latitude')}")
                                     
                                     # Extract planetary aspects (CRITICAL for predictions)
                                     aspects = occupant.get('aspects', {})

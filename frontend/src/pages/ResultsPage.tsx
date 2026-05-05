@@ -71,6 +71,13 @@ function PlanetCard({ planet }: { planet: any }) {
     "Ketu": "bg-gradient-to-br from-slate-600 to-slate-800",
   }
   
+  // Format degree display - show actual degree or longitude if degree is not available
+  const degreeDisplay = planet.degree !== undefined && planet.degree !== null 
+    ? planet.degree.toFixed(2) 
+    : planet.longitude !== undefined && planet.longitude !== null
+    ? planet.longitude.toFixed(2)
+    : 'N/A'
+  
   return (
     <div className="group cosmic-card rounded-xl p-4 hover:bg-purple-500/10 transition-all duration-300">
       <div className="flex items-start gap-4">
@@ -83,7 +90,7 @@ function PlanetCard({ planet }: { planet: any }) {
             <div className="col-span-2"><span className="text-muted-foreground">Nakshatra:</span><span className="ml-2 text-foreground">{planet.nakshatra}</span></div>
           </div>
         </div>
-        <div className="px-2 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-xs font-mono text-purple-300">{planet.degree?.toFixed(1) || 'N/A'}°</div>
+        <div className="px-2 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-xs font-mono text-purple-300">{degreeDisplay}°</div>
       </div>
     </div>
   )
